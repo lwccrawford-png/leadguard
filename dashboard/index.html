@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LeadGuard — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>LeadGuard <span class="badge">Dashboard</span></h1>
+  </header>
+
+  <nav id="tabs">
+    <button data-tab="settings" class="active">Settings</button>
+    <button data-tab="knowledge">Knowledge</button>
+    <button data-tab="leads">Leads</button>
+    <button data-tab="conversations">Conversations</button>
+  </nav>
+
+  <main>
+    <section id="tab-settings" class="tab active">
+      <h2>Business Settings</h2>
+      <form id="settingsForm">
+        <label>Business name
+          <input name="name" required />
+        </label>
+        <label>Website URL <span class="hint">(for the site scan — optional)</span>
+          <input name="website_url" placeholder="https://example.com" />
+        </label>
+        <label>Scheduling link <span class="hint">(Calendly, Acuity, etc. — the agent shares this when it's time to book)</span>
+          <input name="scheduling_link" placeholder="https://calendly.com/your-business" />
+        </label>
+        <label>Handoff webhook URL <span class="hint">(Slack Incoming Webhook, or a Zapier/Make catch-hook to fan out to SMS/email)</span>
+          <input name="handoff_webhook_url" placeholder="https://hooks.slack.com/services/..." />
+        </label>
+        <label>Conversational script <span class="hint">(write how the agent should behave, in your own words)</span>
+          <textarea name="flow_script" rows="8" placeholder="e.g. Greet visitors warmly as 'Jane's Salon'. Always ask what service they're interested in before mentioning price ranges. Never quote exact prices, only ranges. If someone asks about cancellations, point them to the scheduling link. Capture contact info before ending the chat if they haven't booked."></textarea>
+        </label>
+        <label>Accent color
+          <input name="accent_color" type="color" />
+        </label>
+        <button type="submit">Save Settings</button>
+        <span id="saveStatus"></span>
+      </form>
+
+      <div class="card">
+        <h3>Embed on your website</h3>
+        <p>Paste this snippet before <code>&lt;/body&gt;</code> on your site:</p>
+        <pre id="embedSnippet"></pre>
+      </div>
+    </section>
+
+    <section id="tab-knowledge" class="tab">
+      <h2>Knowledge Base</h2>
+      <div class="card">
+        <h3>Site scan</h3>
+        <p>Crawl the website URL set in Settings.</p>
+        <button id="crawlBtn">Crawl Site Now</button>
+        <span id="crawlStatus"></span>
+      </div>
+      <div class="card">
+        <h3>Add content manually</h3>
+        <p>Paste anything the scan might miss — FAQs, price sheets, policies, internal docs.</p>
+        <form id="docForm">
+          <label>Label
+            <input name="label" placeholder="e.g. FAQ, Pricing, Cancellation Policy" required />
+          </label>
+          <label>Content
+            <textarea name="text" rows="6" placeholder="Paste the text here..." required></textarea>
+          </label>
+          <button type="submit">Add to Knowledge Base</button>
+          <span id="docStatus"></span>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Ingested sources</h3>
+        <table id="sourcesTable"><thead><tr><th>Type</th><th>Source</th><th>Chunks</th><th>Added</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section id="tab-leads" class="tab">
+      <h2>Leads</h2>
+      <table id="leadsTable"><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Notes</th><th>Notified</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section id="tab-conversations" class="tab">
+      <h2>Conversations</h2>
+      <div class="conv-layout">
+        <table id="conversationsTable"><thead><tr><th>Session</th><th>Started</th><th>Msgs</th></tr></thead><tbody></tbody></table>
+        <div id="conversationDetail"><p class="muted">Select a conversation to view messages.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
