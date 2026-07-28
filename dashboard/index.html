@@ -100,6 +100,13 @@
 
     <section id="tab-conversations" class="tab">
       <h2>Conversations</h2>
+      <p class="muted">Transcripts older than 90 days are purged automatically (captured leads are unaffected).</p>
+      <div class="conv-filters">
+        <input type="text" id="convSearch" placeholder="Search session id or message text..." />
+        <label>From <input type="date" id="convSince" /></label>
+        <label>To <input type="date" id="convUntil" /></label>
+        <button id="convClearFilters" type="button">Clear</button>
+      </div>
       <div class="conv-layout">
         <table id="conversationsTable"><thead><tr><th>Session</th><th>Started</th><th>Msgs</th></tr></thead><tbody></tbody></table>
         <div id="conversationDetail"><p class="muted">Select a conversation to view messages.</p></div>

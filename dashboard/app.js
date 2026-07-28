@@ -238,8 +238,31 @@ async function patchLead(id, body) {
   });
 }
 
+let convFilterDebounce;
+function scheduleConversationReload() {
+  clearTimeout(convFilterDebounce);
+  convFilterDebounce = setTimeout(loadConversations, 300);
+}
+$("#convSearch")?.addEventListener("input", scheduleConversationReload);
+$("#convSince")?.addEventListener("change", loadConversations);
+$("#convUntil")?.addEventListener("change", loadConversations);
+$("#convClearFilters")?.addEventListener("click", () => {
+  $("#convSearch").value = "";
+  $("#convSince").value = "";
+  $("#convUntil").value = "";
+  loadConversations();
+});
+
 async function loadConversations() {
-  const res = await fetch("/api/conversations");
+  const params = new URLSearchParams();
+  const q = $("#convSearch")?.value.trim();
+  const since = $("#convSince")?.value;
+  const until = $("#convUntil")?.value;
+  if (q) params.set("q", q);
+  if (since) params.set("since", since);
+  if (until) params.set("until", until);
+
+  const res = await fetch("/api/conversations?" + params.toString());
   const rows = await res.json();
   const tbody = $("#conversationsTable tbody");
   tbody.innerHTML =

@@ -132,13 +132,31 @@ def update_lead(lead_id: int, update: LeadUpdate):
 
 
 @router.get("/conversations")
-def list_conversations():
+def list_conversations(q: Optional[str] = None, since: Optional[str] = None, until: Optional[str] = None):
+    where, params = [], []
+    if since:
+        where.append("c.created_at >= ?")
+        params.append(since)
+    if until:
+        # `until` is a date (YYYY-MM-DD) from a date-picker; make it inclusive of the whole day.
+        where.append("c.created_at <= ?")
+        params.append(until + "T23:59:59")
+    if q:
+        where.append(
+            "(c.session_id LIKE ? OR EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content LIKE ?))"
+        )
+        like = f"%{q}%"
+        params.extend([like, like])
+
+    sql = """SELECT c.id, c.session_id, c.created_at,
+                    (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count
+             FROM conversations c"""
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY c.id DESC LIMIT 200"
+
     with db_session() as conn:
-        rows = conn.execute(
-            """SELECT c.id, c.session_id, c.created_at,
-                      (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count
-               FROM conversations c ORDER BY c.id DESC LIMIT 200"""
-        ).fetchall()
+        rows = conn.execute(sql, params).fetchall()
     return [dict(r) for r in rows]
 
 
