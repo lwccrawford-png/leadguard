@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+_data_dir_override = os.getenv("LEADGUARD_DATA_DIR", "")
+DATA_DIR = Path(_data_dir_override) if _data_dir_override else BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "app.db"
 INDEX_PATH = DATA_DIR / "index.pkl"
