@@ -154,9 +154,18 @@ async function loadLeads() {
       loadLeads();
     });
 
+    card.querySelector(".outcome-select")?.addEventListener("change", async (e) => {
+      await patchLead(card.dataset.id, { outcome: e.target.value });
+    });
+
     const notesEl = card.querySelector(".card-notes");
     notesEl?.addEventListener("blur", async () => {
       await patchLead(card.dataset.id, { notes: notesEl.value });
+    });
+
+    const goodToKnowEl = card.querySelector(".card-good-to-know");
+    goodToKnowEl?.addEventListener("blur", async () => {
+      await patchLead(card.dataset.id, { good_to_know: goodToKnowEl.value });
     });
   });
 
@@ -173,6 +182,14 @@ async function loadLeads() {
 }
 
 const STATUS_LABELS = { new: "New", claimed: "Claimed", done: "Done" };
+const OUTCOME_LABELS = {
+  booked: "✅ Booked",
+  not_interested: "🚫 Not interested",
+  no_response: "🔇 No response",
+  duplicate: "♻️ Duplicate",
+  spam: "🗑️ Spam",
+  other: "❔ Other",
+};
 
 function cardHtml(r) {
   const contact = [r.email, r.phone].filter(Boolean).join(" / ");
@@ -180,12 +197,21 @@ function cardHtml(r) {
   const statusOptions = Object.entries(STATUS_LABELS)
     .map(([val, label]) => `<option value="${val}" ${val === status ? "selected" : ""}>${label}</option>`)
     .join("");
+  const outcomeOptions =
+    `<option value="">Outcome…</option>` +
+    Object.entries(OUTCOME_LABELS)
+      .map(([val, label]) => `<option value="${val}" ${val === r.outcome ? "selected" : ""}>${label}</option>`)
+      .join("");
   return `
     <div class="lead-card" draggable="true" data-id="${r.id}">
       <div class="lead-card-intent">${INTENT_LABELS[r.intent] || esc(r.intent)}</div>
       <div class="lead-card-name">${esc(r.name) || "<em>No name given</em>"}</div>
       ${contact ? `<div class="lead-card-contact">${esc(contact)}</div>` : ""}
+      <label class="card-field-label">Notes</label>
       <textarea class="card-notes" rows="2">${esc(r.notes)}</textarea>
+      <label class="card-field-label">Good to know</label>
+      <textarea class="card-good-to-know" rows="2" placeholder="Standing context, e.g. referred by X, handle gently...">${esc(r.good_to_know)}</textarea>
+      ${status === "done" ? `<select class="outcome-select">${outcomeOptions}</select>` : ""}
       <div class="lead-card-footer">
         <span class="lead-card-date">${fmtDate(r.created_at)}</span>
         <select class="status-select">${statusOptions}</select>

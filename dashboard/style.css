@@ -102,7 +102,10 @@ table button.delete { background: none; border: none; color: #c0392b; cursor: po
 .lead-card-intent { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
 .lead-card-name { font-weight: 600; }
 .lead-card-contact { color: #666; font-size: 12px; margin-top: 2px; }
-.card-notes { width: 100%; margin-top: 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; resize: vertical; font-family: inherit; }
+.card-field-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: #999; margin-top: 8px; font-weight: 700; }
+.card-notes, .card-good-to-know { width: 100%; margin-top: 3px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; resize: vertical; font-family: inherit; }
+.card-good-to-know { background: #fffdf0; }
+.outcome-select { width: 100%; margin-top: 8px; font-size: 12px; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--border); font-family: inherit; }
 .lead-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 .lead-card-date { font-size: 11px; color: #999; }
 .lead-card-claim { margin-top: 6px; }

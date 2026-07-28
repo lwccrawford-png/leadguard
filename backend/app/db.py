@@ -54,8 +54,10 @@ CREATE TABLE IF NOT EXISTS leads (
     phone TEXT,
     intent TEXT NOT NULL DEFAULT 'general_inquiry',
     notes TEXT,
+    good_to_know TEXT,
     status TEXT NOT NULL DEFAULT 'new',
     claimed_by TEXT,
+    outcome TEXT,
     handoff_notified INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
@@ -86,6 +88,8 @@ def init_db():
             "ALTER TABLE leads ADD COLUMN intent TEXT NOT NULL DEFAULT 'general_inquiry'",
             "ALTER TABLE leads ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
             "ALTER TABLE leads ADD COLUMN claimed_by TEXT",
+            "ALTER TABLE leads ADD COLUMN good_to_know TEXT",
+            "ALTER TABLE leads ADD COLUMN outcome TEXT",
         ]:
             try:
                 conn.execute(migration)

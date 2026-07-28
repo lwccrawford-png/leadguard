@@ -7,6 +7,7 @@ from ..db import db_session
 from ..services import ingestion
 
 LEAD_STATUSES = {"new", "claimed", "done"}
+LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
 
 router = APIRouter(prefix="/api", tags=["business"])
 
@@ -24,6 +25,8 @@ class LeadUpdate(BaseModel):
     status: Optional[str] = None
     claimed_by: Optional[str] = None
     notes: Optional[str] = None
+    good_to_know: Optional[str] = None
+    outcome: Optional[str] = None
 
 
 class ManualDocument(BaseModel):
@@ -96,6 +99,8 @@ def list_leads():
 def update_lead(lead_id: int, update: LeadUpdate):
     if update.status is not None and update.status not in LEAD_STATUSES:
         raise HTTPException(400, f"status must be one of {sorted(LEAD_STATUSES)}")
+    if update.outcome is not None and update.outcome not in LEAD_OUTCOMES:
+        raise HTTPException(400, f"outcome must be one of {sorted(LEAD_OUTCOMES)}")
 
     fields, values = [], []
     if update.status is not None:
@@ -107,6 +112,12 @@ def update_lead(lead_id: int, update: LeadUpdate):
     if update.notes is not None:
         fields.append("notes = ?")
         values.append(update.notes)
+    if update.good_to_know is not None:
+        fields.append("good_to_know = ?")
+        values.append(update.good_to_know)
+    if update.outcome is not None:
+        fields.append("outcome = ?")
+        values.append(update.outcome)
 
     if not fields:
         raise HTTPException(400, "Nothing to update")
