@@ -90,6 +90,29 @@ table th { background: #f0f0f4; color: #555; }
 table tbody tr:hover { background: #fafafe; cursor: pointer; }
 table button.delete { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 12px; padding: 0; }
 
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.board-col { background: #eceef3; border-radius: 10px; padding: 10px; min-height: 120px; }
+.board-col h3 { margin: 4px 6px 10px; font-size: 13px; color: #555; display: flex; justify-content: space-between; }
+.board-col h3 .count { background: #dcdce8; border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+.board-col-cards { display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+.board-empty { text-align: center; padding: 16px 0; }
+
+.lead-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: grab; font-size: 13px; }
+.lead-card.dragging { opacity: 0.4; }
+.lead-card-intent { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.lead-card-name { font-weight: 600; }
+.lead-card-contact { color: #666; font-size: 12px; margin-top: 2px; }
+.card-notes { width: 100%; margin-top: 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; resize: vertical; font-family: inherit; }
+.lead-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.lead-card-date { font-size: 11px; color: #999; }
+.lead-card-claim { margin-top: 6px; }
+.claimed-by { font-size: 12px; font-weight: 600; color: #444; }
+.lead-card .claim-btn { padding: 4px 10px; font-size: 12px; }
+.claim-prompt { display: inline-flex; gap: 4px; }
+.claim-prompt .claim-input { font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; width: 110px; }
+.claim-prompt .claim-confirm { padding: 4px 10px; font-size: 12px; }
+.status-select { font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border); font-family: inherit; }
+
 .conv-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; align-items: start; }
 #conversationDetail { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 480px; overflow-y: auto; }
 .muted { color: #999; font-size: 13px; }

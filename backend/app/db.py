@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS leads (
     phone TEXT,
     intent TEXT NOT NULL DEFAULT 'general_inquiry',
     notes TEXT,
+    status TEXT NOT NULL DEFAULT 'new',
+    claimed_by TEXT,
     handoff_notified INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
@@ -80,10 +82,15 @@ def db_session():
 def init_db():
     with db_session() as conn:
         conn.executescript(SCHEMA)
-        try:
-            conn.execute("ALTER TABLE leads ADD COLUMN intent TEXT NOT NULL DEFAULT 'general_inquiry'")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        for migration in [
+            "ALTER TABLE leads ADD COLUMN intent TEXT NOT NULL DEFAULT 'general_inquiry'",
+            "ALTER TABLE leads ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
+            "ALTER TABLE leads ADD COLUMN claimed_by TEXT",
+        ]:
+            try:
+                conn.execute(migration)
+            except sqlite3.OperationalError:
+                pass  # column already exists
         row = conn.execute("SELECT id FROM business WHERE id = 1").fetchone()
         if row is None:
             conn.execute("INSERT INTO business (id) VALUES (1)")

@@ -1,8 +1,12 @@
+from typing import Optional
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from ..db import db_session
 from ..services import ingestion
+
+LEAD_STATUSES = {"new", "claimed", "done"}
 
 router = APIRouter(prefix="/api", tags=["business"])
 
@@ -14,6 +18,12 @@ class BusinessSettings(BaseModel):
     handoff_webhook_url: str = ""
     flow_script: str = ""
     accent_color: str = "#4f46e5"
+
+
+class LeadUpdate(BaseModel):
+    status: Optional[str] = None
+    claimed_by: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class ManualDocument(BaseModel):
@@ -80,6 +90,34 @@ def list_leads():
     with db_session() as conn:
         rows = conn.execute("SELECT * FROM leads ORDER BY id DESC LIMIT 200").fetchall()
     return [dict(r) for r in rows]
+
+
+@router.patch("/leads/{lead_id}")
+def update_lead(lead_id: int, update: LeadUpdate):
+    if update.status is not None and update.status not in LEAD_STATUSES:
+        raise HTTPException(400, f"status must be one of {sorted(LEAD_STATUSES)}")
+
+    fields, values = [], []
+    if update.status is not None:
+        fields.append("status = ?")
+        values.append(update.status)
+    if update.claimed_by is not None:
+        fields.append("claimed_by = ?")
+        values.append(update.claimed_by)
+    if update.notes is not None:
+        fields.append("notes = ?")
+        values.append(update.notes)
+
+    if not fields:
+        raise HTTPException(400, "Nothing to update")
+
+    values.append(lead_id)
+    with db_session() as conn:
+        conn.execute(f"UPDATE leads SET {', '.join(fields)} WHERE id = ?", values)
+        row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "Lead not found")
+    return dict(row)
 
 
 @router.get("/conversations")

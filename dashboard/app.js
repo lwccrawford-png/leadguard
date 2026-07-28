@@ -118,14 +118,98 @@ const INTENT_LABELS = {
 async function loadLeads() {
   const res = await fetch("/api/leads");
   const rows = await res.json();
-  const tbody = $("#leadsTable tbody");
-  tbody.innerHTML =
-    rows
-      .map(
-        (r) =>
-          `<tr><td>${fmtDate(r.created_at)}</td><td>${INTENT_LABELS[r.intent] || esc(r.intent)}</td><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(r.phone)}</td><td>${esc(r.notes)}</td><td>${r.handoff_notified ? "✅" : "—"}</td></tr>`
-      )
-      .join("") || `<tr><td colspan="7" class="muted">No leads yet.</td></tr>`;
+
+  for (const status of ["new", "claimed", "done"]) {
+    const col = document.querySelector(`.board-col-cards[data-status="${status}"]`);
+    const inCol = rows.filter((r) => (r.status || "new") === status);
+    $(`#count-${status}`).textContent = inCol.length;
+    col.innerHTML = inCol.map(cardHtml).join("") || `<p class="muted board-empty">Nothing here.</p>`;
+  }
+
+  document.querySelectorAll(".lead-card").forEach((card) => {
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", card.dataset.id);
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => card.classList.remove("dragging"));
+
+    card.querySelector(".claim-btn")?.addEventListener("click", () => {
+      card.querySelector(".claim-prompt").hidden = false;
+      card.querySelector(".claim-btn").hidden = true;
+      card.querySelector(".claim-input").focus();
+    });
+
+    card.querySelector(".claim-confirm")?.addEventListener("click", async () => {
+      const input = card.querySelector(".claim-input");
+      if (!input.value.trim()) return;
+      await patchLead(card.dataset.id, { claimed_by: input.value.trim(), status: "claimed" });
+      loadLeads();
+    });
+    card.querySelector(".claim-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") card.querySelector(".claim-confirm").click();
+    });
+
+    card.querySelector(".status-select")?.addEventListener("change", async (e) => {
+      await patchLead(card.dataset.id, { status: e.target.value });
+      loadLeads();
+    });
+
+    const notesEl = card.querySelector(".card-notes");
+    notesEl?.addEventListener("blur", async () => {
+      await patchLead(card.dataset.id, { notes: notesEl.value });
+    });
+  });
+
+  document.querySelectorAll(".board-col-cards").forEach((col) => {
+    col.addEventListener("dragover", (e) => e.preventDefault());
+    col.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData("text/plain");
+      const newStatus = col.dataset.status;
+      await patchLead(id, { status: newStatus });
+      loadLeads();
+    });
+  });
+}
+
+const STATUS_LABELS = { new: "New", claimed: "Claimed", done: "Done" };
+
+function cardHtml(r) {
+  const contact = [r.email, r.phone].filter(Boolean).join(" / ");
+  const status = r.status || "new";
+  const statusOptions = Object.entries(STATUS_LABELS)
+    .map(([val, label]) => `<option value="${val}" ${val === status ? "selected" : ""}>${label}</option>`)
+    .join("");
+  return `
+    <div class="lead-card" draggable="true" data-id="${r.id}">
+      <div class="lead-card-intent">${INTENT_LABELS[r.intent] || esc(r.intent)}</div>
+      <div class="lead-card-name">${esc(r.name) || "<em>No name given</em>"}</div>
+      ${contact ? `<div class="lead-card-contact">${esc(contact)}</div>` : ""}
+      <textarea class="card-notes" rows="2">${esc(r.notes)}</textarea>
+      <div class="lead-card-footer">
+        <span class="lead-card-date">${fmtDate(r.created_at)}</span>
+        <select class="status-select">${statusOptions}</select>
+      </div>
+      <div class="lead-card-claim">
+        ${
+          r.claimed_by
+            ? `<span class="claimed-by">👤 ${esc(r.claimed_by)}</span>`
+            : `<button class="claim-btn">Claim</button>
+               <span class="claim-prompt" hidden>
+                 <input class="claim-input" type="text" placeholder="Your name" />
+                 <button class="claim-confirm">OK</button>
+               </span>`
+        }
+      </div>
+    </div>`;
+}
+
+async function patchLead(id, body) {
+  await fetch(`/api/leads/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 async function loadConversations() {

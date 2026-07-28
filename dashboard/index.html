@@ -81,7 +81,21 @@
 
     <section id="tab-leads" class="tab">
       <h2>Leads</h2>
-      <table id="leadsTable"><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Notes</th><th>Notified</th></tr></thead><tbody></tbody></table>
+      <p class="muted">Drag a card to change its status. Click "Claim" to put your name on it. Click notes to edit.</p>
+      <div class="board" id="leadsBoard">
+        <div class="board-col" data-status="new">
+          <h3>New <span class="count" id="count-new">0</span></h3>
+          <div class="board-col-cards" data-status="new"></div>
+        </div>
+        <div class="board-col" data-status="claimed">
+          <h3>Claimed <span class="count" id="count-claimed">0</span></h3>
+          <div class="board-col-cards" data-status="claimed"></div>
+        </div>
+        <div class="board-col" data-status="done">
+          <h3>Done <span class="count" id="count-done">0</span></h3>
+          <div class="board-col-cards" data-status="done"></div>
+        </div>
+      </div>
     </section>
 
     <section id="tab-conversations" class="tab">
