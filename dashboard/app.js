@@ -107,6 +107,10 @@ const INTENT_LABELS = {
   event_rsvp: "🎟️ Event RSVP",
   meetup_request: "☕ Meetup",
   call_booking: "📅 Call",
+  human_request: "🙋 Wants human",
+  unresolved_question: "❓ Unresolved",
+  complaint: "⚠️ Complaint",
+  leadership_inquiry: "⭐ Leadership",
   general_inquiry: "💬 Inquiry",
   urgent_crisis: "🚨 Urgent",
 };

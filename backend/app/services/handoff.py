@@ -6,6 +6,10 @@ INTENT_LABELS = {
     "event_rsvp": "🎟️ EVENT RSVP",
     "meetup_request": "☕ MEETUP REQUEST",
     "call_booking": "📅 CALL BOOKING",
+    "human_request": "🙋 WANTS A HUMAN",
+    "unresolved_question": "❓ BOT COULDN'T ANSWER",
+    "complaint": "⚠️ COMPLAINT",
+    "leadership_inquiry": "⭐ LEADERSHIP/PARTNER INQUIRY",
     "general_inquiry": "💬 GENERAL INQUIRY",
     "urgent_crisis": "🚨 URGENT — CRISIS",
 }

@@ -20,9 +20,16 @@ TOOLS = [
         "description": "Save a visitor's contact info as a lead and alert the business. Call this "
         "whenever the visitor gives you a name/email/phone, wants a follow-up, wants to book/schedule "
         "something (share the scheduling link in your reply too, if one is configured), wants to RSVP or "
-        "attend an event (solo or bringing others), or wants to meet up in person (e.g. grab lunch/coffee). "
-        "Call it as soon as you have enough info to be useful to a human follow-up — don't wait until the "
-        "very end of the conversation.",
+        "attend an event (solo or bringing others), wants to meet up in person (e.g. grab lunch/coffee), "
+        "explicitly asks for a real person, expresses a complaint or bad experience, or asks about "
+        "volunteering/leading/hosting/partnering. Call it as soon as you have enough info to be useful to a "
+        "human follow-up — don't wait until the very end of the conversation.\n\n"
+        "MANDATORY, no exceptions: the moment you fail to answer the same or a similar question twice, or "
+        "the knowledge base has nothing relevant after a couple of tries, call capture_lead immediately "
+        "with intent=unresolved_question — right then, in that same turn, even if name/email/phone are all "
+        "still empty. Do not wait for contact info first. Leave name/email/phone blank if you don't have "
+        "them yet; put what the visitor was asking in notes. A missed handoff here is worse than a sparse "
+        "lead record.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -31,14 +38,25 @@ TOOLS = [
                 "phone": {"type": "string"},
                 "intent": {
                     "type": "string",
-                    "enum": ["event_rsvp", "meetup_request", "call_booking", "general_inquiry", "urgent_crisis"],
+                    "enum": [
+                        "event_rsvp",
+                        "meetup_request",
+                        "call_booking",
+                        "human_request",
+                        "unresolved_question",
+                        "complaint",
+                        "leadership_inquiry",
+                        "general_inquiry",
+                        "urgent_crisis",
+                    ],
                     "description": "What kind of follow-up this is, so the team can triage/divide it up.",
                 },
                 "notes": {
                     "type": "string",
                     "description": "What they want, plus any specifics mentioned: which event, how many "
-                    "guests/friends coming, preferred timing, location, or anything else the team needs to "
-                    "act on this without re-asking the visitor.",
+                    "guests/friends coming, preferred timing, location, what question you couldn't answer, "
+                    "what they're complaining about, or anything else the team needs to act on this without "
+                    "re-asking the visitor.",
                 },
             },
             "required": [],
@@ -113,6 +131,18 @@ def _system_prompt(business: dict, context_chunks: list) -> str:
         "they want a follow-up/booking. Keep replies short and conversational. This is a plain-text chat "
         "bubble, not a document — never use markdown formatting (no **bold**, no ## headers, no bullet "
         "lists with *) — write in plain sentences, using line breaks only for natural pauses."
+    )
+
+    parts.append(
+        "EXAMPLE of the unresolved_question rule (follow this pattern exactly):\n"
+        "Visitor: \"What's your refund policy?\"\n"
+        "You: [reply that you don't have that, offer to have the team follow up] "
+        "[in the SAME turn, call capture_lead with intent=unresolved_question, name/email/phone left blank, "
+        "notes=\"Asked about refund policy, not in knowledge base\"]\n"
+        "You do NOT wait for a second attempt, and you do NOT wait for contact info first — the tool call "
+        "happens in the same turn as your very first \"I don't know\" on a knowledge-base gap that sounds "
+        "important to the visitor (pricing, policies, guarantees). Asking the visitor for their email is a "
+        "separate, following step, not a precondition for calling the tool."
     )
 
     parts.append("KNOWLEDGE BASE:\n" + context_text)
