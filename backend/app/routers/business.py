@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from ..db import db_session
-from ..services import ingestion
+from ..services import ingestion, rate_limit
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
@@ -22,6 +22,7 @@ class BusinessSettings(BaseModel):
     handoff_email: str = ""
     flow_script: str = ""
     accent_color: str = "#4f46e5"
+    monthly_message_limit: int = 500
 
 
 class LeadUpdate(BaseModel):
@@ -41,7 +42,9 @@ class ManualDocument(BaseModel):
 def get_business():
     with db_session() as conn:
         row = conn.execute("SELECT * FROM business WHERE id = 1").fetchone()
-    return dict(row)
+    data = dict(row)
+    data["messages_used_this_month"] = rate_limit.messages_used_this_month()
+    return data
 
 
 @router.put("/business")
@@ -49,7 +52,8 @@ def update_business(settings: BusinessSettings):
     with db_session() as conn:
         conn.execute(
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
-               scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=? WHERE id=1""",
+               scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
+               monthly_message_limit=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -60,6 +64,7 @@ def update_business(settings: BusinessSettings):
                 settings.handoff_email,
                 settings.flow_script,
                 settings.accent_color,
+                settings.monthly_message_limit,
             ),
         )
     return {"ok": True}

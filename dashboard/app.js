@@ -16,7 +16,7 @@ async function loadBusiness() {
   const res = await fetch("/api/business");
   const data = await res.json();
   const form = $("#settingsForm");
-  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color"]) {
+  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
   }
   const apiBase = window.location.origin;
@@ -30,6 +30,16 @@ async function loadBusiness() {
     (data.assistant_image_url ? `  data-avatar-url="${data.assistant_image_url.replace(/"/g, "&quot;")}"\n` : "") +
     `  defer\n` +
     `><\/script>`;
+
+  const used = data.messages_used_this_month ?? 0;
+  const limit = data.monthly_message_limit ?? 0;
+  const usageEl = $("#usageStatus");
+  if (limit > 0) {
+    const pct = Math.min(100, Math.round((used / limit) * 100));
+    usageEl.textContent = `${used} / ${limit} messages used this month (${pct}%)${used >= limit ? " — at capacity, new chats are handing off to the team." : ""}`;
+  } else {
+    usageEl.textContent = `${used} messages used this month (no limit set).`;
+  }
 }
 
 $("#settingsForm").addEventListener("submit", async (e) => {
@@ -115,6 +125,7 @@ const INTENT_LABELS = {
   leadership_inquiry: "⭐ Leadership",
   general_inquiry: "💬 Inquiry",
   urgent_crisis: "🚨 Urgent",
+  capacity_reached: "📈 Cap reached",
 };
 
 async function loadLeads() {

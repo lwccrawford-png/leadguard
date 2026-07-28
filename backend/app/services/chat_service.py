@@ -7,7 +7,7 @@ import anthropic
 
 from ..config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from ..db import db_session
-from . import handoff, retrieval
+from . import handoff, rate_limit, retrieval
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -187,7 +187,43 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
     if not ANTHROPIC_API_KEY:
         return {"reply": "The assistant isn't configured yet — the site owner needs to set ANTHROPIC_API_KEY in the backend .env file."}
 
+    if not rate_limit.check_burst_limit(session_id):
+        return {"reply": "You're sending messages a little fast — please wait a moment and try again."}
+
     business = _get_business()
+
+    within_limit, used, limit = rate_limit.check_monthly_limit(business)
+    if not within_limit:
+        conversation_id = _get_or_create_conversation(session_id, visitor_ip)
+        _save_message(conversation_id, "user", user_message)
+        fallback = "Thanks for reaching out! We're at capacity for automated replies right now, but the team will follow up with you directly."
+        _save_message(conversation_id, "assistant", fallback)
+
+        with db_session() as conn:
+            already_notified_this_month = conn.execute(
+                "SELECT 1 FROM leads WHERE intent = 'capacity_reached' AND created_at >= ?",
+                (datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(),),
+            ).fetchone()
+
+        notes = f"Monthly message cap reached ({used}/{limit}). Visitor's message: {user_message[:300]}"
+        notified = False
+        if not already_notified_this_month:
+            # Only alert once per month — every message after the cap would otherwise spam the
+            # webhook/email for every visitor who talks to an already-capped assistant.
+            notified = handoff.notify(
+                business.get("handoff_webhook_url", ""),
+                business.get("name", "your business"),
+                {"intent": "capacity_reached", "notes": notes},
+                notify_email=business.get("handoff_email", ""),
+            )
+
+        with db_session() as conn:
+            conn.execute(
+                "INSERT INTO leads (conversation_id, intent, notes, status, handoff_notified, created_at) VALUES (?, 'capacity_reached', ?, 'new', ?, ?)",
+                (conversation_id, notes, 1 if notified else 0, datetime.now(timezone.utc).isoformat()),
+            )
+        return {"reply": fallback}
+
     conversation_id = _get_or_create_conversation(session_id, visitor_ip)
     _save_message(conversation_id, "user", user_message)
 

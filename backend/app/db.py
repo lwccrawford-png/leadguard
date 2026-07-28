@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS business (
     handoff_email TEXT NOT NULL DEFAULT '',
     flow_script TEXT NOT NULL DEFAULT '',
     accent_color TEXT NOT NULL DEFAULT '#4f46e5',
+    monthly_message_limit INTEGER NOT NULL DEFAULT 500,
     last_crawled_at TEXT
 );
 
@@ -96,6 +97,7 @@ def init_db():
             "ALTER TABLE business ADD COLUMN handoff_email TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN assistant_name TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN assistant_image_url TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN monthly_message_limit INTEGER NOT NULL DEFAULT 500",
         ]:
             try:
                 conn.execute(migration)
