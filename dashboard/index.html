@@ -25,6 +25,12 @@
         <label>Business name
           <input name="name" required />
         </label>
+        <label>Assistant name <span class="hint">(optional — give it a persona name like "Aiden" or "Aisha", or leave blank to just represent the business name)</span>
+          <input name="assistant_name" placeholder="e.g. Aiden" />
+        </label>
+        <label>Assistant image URL <span class="hint">(optional — a small avatar/logo shown on the chat bubble and header; paste a link to an image)</span>
+          <input name="assistant_image_url" type="url" placeholder="https://yoursite.com/avatar.png" />
+        </label>
         <label>Website URL <span class="hint">(for the site scan — optional)</span>
           <input name="website_url" placeholder="https://example.com" />
         </label>
@@ -33,6 +39,9 @@
         </label>
         <label>Handoff webhook URL <span class="hint">(Slack Incoming Webhook, or a Zapier/Make catch-hook to fan out to SMS/email)</span>
           <input name="handoff_webhook_url" placeholder="https://hooks.slack.com/services/..." />
+        </label>
+        <label>Notification email <span class="hint">(sent with every handoff webhook as "notify_email" — map your Make/Zapier email step's To field to it, so changing it here updates where alerts go, no need to edit the automation)</span>
+          <input name="handoff_email" type="email" placeholder="team@yourbusiness.com" />
         </label>
         <label>Conversational script <span class="hint">(write how the agent should behave, in your own words)</span>
           <textarea name="flow_script" rows="8" placeholder="e.g. Greet visitors warmly as 'Jane's Salon'. Always ask what service they're interested in before mentioning price ranges. Never quote exact prices, only ranges. If someone asks about cancellations, point them to the scheduling link. Capture contact info before ending the chat if they haven't booked."></textarea>

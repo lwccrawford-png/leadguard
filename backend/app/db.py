@@ -6,9 +6,12 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS business (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     name TEXT NOT NULL DEFAULT 'My Business',
+    assistant_name TEXT NOT NULL DEFAULT '',
+    assistant_image_url TEXT NOT NULL DEFAULT '',
     website_url TEXT NOT NULL DEFAULT '',
     scheduling_link TEXT NOT NULL DEFAULT '',
     handoff_webhook_url TEXT NOT NULL DEFAULT '',
+    handoff_email TEXT NOT NULL DEFAULT '',
     flow_script TEXT NOT NULL DEFAULT '',
     accent_color TEXT NOT NULL DEFAULT '#4f46e5',
     last_crawled_at TEXT
@@ -90,6 +93,9 @@ def init_db():
             "ALTER TABLE leads ADD COLUMN claimed_by TEXT",
             "ALTER TABLE leads ADD COLUMN good_to_know TEXT",
             "ALTER TABLE leads ADD COLUMN outcome TEXT",
+            "ALTER TABLE business ADD COLUMN handoff_email TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN assistant_name TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN assistant_image_url TEXT NOT NULL DEFAULT ''",
         ]:
             try:
                 conn.execute(migration)

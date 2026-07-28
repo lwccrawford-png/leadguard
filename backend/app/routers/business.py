@@ -14,9 +14,12 @@ router = APIRouter(prefix="/api", tags=["business"])
 
 class BusinessSettings(BaseModel):
     name: str
+    assistant_name: str = ""
+    assistant_image_url: str = ""
     website_url: str = ""
     scheduling_link: str = ""
     handoff_webhook_url: str = ""
+    handoff_email: str = ""
     flow_script: str = ""
     accent_color: str = "#4f46e5"
 
@@ -45,13 +48,16 @@ def get_business():
 def update_business(settings: BusinessSettings):
     with db_session() as conn:
         conn.execute(
-            """UPDATE business SET name=?, website_url=?, scheduling_link=?, handoff_webhook_url=?,
-               flow_script=?, accent_color=? WHERE id=1""",
+            """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
+               scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=? WHERE id=1""",
             (
                 settings.name,
+                settings.assistant_name,
+                settings.assistant_image_url,
                 settings.website_url,
                 settings.scheduling_link,
                 settings.handoff_webhook_url,
+                settings.handoff_email,
                 settings.flow_script,
                 settings.accent_color,
             ),

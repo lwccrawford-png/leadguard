@@ -5,6 +5,7 @@
   var API_BASE = (scriptTag && scriptTag.getAttribute("data-api-base")) || "";
   var BUSINESS_NAME = (scriptTag && scriptTag.getAttribute("data-business-name")) || "Chat with us";
   var ACCENT = (scriptTag && scriptTag.getAttribute("data-color")) || "#4f46e5";
+  var AVATAR_URL = (scriptTag && scriptTag.getAttribute("data-avatar-url")) || "";
   var GREETING =
     (scriptTag && scriptTag.getAttribute("data-greeting")) ||
     "Hi! I'm the AI assistant here — ask me anything or book an appointment.";
@@ -12,6 +13,12 @@
   if (!API_BASE) {
     console.error("[ai-frontdesk widget] Missing data-api-base on the script tag.");
     return;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
   }
 
   var SESSION_KEY = "ai_frontdesk_session_id";
@@ -42,6 +49,9 @@
     ";box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2147483000;transition:transform .15s ease;}" +
     ".bubble:hover{transform:scale(1.06);}" +
     ".bubble svg{width:28px;height:28px;fill:#fff;}" +
+    ".bubble img{width:46px;height:46px;border-radius:50%;object-fit:cover;}" +
+    ".header .avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;margin-right:8px;vertical-align:middle;}" +
+    ".header .titleRow{display:flex;align-items:center;}" +
     ".panel{position:fixed;bottom:92px;right:20px;width:340px;max-width:90vw;height:480px;max-height:70vh;background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;z-index:2147483000;}" +
     ".panel.open{display:flex;}" +
     ".header{background:" +
@@ -63,18 +73,31 @@
     ".inputRow button:disabled{opacity:.5;cursor:default;}";
   root.appendChild(style);
 
+  var CHAT_ICON_SVG =
+    '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.4 1.05 4.57 2.77 6.19-.13 1.32-.6 2.83-1.62 4.09a.5.5 0 00.5.72c2.13-.35 3.7-1.24 4.63-1.9A11.4 11.4 0 0012 21c5.52 0 10-4.03 10-9s-4.48-9-10-9z"/></svg>';
+
   var bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.innerHTML =
-    '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.4 1.05 4.57 2.77 6.19-.13 1.32-.6 2.83-1.62 4.09a.5.5 0 00.5.72c2.13-.35 3.7-1.24 4.63-1.9A11.4 11.4 0 0012 21c5.52 0 10-4.03 10-9s-4.48-9-10-9z"/></svg>';
+  if (AVATAR_URL) {
+    bubble.innerHTML = '<img src="' + escHtml(AVATAR_URL) + '" alt="" />';
+    bubble.querySelector("img").addEventListener("error", function () {
+      bubble.innerHTML = CHAT_ICON_SVG;
+    });
+  } else {
+    bubble.innerHTML = CHAT_ICON_SVG;
+  }
   root.appendChild(bubble);
+
+  var headerTitleHtml = AVATAR_URL
+    ? '<span class="titleRow"><img class="avatar" src="' + escHtml(AVATAR_URL) + '" alt="" onerror="this.remove()" />' + escHtml(BUSINESS_NAME) + "</span>"
+    : "<span>" + escHtml(BUSINESS_NAME) + "</span>";
 
   var panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML =
-    '<div class="header"><span>' +
-    BUSINESS_NAME +
-    '</span><span class="close">✕</span></div>' +
+    '<div class="header">' +
+    headerTitleHtml +
+    '<span class="close">✕</span></div>' +
     '<div class="messages"></div>' +
     '<div class="inputRow"><input type="text" placeholder="Type a message..." /><button>Send</button></div>';
   root.appendChild(panel);

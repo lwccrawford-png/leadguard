@@ -16,16 +16,18 @@ async function loadBusiness() {
   const res = await fetch("/api/business");
   const data = await res.json();
   const form = $("#settingsForm");
-  for (const key of ["name", "website_url", "scheduling_link", "handoff_webhook_url", "flow_script", "accent_color"]) {
+  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
   }
   const apiBase = window.location.origin;
+  const displayName = data.assistant_name || data.name || "Chat with us";
   $("#embedSnippet").textContent =
     `<script\n` +
     `  src="${apiBase}/widget/widget.js"\n` +
     `  data-api-base="${apiBase}"\n` +
-    `  data-business-name="${(data.name || "Chat with us").replace(/"/g, "&quot;")}"\n` +
+    `  data-business-name="${displayName.replace(/"/g, "&quot;")}"\n` +
     `  data-color="${data.accent_color || "#4f46e5"}"\n` +
+    (data.assistant_image_url ? `  data-avatar-url="${data.assistant_image_url.replace(/"/g, "&quot;")}"\n` : "") +
     `  defer\n` +
     `><\/script>`;
 }

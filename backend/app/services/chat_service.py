@@ -104,7 +104,13 @@ def _system_prompt(business: dict, context_chunks: list) -> str:
     context_text = "\n\n".join(f"[Source: {c['source']}]\n{c['text']}" for c in context_chunks) or "No matching knowledge base content found for this question."
     today = datetime.now().strftime("%A, %Y-%m-%d")
 
-    parts = [f'You are the AI assistant for "{business.get("name") or "this business"}". Today is {today}.']
+    business_name = business.get("name") or "this business"
+    assistant_name = (business.get("assistant_name") or "").strip()
+    if assistant_name:
+        parts = [f'Your name is {assistant_name}. You are the AI assistant for "{business_name}". Today is {today}.']
+        parts.append(f'Introduce yourself as {assistant_name} if asked who/what you are, but keep the focus on helping with {business_name} — don\'t dwell on your own name.')
+    else:
+        parts = [f'You are the AI assistant for "{business_name}". Today is {today}.']
 
     parts.append(
         "SAFETY (always applies, takes priority over everything else): If a visitor's message signals "
@@ -152,7 +158,12 @@ def _system_prompt(business: dict, context_chunks: list) -> str:
 def _execute_tool(tool_name: str, tool_input: dict, business: dict, conversation_id: int) -> dict:
     if tool_name == "capture_lead":
         intent = tool_input.get("intent") or "general_inquiry"
-        notified = handoff.notify(business.get("handoff_webhook_url", ""), business.get("name", "your business"), {**tool_input, "intent": intent})
+        notified = handoff.notify(
+            business.get("handoff_webhook_url", ""),
+            business.get("name", "your business"),
+            {**tool_input, "intent": intent},
+            notify_email=business.get("handoff_email", ""),
+        )
         with db_session() as conn:
             conn.execute(
                 "INSERT INTO leads (conversation_id, name, email, phone, intent, notes, handoff_notified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
