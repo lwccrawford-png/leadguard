@@ -28,7 +28,7 @@ def check_burst_limit(session_id: str) -> bool:
         return True
 
 
-def _month_start_iso() -> str:
+def month_start_iso() -> str:
     now = datetime.now(timezone.utc)
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
 
@@ -37,7 +37,7 @@ def messages_used_this_month() -> int:
     with db_session() as conn:
         row = conn.execute(
             "SELECT COUNT(*) AS c FROM messages WHERE role = 'user' AND created_at >= ?",
-            (_month_start_iso(),),
+            (month_start_iso(),),
         ).fetchone()
     return row["c"]
 

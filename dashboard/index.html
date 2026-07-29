@@ -16,6 +16,7 @@
     <button data-tab="knowledge">Knowledge</button>
     <button data-tab="leads">Leads</button>
     <button data-tab="conversations">Conversations</button>
+    <button data-tab="usage">Usage</button>
   </nav>
 
   <main>
@@ -94,6 +95,39 @@
         <h3>Ingested sources</h3>
         <table id="sourcesTable"><thead><tr><th>Type</th><th>Source</th><th>Chunks</th><th>Added</th><th></th></tr></thead><tbody></tbody></table>
       </div>
+
+      <div class="card">
+        <h3>FAQs <span class="hint">(matched directly against visitor questions — answered from the approved answer, no general search needed)</span></h3>
+        <form id="faqForm">
+          <label>Question
+            <input name="question" placeholder="e.g. What is your refund policy?" required />
+          </label>
+          <label>Answer
+            <textarea name="answer" rows="3" placeholder="The approved answer to give visitors" required></textarea>
+          </label>
+          <label>Category <span class="hint">(optional)</span>
+            <input name="category" placeholder="e.g. Policy, Pricing" />
+          </label>
+          <button type="submit">Add FAQ</button>
+          <span id="faqStatus"></span>
+        </form>
+        <table id="faqsTable"><thead><tr><th>Question</th><th>Answer</th><th>Category</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>Business Facts <span class="hint">(quick static facts — hours, phone, address — always included, no matching needed)</span></h3>
+        <form id="factForm">
+          <label>Label
+            <input name="label" placeholder="e.g. Hours, Phone, Address" required />
+          </label>
+          <label>Value
+            <input name="value" placeholder="e.g. Monday-Friday 9am-5pm" required />
+          </label>
+          <button type="submit">Add Fact</button>
+          <span id="factStatus"></span>
+        </form>
+        <table id="factsTable"><thead><tr><th>Label</th><th>Value</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
     </section>
 
     <section id="tab-leads" class="tab">
@@ -127,6 +161,22 @@
       <div class="conv-layout">
         <table id="conversationsTable"><thead><tr><th>Session</th><th>Started</th><th>Msgs</th></tr></thead><tbody></tbody></table>
         <div id="conversationDetail"><p class="muted">Select a conversation to view messages.</p></div>
+      </div>
+    </section>
+
+    <section id="tab-usage" class="tab">
+      <h2>Usage &amp; Performance</h2>
+      <p class="muted">This month, resets on the 1st.</p>
+      <div class="stat-grid" id="usageStats"></div>
+
+      <div class="card">
+        <h3>Knowledge coverage</h3>
+        <ul id="coverageList" class="coverage-list"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Knowledge gaps <span class="hint">(what visitors asked that the assistant couldn't answer — add these as FAQs or facts)</span></h3>
+        <table id="gapsTable"><thead><tr><th>Date</th><th>What was missing</th></tr></thead><tbody></tbody></table>
       </div>
     </section>
   </main>

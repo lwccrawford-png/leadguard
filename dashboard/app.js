@@ -6,9 +6,14 @@ document.querySelectorAll("#tabs button").forEach((btn) => {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     btn.classList.add("active");
     $("#tab-" + btn.dataset.tab).classList.add("active");
-    if (btn.dataset.tab === "knowledge") loadSources();
+    if (btn.dataset.tab === "knowledge") {
+      loadSources();
+      loadFaqs();
+      loadFacts();
+    }
     if (btn.dataset.tab === "leads") loadLeads();
     if (btn.dataset.tab === "conversations") loadConversations();
+    if (btn.dataset.tab === "usage") loadUsage();
   });
 });
 
@@ -113,6 +118,109 @@ async function loadSources() {
       loadSources();
     });
   });
+}
+
+$("#faqForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const payload = Object.fromEntries(new FormData(e.target).entries());
+  const status = $("#faqStatus");
+  status.textContent = "Saving…";
+  const res = await fetch("/api/knowledge/faqs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  status.textContent = res.ok ? "Added ✓" : "Error adding FAQ";
+  if (res.ok) e.target.reset();
+  loadFaqs();
+  setTimeout(() => (status.textContent = ""), 2500);
+});
+
+async function loadFaqs() {
+  const res = await fetch("/api/knowledge/faqs");
+  const rows = await res.json();
+  const tbody = $("#faqsTable tbody");
+  tbody.innerHTML =
+    rows
+      .map(
+        (f) =>
+          `<tr><td>${esc(f.question)}</td><td>${esc(f.answer).slice(0, 100)}${f.answer.length > 100 ? "…" : ""}</td><td>${esc(f.category)}</td><td><button class="delete" data-id="${f.id}" data-kind="faq">Remove</button></td></tr>`
+      )
+      .join("") || `<tr><td colspan="4" class="muted">No FAQs added yet.</td></tr>`;
+  tbody.querySelectorAll("button.delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/knowledge/faqs/${btn.dataset.id}`, { method: "DELETE" });
+      loadFaqs();
+    });
+  });
+}
+
+$("#factForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const payload = Object.fromEntries(new FormData(e.target).entries());
+  const status = $("#factStatus");
+  status.textContent = "Saving…";
+  const res = await fetch("/api/knowledge/facts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  status.textContent = res.ok ? "Added ✓" : "Error adding fact";
+  if (res.ok) e.target.reset();
+  loadFacts();
+  setTimeout(() => (status.textContent = ""), 2500);
+});
+
+async function loadFacts() {
+  const res = await fetch("/api/knowledge/facts");
+  const rows = await res.json();
+  const tbody = $("#factsTable tbody");
+  tbody.innerHTML =
+    rows
+      .map(
+        (f) =>
+          `<tr><td>${esc(f.label)}</td><td>${esc(f.value)}</td><td><button class="delete" data-id="${f.id}" data-kind="fact">Remove</button></td></tr>`
+      )
+      .join("") || `<tr><td colspan="3" class="muted">No facts added yet.</td></tr>`;
+  tbody.querySelectorAll("button.delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/knowledge/facts/${btn.dataset.id}`, { method: "DELETE" });
+      loadFacts();
+    });
+  });
+}
+
+async function loadUsage() {
+  const res = await fetch("/api/usage/summary");
+  const d = await res.json();
+
+  const stats = [
+    { label: "Messages this month", value: d.messages_used_this_month },
+    { label: "Avg response time", value: d.avg_latency_ms ? (d.avg_latency_ms / 1000).toFixed(1) + "s" : "—" },
+    { label: "Input tokens", value: d.total_input_tokens.toLocaleString() },
+    { label: "Output tokens", value: d.total_output_tokens.toLocaleString() },
+  ];
+  $("#usageStats").innerHTML = stats
+    .map((s) => `<div class="stat-tile"><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`)
+    .join("");
+
+  const coverage = [
+    { label: "FAQs", count: d.faq_count, emptyMsg: "No FAQs added yet — common questions will fall back to general search." },
+    { label: "Business Facts", count: d.facts_count, emptyMsg: "No quick facts added yet — things like hours/phone rely on the site scan or script." },
+    { label: "Knowledge sources", count: d.source_count, emptyMsg: "No site scan or manual documents yet — run a crawl in the Knowledge tab." },
+  ];
+  $("#coverageList").innerHTML = coverage
+    .map(
+      (c) =>
+        `<li class="${c.count > 0 ? "coverage-ok" : "coverage-empty"}">${c.count > 0 ? "✅" : "⚠️"} ${c.label}: ${c.count}${c.count === 0 ? ` — <span class="muted">${c.emptyMsg}</span>` : ""}</li>`
+    )
+    .join("");
+
+  const tbody = $("#gapsTable tbody");
+  tbody.innerHTML =
+    d.knowledge_gaps_this_month
+      .map((g) => `<tr><td>${fmtDate(g.created_at)}</td><td>${esc(g.notes)}</td></tr>`)
+      .join("") || `<tr><td colspan="2" class="muted">No unanswered questions logged this month.</td></tr>`;
 }
 
 const INTENT_LABELS = {

@@ -3,8 +3,10 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
+from datetime import datetime, timezone
+
 from ..db import db_session
-from ..services import ingestion, rate_limit
+from ..services import faq_matching, ingestion, rate_limit
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
@@ -36,6 +38,18 @@ class LeadUpdate(BaseModel):
 class ManualDocument(BaseModel):
     label: str
     text: str
+
+
+class FaqInput(BaseModel):
+    question: str
+    answer: str
+    category: str = ""
+    priority: int = 0
+
+
+class FactInput(BaseModel):
+    label: str
+    value: str
 
 
 @router.get("/business")
@@ -96,6 +110,95 @@ def sources():
 @router.delete("/knowledge/sources/{source_id}")
 def delete_source(source_id: int):
     ingestion.delete_source(source_id)
+    return {"ok": True}
+
+
+@router.get("/knowledge/faqs")
+def list_faqs():
+    with db_session() as conn:
+        rows = conn.execute("SELECT * FROM faqs ORDER BY priority DESC, id DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/knowledge/faqs")
+def add_faq(faq: FaqInput):
+    if not faq.question.strip() or not faq.answer.strip():
+        raise HTTPException(400, "Question and answer are both required")
+    now = datetime.now(timezone.utc).isoformat()
+    with db_session() as conn:
+        cur = conn.execute(
+            "INSERT INTO faqs (question, answer, category, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (faq.question, faq.answer, faq.category, faq.priority, now, now),
+        )
+        row = conn.execute("SELECT * FROM faqs WHERE id = ?", (cur.lastrowid,)).fetchone()
+    faq_matching.rebuild_index()
+    return dict(row)
+
+
+@router.patch("/knowledge/faqs/{faq_id}")
+def update_faq(faq_id: int, faq: FaqInput):
+    if not faq.question.strip() or not faq.answer.strip():
+        raise HTTPException(400, "Question and answer are both required")
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE faqs SET question=?, answer=?, category=?, priority=?, updated_at=? WHERE id=?",
+            (faq.question, faq.answer, faq.category, faq.priority, datetime.now(timezone.utc).isoformat(), faq_id),
+        )
+        row = conn.execute("SELECT * FROM faqs WHERE id = ?", (faq_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "FAQ not found")
+    faq_matching.rebuild_index()
+    return dict(row)
+
+
+@router.delete("/knowledge/faqs/{faq_id}")
+def delete_faq(faq_id: int):
+    with db_session() as conn:
+        conn.execute("DELETE FROM faqs WHERE id = ?", (faq_id,))
+    faq_matching.rebuild_index()
+    return {"ok": True}
+
+
+@router.get("/knowledge/facts")
+def list_facts():
+    with db_session() as conn:
+        rows = conn.execute("SELECT * FROM business_facts ORDER BY id ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/knowledge/facts")
+def add_fact(fact: FactInput):
+    if not fact.label.strip() or not fact.value.strip():
+        raise HTTPException(400, "Label and value are both required")
+    now = datetime.now(timezone.utc).isoformat()
+    with db_session() as conn:
+        cur = conn.execute(
+            "INSERT INTO business_facts (label, value, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (fact.label, fact.value, now, now),
+        )
+        row = conn.execute("SELECT * FROM business_facts WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return dict(row)
+
+
+@router.patch("/knowledge/facts/{fact_id}")
+def update_fact(fact_id: int, fact: FactInput):
+    if not fact.label.strip() or not fact.value.strip():
+        raise HTTPException(400, "Label and value are both required")
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE business_facts SET label=?, value=?, updated_at=? WHERE id=?",
+            (fact.label, fact.value, datetime.now(timezone.utc).isoformat(), fact_id),
+        )
+        row = conn.execute("SELECT * FROM business_facts WHERE id = ?", (fact_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "Fact not found")
+    return dict(row)
+
+
+@router.delete("/knowledge/facts/{fact_id}")
+def delete_fact(fact_id: int):
+    with db_session() as conn:
+        conn.execute("DELETE FROM business_facts WHERE id = ?", (fact_id,))
     return {"ok": True}
 
 
@@ -179,3 +282,42 @@ def conversation_messages(conversation_id: int):
             (conversation_id,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/usage/summary")
+def usage_summary():
+    month_start = rate_limit.month_start_iso()
+    with db_session() as conn:
+        totals = conn.execute(
+            """SELECT COUNT(*) AS assistant_messages,
+                      COALESCE(SUM(input_tokens), 0) AS total_input_tokens,
+                      COALESCE(SUM(output_tokens), 0) AS total_output_tokens,
+                      COALESCE(AVG(latency_ms), 0) AS avg_latency_ms
+               FROM messages WHERE role = 'assistant' AND created_at >= ? AND latency_ms IS NOT NULL""",
+            (month_start,),
+        ).fetchone()
+        faq_count = conn.execute("SELECT COUNT(*) AS c FROM faqs").fetchone()["c"]
+        facts_count = conn.execute("SELECT COUNT(*) AS c FROM business_facts").fetchone()["c"]
+        source_count = conn.execute("SELECT COUNT(*) AS c FROM sources").fetchone()["c"]
+        gaps = conn.execute(
+            """SELECT id, notes, created_at FROM leads
+               WHERE intent = 'unresolved_question' AND created_at >= ?
+               ORDER BY id DESC LIMIT 50""",
+            (month_start,),
+        ).fetchall()
+        gaps_count_all_time = conn.execute(
+            "SELECT COUNT(*) AS c FROM leads WHERE intent = 'unresolved_question'"
+        ).fetchone()["c"]
+
+    return {
+        "messages_used_this_month": rate_limit.messages_used_this_month(),
+        "assistant_messages_this_month": totals["assistant_messages"],
+        "total_input_tokens": totals["total_input_tokens"],
+        "total_output_tokens": totals["total_output_tokens"],
+        "avg_latency_ms": round(totals["avg_latency_ms"]) if totals["avg_latency_ms"] else 0,
+        "faq_count": faq_count,
+        "facts_count": facts_count,
+        "source_count": source_count,
+        "knowledge_gaps_this_month": [dict(g) for g in gaps],
+        "knowledge_gaps_all_time_count": gaps_count_all_time,
+    }

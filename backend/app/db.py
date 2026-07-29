@@ -47,7 +47,33 @@ CREATE TABLE IF NOT EXISTS messages (
     conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    latency_ms INTEGER,
+    input_tokens INTEGER,
+    output_tokens INTEGER
+);
+
+-- Structured Layer 1 knowledge (V1_UPDATE_SPEC.md §2A): flexible key/value facts
+-- (hours, phone, address, short policy summaries) — always cheap enough to include
+-- in every system prompt directly, no retrieval call needed.
+CREATE TABLE IF NOT EXISTS business_facts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+-- Structured Layer 1 knowledge: approved FAQs (V1_UPDATE_SPEC.md §3.5). Matched via a
+-- dedicated lightweight index before falling back to general knowledge-base retrieval.
+CREATE TABLE IF NOT EXISTS faqs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    category TEXT,
+    priority INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS leads (
@@ -98,6 +124,9 @@ def init_db():
             "ALTER TABLE business ADD COLUMN assistant_name TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN assistant_image_url TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN monthly_message_limit INTEGER NOT NULL DEFAULT 500",
+            "ALTER TABLE messages ADD COLUMN latency_ms INTEGER",
+            "ALTER TABLE messages ADD COLUMN input_tokens INTEGER",
+            "ALTER TABLE messages ADD COLUMN output_tokens INTEGER",
         ]:
             try:
                 conn.execute(migration)

@@ -4,6 +4,43 @@ Audit date: 2026-07-29. Verified directly against the current code (not from
 memory) — `backend/app/db.py`, `services/chat_service.py`, `services/retrieval.py`,
 `services/ingestion.py`, `routers/business.py`, `widget/widget.js`.
 
+## Phase 1 status update (2026-07-29, later same day)
+
+Approved per `BIA_structured_knowledge_layer.md` and implemented:
+
+- **§2A SQL structured layer** — `business_facts` (key/value, always included in
+  every prompt, no matching needed) and `faqs` (question/answer/category/priority)
+  tables added. **Was Missing → now Partial** (Services/Policies/Qualification/CTA
+  modules remain deferred, per the phased plan).
+- **§2A Source priority routing** — a dedicated FAQ-matching index is checked
+  before general retrieval; a confident match skips the TF-IDF chunk pass
+  entirely. **Was Missing → now Partial** (client-context and full priority
+  chain from §4.3 still not implemented — only the FAQ-vs-general-KB priority
+  exists so far).
+- **§7.2 Unnecessary-research prevention** — confirmed via test and live
+  measurement: FAQ-matched questions use ~1,800 input tokens vs. ~2,900 for the
+  same conversation falling through to general retrieval. **Was Partial → now
+  Partial-but-measured** (real numbers now exist; full §7 tool-threshold logic
+  still doesn't gate the general retrieval call itself, only FAQ vs. general).
+- **§10 Performance targets/logging** — `latency_ms`, `input_tokens`,
+  `output_tokens` now captured on every assistant message, summed across
+  tool-use rounds. **Was Missing → now Implemented** (response-duration
+  logging; no per-tool-call breakdown yet).
+- **§17 Logging/analytics** — a Usage & Performance dashboard view surfaces
+  monthly tokens/latency, knowledge coverage (FAQ/fact/source counts), and a
+  live list of `unresolved_question` leads as knowledge gaps. **Was Missing →
+  now Partial** (this is a live dashboard view, not the fuller report set
+  §17 describes — most-common-questions, tool failure rates, etc. still absent).
+- **Testing** — a pytest suite now covers source-priority routing,
+  unnecessary-research prevention, client-context retention, callback/human
+  handoff, and tool-failure handling, per the update spec's own testing
+  requirement (§22). 23 tests, no live API calls, ~1.2s runtime.
+
+Still open from the original audit: Services catalog, Qualification rules,
+CTA definitions, conflict detection, confidence-scored approval workflow, a
+true vector database, and the fuller admin review interface (§16). Deferred
+intentionally per the Phase 1 scoping in the Business Impact Analysis.
+
 ## Section 22 Audit Answers
 
 1. **How is website content crawled?** `services/ingestion.py::crawl_site()` —

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime, timezone
 
 import anthropic
 
 from ..config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from ..db import db_session
-from . import handoff, rate_limit, retrieval
+from . import faq_matching, handoff, rate_limit, retrieval
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -83,12 +84,18 @@ def _get_or_create_conversation(session_id: str, visitor_ip):
         return cur.lastrowid
 
 
-def _save_message(conversation_id: int, role: str, content: str):
+def _save_message(conversation_id: int, role: str, content: str, latency_ms: int = None, input_tokens: int = None, output_tokens: int = None):
     with db_session() as conn:
         conn.execute(
-            "INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-            (conversation_id, role, content, datetime.now(timezone.utc).isoformat()),
+            "INSERT INTO messages (conversation_id, role, content, created_at, latency_ms, input_tokens, output_tokens) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (conversation_id, role, content, datetime.now(timezone.utc).isoformat(), latency_ms, input_tokens, output_tokens),
         )
+
+
+def _get_facts():
+    with db_session() as conn:
+        rows = conn.execute("SELECT label, value FROM business_facts ORDER BY id ASC").fetchall()
+    return [dict(r) for r in rows]
 
 
 def _load_history(conversation_id: int):
@@ -100,8 +107,7 @@ def _load_history(conversation_id: int):
     return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
 
 
-def _system_prompt(business: dict, context_chunks: list) -> str:
-    context_text = "\n\n".join(f"[Source: {c['source']}]\n{c['text']}" for c in context_chunks) or "No matching knowledge base content found for this question."
+def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = None, facts: list = None) -> str:
     today = datetime.now().strftime("%A, %Y-%m-%d")
 
     business_name = business.get("name") or "this business"
@@ -140,18 +146,41 @@ def _system_prompt(business: dict, context_chunks: list) -> str:
     )
 
     parts.append(
-        "EXAMPLE of the unresolved_question rule (follow this pattern exactly):\n"
-        "Visitor: \"What's your refund policy?\"\n"
+        "EXAMPLE of the unresolved_question rule (follow this pattern exactly — this example topic is "
+        "illustrative only, apply the PATTERN to whatever topic is actually missing, and note that an "
+        "APPROVED FAQ MATCH or BUSINESS FACTS entry below always overrides this — if the topic IS covered "
+        "there, answer from it directly and do not treat it as unresolved):\n"
+        "Visitor: \"Do you have a location in Alaska?\"\n"
         "You: [reply that you don't have that, offer to have the team follow up] "
         "[in the SAME turn, call capture_lead with intent=unresolved_question, name/email/phone left blank, "
-        "notes=\"Asked about refund policy, not in knowledge base\"]\n"
+        "notes=\"Asked about an Alaska location, not in knowledge base\"]\n"
         "You do NOT wait for a second attempt, and you do NOT wait for contact info first — the tool call "
         "happens in the same turn as your very first \"I don't know\" on a knowledge-base gap that sounds "
         "important to the visitor (pricing, policies, guarantees). Asking the visitor for their email is a "
         "separate, following step, not a precondition for calling the tool."
     )
 
-    parts.append("KNOWLEDGE BASE:\n" + context_text)
+    if facts:
+        facts_text = "\n".join(f"- {f['label']}: {f['value']}" for f in facts)
+        parts.append(
+            "BUSINESS FACTS (structured, always trust these over anything else for these specific "
+            "items):\n" + facts_text
+        )
+
+    if matched_faq:
+        parts.append(
+            "APPROVED FAQ MATCH — this question was matched to a pre-approved FAQ with high confidence. "
+            "Answer from this directly (you may rephrase naturally to fit the conversation, but do not "
+            "contradict it, and do not treat this as uncertain or in need of further research):\n"
+            f"Q: {matched_faq['question']}\nA: {matched_faq['answer']}"
+        )
+    else:
+        context_text = (
+            "\n\n".join(f"[Source: {c['source']}]\n{c['text']}" for c in context_chunks)
+            or "No matching knowledge base content found for this question."
+        )
+        parts.append("KNOWLEDGE BASE:\n" + context_text)
+
     return "\n\n".join(parts)
 
 
@@ -227,10 +256,21 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
     conversation_id = _get_or_create_conversation(session_id, visitor_ip)
     _save_message(conversation_id, "user", user_message)
 
-    context_chunks = retrieval.retrieve(user_message, top_k=5)
-    system_prompt = _system_prompt(business, context_chunks)
+    # Source-priority routing (V1_UPDATE_SPEC.md §2A/§4.3): check the approved FAQ fast path
+    # first. A confident match skips general knowledge-base retrieval entirely — smaller
+    # prompt, fewer tokens, and an answer grounded in pre-approved text rather than a chunk dump.
+    matched_faq = faq_matching.match(user_message)
+    context_chunks = [] if matched_faq else retrieval.retrieve(user_message, top_k=5)
+    facts = _get_facts()
+    system_prompt = _system_prompt(business, context_chunks, matched_faq=matched_faq, facts=facts)
     messages = _load_history(conversation_id)
     collected_text = []
+    total_input_tokens = 0
+    total_output_tokens = 0
+    start_time = time.perf_counter()
+
+    def elapsed_ms():
+        return int((time.perf_counter() - start_time) * 1000)
 
     for _ in range(MAX_TOOL_ROUNDS):
         try:
@@ -243,8 +283,11 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
             )
         except anthropic.APIError:
             fallback = "Sorry, I'm having a connection issue right now — please try again in a moment."
-            _save_message(conversation_id, "assistant", fallback)
+            _save_message(conversation_id, "assistant", fallback, elapsed_ms(), total_input_tokens, total_output_tokens)
             return {"reply": fallback}
+
+        total_input_tokens += response.usage.input_tokens
+        total_output_tokens += response.usage.output_tokens
 
         # Claude can emit text AND call a tool in the same turn (e.g. explain + capture_lead) —
         # collect text from every round, not just the final one, or it gets silently dropped.
@@ -252,7 +295,7 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
 
         if response.stop_reason != "tool_use":
             final_text = "\n\n".join(collected_text).strip()
-            _save_message(conversation_id, "assistant", final_text)
+            _save_message(conversation_id, "assistant", final_text, elapsed_ms(), total_input_tokens, total_output_tokens)
             return {"reply": final_text}
 
         messages.append({"role": "assistant", "content": response.content})
@@ -264,5 +307,5 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
         messages.append({"role": "user", "content": tool_results})
 
     fallback = "Sorry, I'm having trouble completing that right now — could you leave your contact info and we'll follow up?"
-    _save_message(conversation_id, "assistant", fallback)
+    _save_message(conversation_id, "assistant", fallback, elapsed_ms(), total_input_tokens, total_output_tokens)
     return {"reply": fallback}

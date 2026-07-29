@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from ..config import INDEX_PATH
 from ..db import db_session
+from .text_matching import tokenize
 
 _lock = threading.Lock()
 _cache = None
@@ -20,7 +21,7 @@ def rebuild_index():
     if not chunks:
         index = {"vectorizer": None, "matrix": None, "chunks": []}
     else:
-        vectorizer = TfidfVectorizer(stop_words="english", max_features=20000)
+        vectorizer = TfidfVectorizer(tokenizer=tokenize, token_pattern=None, stop_words="english", max_features=20000)
         matrix = vectorizer.fit_transform([c["text"] for c in chunks])
         index = {"vectorizer": vectorizer, "matrix": matrix, "chunks": chunks}
 
