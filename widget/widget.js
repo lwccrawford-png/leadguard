@@ -82,7 +82,7 @@
     ".header{background:" +
     ACCENT +
     ";color:#fff;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;}" +
-    ".close{cursor:pointer;opacity:.85;font-size:18px;line-height:1;}" +
+    ".close{cursor:pointer;opacity:.85;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin:-8px -10px -8px 0;}" +
     ".messages{flex:1;overflow-y:auto;padding:12px;background:#f7f7f9;display:flex;flex-direction:column;gap:8px;}" +
     ".msg{max-width:80%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.35;white-space:pre-wrap;}" +
     ".msg.user{align-self:flex-end;background:" +
@@ -100,10 +100,12 @@
     ".typing-dots span:nth-child(3){animation-delay:.3s;}" +
     "@keyframes leadguardTypingBounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}" +
     ".inputRow{display:flex;border-top:1px solid #eee;padding:8px;gap:8px;}" +
-    ".inputRow input{flex:1;border:1px solid #ddd;border-radius:20px;padding:9px 14px;font-size:14px;outline:none;}" +
-    ".inputRow button{background:" +
+    // font-size must be >=16px or iOS Safari auto-zooms the page on focus, which is jarring
+    // inside an embedded widget — this isn't a style preference, it's a hard mobile threshold.
+    ".inputRow input{flex:1;min-height:44px;border:1px solid #ddd;border-radius:22px;padding:9px 14px;font-size:16px;outline:none;}" +
+    ".inputRow button{min-height:44px;min-width:44px;background:" +
     ACCENT +
-    ";color:#fff;border:none;border-radius:20px;padding:0 16px;font-size:14px;cursor:pointer;}" +
+    ";color:#fff;border:none;border-radius:22px;padding:0 18px;font-size:15px;cursor:pointer;}" +
     ".inputRow button:disabled{opacity:.5;cursor:default;}";
   root.appendChild(style);
 
