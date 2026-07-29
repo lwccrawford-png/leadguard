@@ -21,6 +21,31 @@
     });
   }
 
+  // Matches a URL or a phone-shaped number in one pass so neither can be re-processed
+  // inside the other's replacement (a nested <a> would break click behavior).
+  var LINK_RE = /(https?:\/\/[^\s<>"')]+)|(\+?1?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/g;
+
+  function linkify(escapedText) {
+    return escapedText.replace(LINK_RE, function (match, urlMatch, phoneMatch) {
+      if (urlMatch) {
+        var trail = "";
+        var trailMatch = urlMatch.match(/[.,;:!?)\]]+$/);
+        var url = urlMatch;
+        if (trailMatch) {
+          trail = trailMatch[0];
+          url = urlMatch.slice(0, -trail.length);
+        }
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + "</a>" + trail;
+      }
+      if (phoneMatch) {
+        var digits = phoneMatch.replace(/[^\d+]/g, "");
+        if (digits.replace(/\D/g, "").length < 10) return match; // avoid false positives, e.g. short numbers
+        return '<a href="tel:' + digits + '">' + phoneMatch + "</a>";
+      }
+      return match;
+    });
+  }
+
   var SESSION_KEY = "ai_frontdesk_session_id";
   function getSessionId() {
     try {
@@ -64,6 +89,10 @@
     ACCENT +
     ";color:#fff;border-bottom-right-radius:4px;}" +
     ".msg.assistant{align-self:flex-start;background:#fff;color:#222;border:1px solid #e5e5ea;border-bottom-left-radius:4px;}" +
+    ".msg a{color:" +
+    ACCENT +
+    ";font-weight:600;text-decoration:underline;word-break:break-all;}" +
+    ".msg.user a{color:#fff;}" +
     ".msg.typing{align-self:flex-start;color:#888;font-style:italic;}" +
     ".inputRow{display:flex;border-top:1px solid #eee;padding:8px;gap:8px;}" +
     ".inputRow input{flex:1;border:1px solid #ddd;border-radius:20px;padding:9px 14px;font-size:14px;outline:none;}" +
@@ -110,7 +139,7 @@
   function addMessage(role, text) {
     var el = document.createElement("div");
     el.className = "msg " + role;
-    el.textContent = text;
+    el.innerHTML = linkify(escHtml(text));
     messagesEl.appendChild(el);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return el;
