@@ -128,6 +128,16 @@
         </form>
         <table id="factsTable"><thead><tr><th>Label</th><th>Value</th><th></th></tr></thead><tbody></tbody></table>
       </div>
+
+      <div class="card">
+        <h3>AI search discoverability <span class="hint">(help this business show up in ChatGPT/Perplexity/Google AI answers)</span></h3>
+        <p>FAQPage structured data, generated live from your FAQs above. Paste this into the site's <code>&lt;head&gt;</code>:</p>
+        <pre id="faqSchemaSnippet">Loading…</pre>
+        <h4>AI crawler access check</h4>
+        <p class="muted">Checks the business's robots.txt — a blocked crawler here means this business can't be found through that AI surface at all.</p>
+        <button id="checkCrawlersBtn" type="button">Check Now</button>
+        <table id="crawlerTable"><thead><tr><th>Crawler</th><th>Used by</th><th>Status</th></tr></thead><tbody></tbody></table>
+      </div>
     </section>
 
     <section id="tab-leads" class="tab">

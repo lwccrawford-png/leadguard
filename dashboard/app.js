@@ -10,6 +10,7 @@ document.querySelectorAll("#tabs button").forEach((btn) => {
       loadSources();
       loadFaqs();
       loadFacts();
+      loadFaqSchema();
     }
     if (btn.dataset.tab === "leads") loadLeads();
     if (btn.dataset.tab === "conversations") loadConversations();
@@ -189,6 +190,41 @@ async function loadFacts() {
     });
   });
 }
+
+async function loadFaqSchema() {
+  const res = await fetch("/api/seo/faq-schema");
+  const schema = await res.json();
+  const el = $("#faqSchemaSnippet");
+  if (!schema.mainEntity || schema.mainEntity.length === 0) {
+    el.textContent = "Add at least one FAQ above to generate this.";
+    return;
+  }
+  el.textContent = `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n<\/script>`;
+}
+
+$("#checkCrawlersBtn").addEventListener("click", async () => {
+  const btn = $("#checkCrawlersBtn");
+  const tbody = $("#crawlerTable tbody");
+  btn.disabled = true;
+  btn.textContent = "Checking…";
+  tbody.innerHTML = `<tr><td colspan="3" class="muted">Checking robots.txt…</td></tr>`;
+
+  const res = await fetch("/api/seo/ai-crawler-access");
+  const data = await res.json();
+  btn.disabled = false;
+  btn.textContent = "Check Now";
+
+  if (!data.checked) {
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">${esc(data.message)}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.results
+    .map(
+      (r) =>
+        `<tr><td>${esc(r.bot)}</td><td>${esc(r.description)}</td><td>${r.allowed ? "✅ Allowed" : "🚫 Blocked"}</td></tr>`
+    )
+    .join("");
+});
 
 async function loadUsage() {
   const res = await fetch("/api/usage/summary");

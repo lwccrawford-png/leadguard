@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 
 from ..db import db_session
-from ..services import faq_matching, ingestion, rate_limit
+from ..services import faq_matching, ingestion, rate_limit, seo
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
@@ -321,3 +321,19 @@ def usage_summary():
         "knowledge_gaps_this_month": [dict(g) for g in gaps],
         "knowledge_gaps_all_time_count": gaps_count_all_time,
     }
+
+
+@router.get("/seo/faq-schema")
+def faq_schema():
+    return seo.generate_faq_schema()
+
+
+@router.get("/seo/ai-crawler-access")
+def ai_crawler_access():
+    with db_session() as conn:
+        row = conn.execute("SELECT website_url FROM business WHERE id = 1").fetchone()
+    website_url = row["website_url"] if row else ""
+    if not website_url:
+        return {"checked": False, "results": [], "message": "Set a website URL in Settings first."}
+    results = seo.check_ai_crawler_access(website_url)
+    return {"checked": True, "results": results}
