@@ -93,7 +93,12 @@
     ACCENT +
     ";font-weight:600;text-decoration:underline;word-break:break-all;}" +
     ".msg.user a{color:#fff;}" +
-    ".msg.typing{align-self:flex-start;color:#888;font-style:italic;}" +
+    ".msg.typing{align-self:flex-start;background:#fff;border:1px solid #e5e5ea;padding:11px 14px;}" +
+    ".typing-dots{display:inline-flex;gap:4px;align-items:center;}" +
+    ".typing-dots span{width:6px;height:6px;border-radius:50%;background:#9aa0a6;display:inline-block;animation:leadguardTypingBounce 1.2s infinite ease-in-out;}" +
+    ".typing-dots span:nth-child(2){animation-delay:.15s;}" +
+    ".typing-dots span:nth-child(3){animation-delay:.3s;}" +
+    "@keyframes leadguardTypingBounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}" +
     ".inputRow{display:flex;border-top:1px solid #eee;padding:8px;gap:8px;}" +
     ".inputRow input{flex:1;border:1px solid #ddd;border-radius:20px;padding:9px 14px;font-size:14px;outline:none;}" +
     ".inputRow button{background:" +
@@ -145,6 +150,15 @@
     return el;
   }
 
+  function addTypingIndicator() {
+    var el = document.createElement("div");
+    el.className = "msg typing";
+    el.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
   var greeted = false;
   function openPanel() {
     panel.classList.add("open");
@@ -173,8 +187,7 @@
     inputEl.value = "";
     sending = true;
     sendBtn.disabled = true;
-    var typingEl = addMessage("typing", "...");
-    typingEl.classList.add("typing");
+    var typingEl = addTypingIndicator();
 
     fetch(API_BASE.replace(/\/$/, "") + "/api/chat", {
       method: "POST",
