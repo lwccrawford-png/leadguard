@@ -52,6 +52,18 @@ TOOLS = [
                     ],
                     "description": "What kind of follow-up this is, so the team can triage/divide it up.",
                 },
+                "discovery_phase": {
+                    "type": "string",
+                    "enum": [
+                        "fact_finding",
+                        "price_shopping",
+                        "comparing_providers",
+                        "evaluating_fit",
+                        "ready_to_book",
+                    ],
+                    "description": "Where the visitor was in their buying journey when you captured them — "
+                    "see the DISCOVERY PHASES section of your instructions for what each one means.",
+                },
                 "notes": {
                     "type": "string",
                     "description": "What they want, plus any specifics mentioned: which event, how many "
@@ -138,6 +150,30 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
         parts.append(f"When it's time to book/schedule, share this link: {business['scheduling_link']}")
 
     parts.append(
+        "DISCOVERY PHASES — silently classify which phase the visitor is in from their messages, and let "
+        "it shape your response and recommendation:\n"
+        "- fact_finding: basic informational questions (hours, services, general \"what do you do\"). "
+        "Just answer directly. Don't push a next step yet, but a soft, low-pressure invitation to go "
+        "deeper is fine if it fits naturally.\n"
+        "- price_shopping: asking about cost specifically. Give whatever range/context is in your "
+        "knowledge, then recommend a discovery call for an accurate quote for their situation.\n"
+        "- comparing_providers: weighing this business against alternatives. Lead with genuine "
+        "differentiators from your knowledge, then recommend a discovery call so they can ask direct "
+        "questions.\n"
+        "- evaluating_fit: trying to determine if this business solves THEIR specific situation (more "
+        "personal than fact_finding). Ask one or two clarifying questions, give preliminary guidance, "
+        "then recommend a discovery call.\n"
+        "- ready_to_book: they've signaled they want to move forward. Skip the soft-sell — go straight "
+        "to booking, capturing their info, or offering a direct call/text.\n"
+        "\n"
+        "Regardless of phase: every substantive conversation must work toward one of exactly four "
+        "closing actions — (1) booking/scheduling, (2) capturing contact info for follow-up, (3) a "
+        "clickable phone call, or (4) a clickable text message. Never let a real conversation just trail "
+        "off with information and no next step. Whenever you call capture_lead, include the "
+        "discovery_phase you identified."
+    )
+
+    parts.append(
         "Answer using the KNOWLEDGE BASE below when relevant. If you don't know, say so and offer to "
         "have the business follow up. Call capture_lead whenever you get the visitor's contact info or "
         "they want a follow-up/booking. Keep replies short and conversational. This is a plain-text chat "
@@ -195,13 +231,14 @@ def _execute_tool(tool_name: str, tool_input: dict, business: dict, conversation
         )
         with db_session() as conn:
             conn.execute(
-                "INSERT INTO leads (conversation_id, name, email, phone, intent, notes, handoff_notified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO leads (conversation_id, name, email, phone, intent, discovery_phase, notes, handoff_notified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     conversation_id,
                     tool_input.get("name"),
                     tool_input.get("email"),
                     tool_input.get("phone"),
                     intent,
+                    tool_input.get("discovery_phase"),
                     tool_input.get("notes", ""),
                     1 if notified else 0,
                     datetime.now(timezone.utc).isoformat(),

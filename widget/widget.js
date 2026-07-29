@@ -25,8 +25,10 @@
   // inside the other's replacement (a nested <a> would break click behavior).
   var LINK_RE = /(https?:\/\/[^\s<>"')]+)|(\+?1?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/g;
 
+  var TEXT_CONTEXT_RE = /\b(text|sms|txt)\b/i;
+
   function linkify(escapedText) {
-    return escapedText.replace(LINK_RE, function (match, urlMatch, phoneMatch) {
+    return escapedText.replace(LINK_RE, function (match, urlMatch, phoneMatch, offset, fullString) {
       if (urlMatch) {
         var trail = "";
         var trailMatch = urlMatch.match(/[.,;:!?)\]]+$/);
@@ -40,7 +42,11 @@
       if (phoneMatch) {
         var digits = phoneMatch.replace(/[^\d+]/g, "");
         if (digits.replace(/\D/g, "").length < 10) return match; // avoid false positives, e.g. short numbers
-        return '<a href="tel:' + digits + '">' + phoneMatch + "</a>";
+        // "text us at 555-..." should open Messages, not the dialer — check the words just
+        // before the number for that intent, defaulting to a phone call otherwise.
+        var precedingText = fullString.slice(Math.max(0, offset - 25), offset);
+        var scheme = TEXT_CONTEXT_RE.test(precedingText) ? "sms" : "tel";
+        return '<a href="' + scheme + ":" + digits + '">' + phoneMatch + "</a>";
       }
       return match;
     });

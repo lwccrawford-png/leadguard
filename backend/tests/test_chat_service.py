@@ -131,6 +131,44 @@ def test_capture_lead_tool_persists_and_notifies(monkeypatch):
     assert row["handoff_notified"] == 1
 
 
+# ---------------------------------------------------------------- discovery phase presets
+
+def test_capture_lead_persists_discovery_phase(monkeypatch):
+    monkeypatch.setattr(chat_service.handoff, "notify", lambda *a, **k: True)
+
+    with patch.object(
+        chat_service.client.messages, "create",
+        side_effect=[
+            _tool_use_response(
+                "capture_lead",
+                {
+                    "name": "Sam",
+                    "email": "sam@example.com",
+                    "intent": "call_booking",
+                    "discovery_phase": "ready_to_book",
+                    "notes": "wants to sign up now",
+                },
+            ),
+            _text_response("Great, Sam — let's get that booked."),
+        ],
+    ):
+        chat_service.handle_message("session-phase", "I'm ready to sign up, book me a call")
+
+    with db_session() as conn:
+        row = conn.execute("SELECT * FROM leads WHERE email = 'sam@example.com'").fetchone()
+    assert row is not None
+    assert row["discovery_phase"] == "ready_to_book"
+
+
+def test_capture_lead_discovery_phase_is_optional():
+    """A lead captured without a recognizable phase (e.g. a crisis handoff) shouldn't error —
+    discovery_phase is informational, not required."""
+    result = chat_service._execute_tool(
+        "capture_lead", {"name": "Anon", "intent": "urgent_crisis"}, {"name": "Acme"}, conversation_id=None
+    )
+    assert result["saved"] is True
+
+
 # ---------------------------------------------------------------- tool-failure handling
 
 def test_handle_message_api_error_returns_graceful_fallback():

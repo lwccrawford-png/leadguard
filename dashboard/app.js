@@ -339,6 +339,13 @@ async function loadLeads() {
 }
 
 const STATUS_LABELS = { new: "New", claimed: "Claimed", done: "Done" };
+const DISCOVERY_PHASE_LABELS = {
+  fact_finding: "Fact finding",
+  price_shopping: "Price shopping",
+  comparing_providers: "Comparing providers",
+  evaluating_fit: "Evaluating fit",
+  ready_to_book: "Ready to book",
+};
 const OUTCOME_LABELS = {
   booked: "✅ Booked",
   not_interested: "🚫 Not interested",
@@ -362,6 +369,7 @@ function cardHtml(r) {
   return `
     <div class="lead-card" draggable="true" data-id="${r.id}">
       <div class="lead-card-intent">${INTENT_LABELS[r.intent] || esc(r.intent)}</div>
+      ${r.discovery_phase ? `<div class="lead-card-phase">${esc(DISCOVERY_PHASE_LABELS[r.discovery_phase] || r.discovery_phase)}</div>` : ""}
       <div class="lead-card-name">${esc(r.name) || "<em>No name given</em>"}</div>
       ${contact ? `<div class="lead-card-contact">${esc(contact)}</div>` : ""}
       <label class="card-field-label">Notes</label>

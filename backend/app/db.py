@@ -83,6 +83,10 @@ CREATE TABLE IF NOT EXISTS leads (
     email TEXT,
     phone TEXT,
     intent TEXT NOT NULL DEFAULT 'general_inquiry',
+    -- Where the visitor was in their buying journey when captured — a fixed, business-agnostic
+    -- taxonomy standing in for the spec's generic 12-stage funnel model. Complementary to
+    -- `intent` (what the follow-up is for), not a replacement for it.
+    discovery_phase TEXT,
     notes TEXT,
     good_to_know TEXT,
     status TEXT NOT NULL DEFAULT 'new',
@@ -127,6 +131,7 @@ def init_db():
             "ALTER TABLE messages ADD COLUMN latency_ms INTEGER",
             "ALTER TABLE messages ADD COLUMN input_tokens INTEGER",
             "ALTER TABLE messages ADD COLUMN output_tokens INTEGER",
+            "ALTER TABLE leads ADD COLUMN discovery_phase TEXT",
         ]:
             try:
                 conn.execute(migration)
