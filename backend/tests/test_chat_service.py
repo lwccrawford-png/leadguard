@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.parse import parse_qsl, urlparse
 
 import anthropic
 
@@ -167,6 +168,60 @@ def test_capture_lead_discovery_phase_is_optional():
         "capture_lead", {"name": "Anon", "intent": "urgent_crisis"}, {"name": "Acme"}, conversation_id=None
     )
     assert result["saved"] is True
+
+
+# ---------------------------------------------------------------- scheduling link prefill
+
+def test_build_tools_omits_scheduling_link_tool_when_not_configured():
+    tools = chat_service._build_tools({"scheduling_link": ""})
+    assert all(t["name"] != "get_scheduling_link" for t in tools)
+
+
+def test_build_tools_includes_scheduling_link_tool_when_configured():
+    tools = chat_service._build_tools({"scheduling_link": "https://cal.com/acme/intro"})
+    assert any(t["name"] == "get_scheduling_link" for t in tools)
+
+
+def test_build_prefilled_link_adds_known_contact_params():
+    url = chat_service._build_prefilled_link(
+        "https://cal.com/acme/intro", name="Jane Doe", email="jane@example.com", phone="555-1234"
+    )
+    parsed = dict(parse_qsl(urlparse(url).query))
+    assert parsed["name"] == "Jane Doe"
+    assert parsed["firstName"] == "Jane"
+    assert parsed["lastName"] == "Doe"
+    assert parsed["email"] == "jane@example.com"
+    assert parsed["phone"] == "555-1234"
+
+
+def test_build_prefilled_link_preserves_existing_query_params():
+    url = chat_service._build_prefilled_link("https://cal.com/acme/intro?theme=dark", name="Jane")
+    parsed = dict(parse_qsl(urlparse(url).query))
+    assert parsed["theme"] == "dark"
+    assert parsed["name"] == "Jane"
+
+
+def test_build_prefilled_link_falls_back_to_base_url_with_no_contact_info():
+    url = chat_service._build_prefilled_link("https://cal.com/acme/intro")
+    assert url == "https://cal.com/acme/intro"
+
+
+def test_execute_tool_get_scheduling_link_returns_prefilled_url():
+    result = chat_service._execute_tool(
+        "get_scheduling_link",
+        {"name": "Sam", "email": "sam@example.com"},
+        {"scheduling_link": "https://cal.com/acme/intro"},
+        conversation_id=None,
+    )
+    parsed = dict(parse_qsl(urlparse(result["url"]).query))
+    assert parsed["email"] == "sam@example.com"
+
+
+def test_execute_tool_get_scheduling_link_errors_without_configured_link():
+    result = chat_service._execute_tool(
+        "get_scheduling_link", {"name": "Sam"}, {"scheduling_link": ""}, conversation_id=None
+    )
+    assert "error" in result
 
 
 # ---------------------------------------------------------------- tool-failure handling

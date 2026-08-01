@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Client Directory — Mockup (Internal, Never Publish)</title>
+<link rel="stylesheet" href="../dashboard/style.css" />
+<style>
+  .danger-banner {
+    background: #fef2f2; border-bottom: 3px solid #b91c1c; color: #7f1d1d;
+    padding: 14px 24px; font-size: 13px; line-height: 1.5;
+  }
+  .danger-banner strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .dir-search { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; width: 260px; }
+  .dir-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+
+  .client-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 20px; }
+  .client-info { flex: 1; }
+  .client-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .status-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 2px 8px; border-radius: 10px; }
+  .status-pill.live { background: #eafbf0; color: #15803d; }
+  .status-pill.demo { background: #eef0ff; color: var(--accent); }
+  .status-pill.onboarding { background: #fff7e6; color: #b45309; }
+  .status-pill.trial { background: #e6f3fb; color: #1d4ed8; }
+  .status-pill.paused { background: #f1f0ee; color: #6b7280; }
+  .status-pill.lapsed { background: #fef2f2; color: #b91c1c; }
+  .client-meta { font-size: 12.5px; color: #777; margin-top: 4px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .client-meta span strong { color: #444; font-weight: 600; }
+  .client-notes { font-size: 12.5px; color: #999; margin-top: 4px; font-style: italic; }
+  .open-btn { white-space: nowrap; }
+
+  .add-client-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--accent); font-weight: 600; padding: 14px; border-radius: 10px; cursor: pointer; font-size: 14px; margin-top: 4px; }
+
+  .status-filters { display: flex; gap: 8px; }
+  .status-filter-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; color: #555;
+  }
+  .status-filter-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-filter-btn.all .dot { background: #999; }
+  .status-filter-btn.live .dot { background: #15803d; }
+  .status-filter-btn.demo .dot { background: var(--accent); }
+  .status-filter-btn.onboarding .dot { background: #b45309; }
+  .status-filter-btn.trial .dot { background: #1d4ed8; }
+  .status-filter-btn.paused .dot { background: #6b7280; }
+  .status-filter-btn.lapsed .dot { background: #b91c1c; }
+  .status-filter-btn.active { border-color: var(--ink, #222); font-weight: 700; background: #f5f5f7; }
+  .status-filter-btn .fcount { color: #999; font-weight: 400; }
+</style>
+</head>
+<body>
+  <div class="danger-banner">
+    <strong>Internal use only — never publish this page or its underlying file.</strong>
+    Every dashboard link below has no login of its own. This page is a single index of every client's
+    unauthenticated dashboard — treat it like a password list, not a bookmarks page. Keep it local-only
+    or behind your own device, never a public URL.
+  </div>
+  <header>
+    <h1>LeadGuard <span class="badge">Client Directory</span></h1>
+  </header>
+
+  <main>
+    <div class="dir-toolbar">
+      <div class="status-filters" id="statusFilters"></div>
+      <input class="dir-search" id="search" type="text" placeholder="Search clients..." />
+    </div>
+
+    <div id="clientList"></div>
+
+    <button class="add-client-btn" type="button">+ Add client (after onboarding)</button>
+  </main>
+
+<script>
+const CLIENTS = [
+  {
+    name: "LMTLSS", status: "live",
+    url: "http://localhost:8000/dashboard/",
+    scheduling: "—", handoff: "Slack #lmtlss-leads", liveSince: "2026-07-15",
+    notes: "Pilot client",
+  },
+  {
+    name: "Evolve Credit Repair", status: "demo",
+    url: "http://localhost:8001/dashboard/",
+    scheduling: "Calendly", handoff: "—", liveSince: "2026-07-28",
+    notes: "Demo instance for partner meeting",
+  },
+  {
+    name: "Riverside Auto Detailing", status: "onboarding",
+    url: "http://localhost:8002/dashboard/",
+    scheduling: "Acuity", handoff: "Email", liveSince: "—",
+    notes: "Signed up 7/28, knowledge base still being filled in",
+  },
+  {
+    name: "Cedar Grove Fellowship", status: "lapsed",
+    url: "http://localhost:8003/dashboard/",
+    scheduling: "—", handoff: "Email", liveSince: "2026-03-01",
+    notes: "Stopped paying 6/1 — instance still running, decommission or re-engage",
+  },
+  {
+    name: "Northgate Fitness Studio", status: "trial",
+    url: "http://localhost:8004/dashboard/",
+    scheduling: "Calendly", handoff: "Slack #northgate", liveSince: "—",
+    notes: "14-day trial started 7/24, convert or expire 8/7",
+  },
+  {
+    name: "Summit Tax & Bookkeeping", status: "paused",
+    url: "http://localhost:8005/dashboard/",
+    scheduling: "—", handoff: "Email", liveSince: "2026-04-10",
+    notes: "Paused for the off-season at their request, resuming in January",
+  },
+];
+
+const STATUS_LABELS = { all: "All", live: "Live", demo: "Demo", onboarding: "Onboarding", trial: "Trial", paused: "Paused", lapsed: "Lapsed" };
+let activeStatus = "all";
+let activeSearch = "";
+
+function renderFilters() {
+  const el = document.getElementById("statusFilters");
+  el.innerHTML = Object.entries(STATUS_LABELS).map(([key, label]) => {
+    const count = key === "all" ? CLIENTS.length : CLIENTS.filter((c) => c.status === key).length;
+    return `<button type="button" class="status-filter-btn ${key} ${activeStatus === key ? "active" : ""}" data-status="${key}">
+      ${key === "all" ? "" : '<span class="dot"></span>'}${label} <span class="fcount">${count}</span>
+    </button>`;
+  }).join("");
+  el.querySelectorAll(".status-filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeStatus = btn.dataset.status;
+      renderFilters();
+      renderList();
+    });
+  });
+}
+
+function renderList() {
+  const list = document.getElementById("clientList");
+  const f = activeSearch.toLowerCase();
+  const shown = CLIENTS.filter((c) =>
+    c.name.toLowerCase().includes(f) && (activeStatus === "all" || c.status === activeStatus)
+  );
+  list.innerHTML = shown.map((c) => `
+    <div class="client-card">
+      <div class="client-info">
+        <div class="client-name">${c.name} <span class="status-pill ${c.status}">${c.status}</span></div>
+        <div class="client-meta">
+          <span><strong>Scheduling:</strong> ${c.scheduling}</span>
+          <span><strong>Handoff:</strong> ${c.handoff}</span>
+          <span><strong>Live since:</strong> ${c.liveSince}</span>
+        </div>
+        <div class="client-notes">${c.notes}</div>
+      </div>
+      <button class="open-btn" type="button" onclick="alert('Would open: ${c.url}')">Open dashboard →</button>
+    </div>`).join("") || `<p class="muted">No clients match.</p>`;
+}
+
+document.getElementById("search").addEventListener("input", (e) => {
+  activeSearch = e.target.value;
+  renderList();
+});
+renderFilters();
+renderList();
+</script>
+</body>
+</html>

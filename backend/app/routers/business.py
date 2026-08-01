@@ -5,8 +5,9 @@ from pydantic import BaseModel
 
 from datetime import datetime, timezone
 
+from ..config import AGENCY_NOTIFY_EMAIL, AGENCY_NOTIFY_WEBHOOK_URL, PRODUCT_NAME
 from ..db import db_session
-from ..services import faq_matching, ingestion, rate_limit, seo
+from ..services import faq_matching, handoff, ingestion, rate_limit, seo
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
@@ -25,6 +26,9 @@ class BusinessSettings(BaseModel):
     flow_script: str = ""
     accent_color: str = "#4f46e5"
     monthly_message_limit: int = 500
+    rot_aging_minutes: int = 1440
+    rot_rotting_minutes: int = 4320
+    pipeline_enabled: bool = False
 
 
 class LeadUpdate(BaseModel):
@@ -52,22 +56,33 @@ class FactInput(BaseModel):
     value: str
 
 
+class SupportRequestInput(BaseModel):
+    category: str
+    details: str
+    urgency: str = "normal"
+    contact_info: str = ""
+    screenshot_data_uri: Optional[str] = None
+
+
 @router.get("/business")
 def get_business():
     with db_session() as conn:
         row = conn.execute("SELECT * FROM business WHERE id = 1").fetchone()
     data = dict(row)
     data["messages_used_this_month"] = rate_limit.messages_used_this_month()
+    data["product_name"] = PRODUCT_NAME
     return data
 
 
 @router.put("/business")
 def update_business(settings: BusinessSettings):
+    if settings.rot_rotting_minutes < settings.rot_aging_minutes:
+        raise HTTPException(400, "Rotting threshold must be equal to or later than the aging threshold")
     with db_session() as conn:
         conn.execute(
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
-               monthly_message_limit=? WHERE id=1""",
+               monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -79,6 +94,9 @@ def update_business(settings: BusinessSettings):
                 settings.flow_script,
                 settings.accent_color,
                 settings.monthly_message_limit,
+                settings.rot_aging_minutes,
+                settings.rot_rotting_minutes,
+                int(settings.pipeline_enabled),
             ),
         )
     return {"ok": True}
@@ -245,6 +263,33 @@ def update_lead(lead_id: int, update: LeadUpdate):
     return dict(row)
 
 
+@router.post("/leads/{lead_id}/promote")
+def promote_lead(lead_id: int):
+    """Create a Pipeline card seeded from a claimed lead, linked back via source_lead_id, and
+    mark the originating lead Done — its intake job is finished, the relationship continues
+    in Pipeline now. Per BIA_configurable_pipeline_board.md."""
+    with db_session() as conn:
+        lead = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
+        if lead is None:
+            raise HTTPException(404, "Lead not found")
+        first_stage = conn.execute("SELECT id FROM pipeline_stages ORDER BY position ASC LIMIT 1").fetchone()
+        if first_stage is None:
+            raise HTTPException(400, "No pipeline stages configured yet")
+        count = conn.execute(
+            "SELECT COUNT(*) AS n FROM pipeline_cards WHERE stage_id = ?", (first_stage["id"],)
+        ).fetchone()["n"]
+        now = datetime.now(timezone.utc).isoformat()
+        cur = conn.execute(
+            """INSERT INTO pipeline_cards
+               (stage_id, name, email, phone, source_lead_id, position, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (first_stage["id"], lead["name"], lead["email"], lead["phone"], lead_id, count, now, now),
+        )
+        conn.execute("UPDATE leads SET status = 'done' WHERE id = ?", (lead_id,))
+        card = conn.execute("SELECT * FROM pipeline_cards WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return dict(card)
+
+
 @router.get("/conversations")
 def list_conversations(q: Optional[str] = None, since: Optional[str] = None, until: Optional[str] = None):
     where, params = [], []
@@ -337,3 +382,70 @@ def ai_crawler_access():
         return {"checked": False, "results": [], "message": "Set a website URL in Settings first."}
     results = seo.check_ai_crawler_access(website_url)
     return {"checked": True, "results": results}
+
+
+@router.post("/support-request")
+def submit_support_request(req: SupportRequestInput):
+    if not req.category.strip() or not req.details.strip():
+        raise HTTPException(400, "Category and details are both required")
+    with db_session() as conn:
+        business = conn.execute("SELECT name FROM business WHERE id = 1").fetchone()
+    business_name = business["name"] if business else "a client"
+
+    # The raw image isn't sent through the webhook itself — payload size limits on
+    # Slack/Zapier-style endpoints make that risky. It's stored on the request record;
+    # the notification just flags that one's attached.
+    notified = handoff.notify(
+        AGENCY_NOTIFY_WEBHOOK_URL,
+        business_name,
+        {
+            "intent": "support_request",
+            "name": business_name,
+            "notes": f"[{req.category}] {req.details}"
+            + (f" (contact: {req.contact_info})" if req.contact_info else "")
+            + (" [screenshot attached — see request record]" if req.screenshot_data_uri else ""),
+        },
+        notify_email=AGENCY_NOTIFY_EMAIL,
+    )
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO support_requests "
+            "(category, details, urgency, contact_info, screenshot_data_uri, notified, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                req.category,
+                req.details,
+                req.urgency,
+                req.contact_info,
+                req.screenshot_data_uri,
+                1 if notified else 0,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+    return {"ok": True, "notified": notified}
+
+
+@router.get("/support-requests")
+def list_support_requests():
+    with db_session() as conn:
+        rows = conn.execute("SELECT * FROM support_requests ORDER BY id DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+SUPPORT_REQUEST_STATUSES = {"new", "in_progress", "resolved"}
+
+
+class SupportRequestStatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/support-requests/{request_id}")
+def update_support_request_status(request_id: int, update: SupportRequestStatusUpdate):
+    if update.status not in SUPPORT_REQUEST_STATUSES:
+        raise HTTPException(400, f"status must be one of {sorted(SUPPORT_REQUEST_STATUSES)}")
+    with db_session() as conn:
+        conn.execute("UPDATE support_requests SET status = ? WHERE id = ?", (update.status, request_id))
+        row = conn.execute("SELECT * FROM support_requests WHERE id = ?", (request_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "Support request not found")
+    return dict(row)

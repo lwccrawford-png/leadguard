@@ -1,0 +1,25 @@
+# systemd template unit — one instance per client, e.g.:
+#   systemctl enable --now leadguard@lmtlss.service
+#
+# Each instance reads its own port and data directory from
+# /etc/leadguard/<name>.env (see leadguard.env.example in this directory).
+# Install: sudo cp leadguard@.service /etc/systemd/system/ && sudo systemctl daemon-reload
+
+[Unit]
+Description=LeadGuard client instance: %i
+After=network.target
+
+[Service]
+Type=simple
+User=leadguard
+Group=leadguard
+WorkingDirectory=/opt/leadguard/backend
+EnvironmentFile=/etc/leadguard/%i.env
+ExecStart=/bin/bash -c 'exec /opt/leadguard/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${PORT}'
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

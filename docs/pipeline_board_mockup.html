@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Pipeline Board — Mockup</title>
+<link rel="stylesheet" href="../dashboard/style.css" />
+<style>
+  .mock-banner { background: #fffbe6; border-bottom: 2px solid #eab308; padding: 10px 24px; font-size: 13px; color: #78350f; }
+  .mock-switch { display: flex; gap: 8px; padding: 16px 24px 0; }
+  .mock-switch button { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 14px; }
+  .mock-switch button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mock-view { display: none; }
+  .mock-view.active { display: block; }
+
+  .pipe-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; align-items: start; overflow-x: auto; }
+  .pipe-col { background: #eceef3; border-radius: 10px; padding: 10px; min-height: 120px; }
+  .pipe-col-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 6px 10px; }
+  .pipe-col-head h3 { margin: 0; font-size: 13px; color: #555; display: flex; align-items: center; gap: 6px; }
+  .pipe-col-head .count { background: #dcdce8; border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+  .pipe-eye { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 6px; color: #666; }
+  .pipe-eye:hover { background: #dcdce8; }
+  .pipe-cards { display: flex; flex-direction: column; gap: 8px; }
+
+  .pipe-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; }
+  .pipe-card-collapsed-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .pipe-card-name { font-weight: 600; }
+  .pipe-card-phone { color: #666; font-size: 12px; }
+  .pipe-card-claim { font-size: 11px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .pipe-card-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pipe-card.expanded .pipe-card-detail { display: block; }
+  .pipe-card-detail label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: #999; font-weight: 700; margin-top: 8px; }
+  .pipe-card-detail textarea, .pipe-card-detail select { width: 100%; margin-top: 3px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-family: inherit; }
+  .pipe-won-tag { display: inline-block; background: #eafbf0; color: #15803d; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-bottom: 6px; }
+  .pipe-lost-tag { display: inline-block; background: #fef2f2; color: #b91c1c; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-bottom: 6px; }
+
+  .stage-row { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .stage-row input[type="text"] { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+  .stage-row .stage-order { display: flex; flex-direction: column; gap: 2px; }
+  .stage-row .stage-order button { border: none; background: #f0f0f4; border-radius: 4px; cursor: pointer; font-size: 11px; width: 22px; height: 18px; }
+  .stage-flag { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; white-space: nowrap; }
+  .stage-dropdown-opts { margin-left: 40px; margin-bottom: 10px; padding: 8px 12px; background: #fafafc; border-radius: 8px; border: 1px dashed var(--border); }
+  .stage-dropdown-opts input { font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; margin-right: 6px; margin-bottom: 4px; }
+  .add-stage-btn { background: none; border: 1px dashed var(--border); color: var(--accent); font-weight: 600; padding: 10px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="mock-banner">Mockup only — example data, not wired to the backend. For visual review of layout and interaction before implementation.</div>
+  <header>
+    <h1>LeadGuard <span class="badge">Dashboard</span></h1>
+  </header>
+
+  <div class="mock-switch">
+    <button id="btnBoard" class="active">Pipeline board</button>
+    <button id="btnSettings">Settings (stage config)</button>
+  </div>
+
+  <main>
+    <section id="viewBoard" class="mock-view active">
+      <h2>Pipeline</h2>
+      <p class="muted">Drag a card to move it between stages. Click a card to expand it. Click the eye icon to expand or collapse a whole column.</p>
+      <div class="pipe-board" id="pipeBoard"></div>
+    </section>
+
+    <section id="viewSettings" class="mock-view">
+      <h2>Pipeline stages</h2>
+      <p class="muted">Define up to 8 stages, in order. Enable outcome notes on any stage. Exactly one stage can be marked as the Won stage — it unlocks a configurable dropdown on its cards.</p>
+      <div id="stageList"></div>
+      <button class="add-stage-btn" type="button">+ Add stage (5 of 8 used)</button>
+    </section>
+  </main>
+
+<script>
+const STAGES = [
+  { id: 1, label: "New inquiry", notes: false, won: false, lost: false },
+  { id: 2, label: "In progress", notes: false, won: false, lost: false },
+  { id: 3, label: "Decision pending", notes: true, won: false, lost: false },
+  { id: 4, label: "Won", notes: true, won: true, lost: false },
+  { id: 5, label: "Lost", notes: true, won: false, lost: true },
+];
+
+const DROPDOWN_OPTIONS = ["Standard plan", "Premium plan", "Family plan"];
+
+const CARDS = [
+  { id: 1, stage: 1, name: "Alex Chen", phone: "555-201-3344", claimed: null },
+  { id: 2, stage: 1, name: "Morgan Blake", phone: "555-201-9981", claimed: "Sam" },
+  { id: 3, stage: 2, name: "Priya Nair", phone: "555-201-2210", claimed: "Sam", notes: "Attended orientation 7/20." },
+  { id: 4, stage: 3, name: "Jordan Lee", phone: "555-201-7765", claimed: "Sam", notes: "Comparing with another program." },
+  { id: 5, stage: 4, name: "Taylor Reyes", phone: "555-201-4432", claimed: "Sam", notes: "Signed up after 3rd call.", chosen: "Premium plan" },
+  { id: 6, stage: 5, name: "Casey Kim", phone: "555-201-8820", claimed: "Sam", notes: "Went with a competitor." },
+];
+
+const expanded = {};
+
+function renderBoard() {
+  const board = document.getElementById("pipeBoard");
+  board.innerHTML = STAGES.map((stage) => {
+    const cards = CARDS.filter((c) => c.stage === stage.id);
+    return `
+      <div class="pipe-col" data-stage="${stage.id}">
+        <div class="pipe-col-head">
+          <h3>${stage.label} <span class="count">${cards.length}</span></h3>
+          <button class="pipe-eye" data-toggle-col="${stage.id}" title="Expand/collapse all in this column">&#128065;</button>
+        </div>
+        <div class="pipe-cards">
+          ${cards.map((c) => cardHtml(c, stage)).join("") || `<p class="muted board-empty">Nothing here.</p>`}
+        </div>
+      </div>`;
+  }).join("");
+
+  board.querySelectorAll(".pipe-card").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      if (e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+      const id = Number(el.dataset.id);
+      expanded[id] = !expanded[id];
+      renderBoard();
+    });
+  });
+  board.querySelectorAll("[data-toggle-col]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const stageId = Number(btn.dataset.toggleCol);
+      const cardsInCol = CARDS.filter((c) => c.stage === stageId);
+      const anyCollapsed = cardsInCol.some((c) => !expanded[c.id]);
+      cardsInCol.forEach((c) => (expanded[c.id] = anyCollapsed));
+      renderBoard();
+    });
+  });
+}
+
+function cardHtml(c, stage) {
+  const isExpanded = !!expanded[c.id];
+  const tag = stage.won ? `<div class="pipe-won-tag">Won</div>` : stage.lost ? `<div class="pipe-lost-tag">Lost</div>` : "";
+  return `
+    <div class="pipe-card ${isExpanded ? "expanded" : ""}" data-id="${c.id}">
+      <div class="pipe-card-collapsed-row">
+        <span class="pipe-card-name">${c.name}</span>
+        <span class="pipe-card-claim">${c.claimed ? "👤 " + c.claimed : "Claim"}</span>
+      </div>
+      <div class="pipe-card-phone">${c.phone}</div>
+      <div class="pipe-card-detail">
+        ${tag}
+        <label>Notes</label>
+        <textarea rows="2">${c.notes || ""}</textarea>
+        ${stage.notes ? `<label>Outcome notes</label><textarea rows="2" placeholder="Why won/lost..."></textarea>` : ""}
+        ${stage.won ? `<label>Product / service chosen</label><select>${DROPDOWN_OPTIONS.map((o) => `<option ${o === c.chosen ? "selected" : ""}>${o}</option>`).join("")}</select>` : ""}
+      </div>
+    </div>`;
+}
+
+function renderSettings() {
+  const list = document.getElementById("stageList");
+  list.innerHTML = STAGES.map((s, i) => `
+    <div class="stage-row">
+      <div class="stage-order">
+        <button type="button" ${i === 0 ? "disabled" : ""}>&#9650;</button>
+        <button type="button" ${i === STAGES.length - 1 ? "disabled" : ""}>&#9660;</button>
+      </div>
+      <input type="text" value="${s.label}" />
+      <label class="stage-flag"><input type="checkbox" ${s.notes ? "checked" : ""} /> Outcome notes</label>
+      <label class="stage-flag"><input type="radio" name="won-stage" ${s.won ? "checked" : ""} /> Won stage</label>
+      <button type="button" class="card-field-label" style="color:#c0392b;background:none;border:none;cursor:pointer;">Remove</button>
+    </div>
+    ${s.won ? `<div class="stage-dropdown-opts">
+      <label class="card-field-label">Dropdown options for this stage</label><br/>
+      ${DROPDOWN_OPTIONS.map((o) => `<input type="text" value="${o}" />`).join("")}
+      <button type="button" class="add-stage-btn" style="width:auto;padding:4px 10px;font-size:12px;margin-top:4px;">+ Add option</button>
+    </div>` : ""}
+  `).join("");
+}
+
+document.getElementById("btnBoard").addEventListener("click", () => {
+  document.getElementById("btnBoard").classList.add("active");
+  document.getElementById("btnSettings").classList.remove("active");
+  document.getElementById("viewBoard").classList.add("active");
+  document.getElementById("viewSettings").classList.remove("active");
+});
+document.getElementById("btnSettings").addEventListener("click", () => {
+  document.getElementById("btnSettings").classList.add("active");
+  document.getElementById("btnBoard").classList.remove("active");
+  document.getElementById("viewSettings").classList.add("active");
+  document.getElementById("viewBoard").classList.remove("active");
+});
+
+renderBoard();
+renderSettings();
+</script>
+</body>
+</html>

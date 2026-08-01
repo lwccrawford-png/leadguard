@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timezone
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 
 import anthropic
 
@@ -15,7 +16,7 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 MAX_HISTORY_MESSAGES = 20
 MAX_TOOL_ROUNDS = 4
 
-TOOLS = [
+BASE_TOOLS = [
     {
         "name": "capture_lead",
         "description": "Save a visitor's contact info as a lead and alert the business. Call this "
@@ -77,6 +78,49 @@ TOOLS = [
     },
 ]
 
+SCHEDULING_LINK_TOOL = {
+    "name": "get_scheduling_link",
+    "description": "Get the booking link for this business, pre-filled with whatever contact info the "
+    "visitor has already given you (name/email/phone) so they don't have to retype it on the scheduling "
+    "page. Call this whenever you're ready to send the visitor to book — do not paste or retype the "
+    "scheduling link yourself, always call this tool so it can be filled in correctly. Share the returned "
+    "url in your reply exactly as given; the chat widget turns it into a clickable link automatically.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "email": {"type": "string"},
+            "phone": {"type": "string"},
+        },
+        "required": [],
+    },
+}
+
+
+def _build_tools(business: dict) -> list:
+    if business.get("scheduling_link"):
+        return BASE_TOOLS + [SCHEDULING_LINK_TOOL]
+    return BASE_TOOLS
+
+
+def _build_prefilled_link(base_url: str, name: str = "", email: str = "", phone: str = "") -> str:
+    parts = urlparse(base_url)
+    params = dict(parse_qsl(parts.query))
+
+    if name:
+        params.setdefault("name", name)
+        first, _, last = name.partition(" ")
+        params.setdefault("firstName", first)
+        if last:
+            params.setdefault("lastName", last)
+    if email:
+        params.setdefault("email", email)
+    if phone:
+        params.setdefault("phone", phone)
+
+    new_query = urlencode(params)
+    return urlunparse(parts._replace(query=new_query))
+
 
 def _get_business():
     with db_session() as conn:
@@ -126,7 +170,7 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
     assistant_name = (business.get("assistant_name") or "").strip()
     if assistant_name:
         parts = [f'Your name is {assistant_name}. You are the AI assistant for "{business_name}". Today is {today}.']
-        parts.append(f'Introduce yourself as {assistant_name} if asked who/what you are, but keep the focus on helping with {business_name} — don\'t dwell on your own name.')
+        parts.append(f'If you state a name for yourself anywhere — a greeting, when asked who you are, anywhere — it must be {assistant_name}. Never invent, use, or default to any other name for yourself under any circumstances. You don\'t need to lead with your name in every message, but if you say one, it is always {assistant_name}.')
     else:
         parts = [f'You are the AI assistant for "{business_name}". Today is {today}.']
 
@@ -147,7 +191,11 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
         parts.append("Be friendly, professional, and helpful. Qualify what the visitor needs and capture their contact info if they're interested.")
 
     if business.get("scheduling_link"):
-        parts.append(f"When it's time to book/schedule, share this link: {business['scheduling_link']}")
+        parts.append(
+            "When it's time to book/schedule, call the get_scheduling_link tool (passing along any "
+            "name/email/phone you already have) and share the url it returns — don't type or remember the "
+            "link yourself. Pre-filling it saves the visitor from retyping their info on the booking page."
+        )
 
     parts.append(
         "DISCOVERY PHASES — silently classify which phase the visitor is in from their messages, and let "
@@ -171,6 +219,21 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
         "clickable phone call, or (4) a clickable text message. Never let a real conversation just trail "
         "off with information and no next step. Whenever you call capture_lead, include the "
         "discovery_phase you identified."
+    )
+
+    parts.append(
+        "NEVER ASSUME THE VISITOR'S SPECIFIC GOAL. Your knowledge base may lean heavily toward one "
+        "particular use case just because that's what the business's own marketing emphasizes most "
+        "(e.g., a credit repair business's site might talk a lot about qualifying for a mortgage, even "
+        "though plenty of visitors want credit repair for entirely different reasons — a car loan, a "
+        "job application, or just general peace of mind). That emphasis in your knowledge base is not "
+        "evidence about what THIS visitor wants. If they haven't told you their specific goal, ask — "
+        "in neutral, open terms — rather than presuming one. Don't phrase your own question in a way "
+        "that presumes an answer either (avoid leading with \"are you looking to buy a home?\" as your "
+        "first guess; ask \"what are you hoping to accomplish?\" instead).\n"
+        "EXAMPLE — visitor: \"Hi, my name is Lawrence and my credit score is 509.\" You should "
+        "acknowledge the score, briefly explain generally how you help, and ask what's driving this "
+        "for them — not respond as if you already know they're trying to qualify for a mortgage."
     )
 
     parts.append(
@@ -246,6 +309,18 @@ def _execute_tool(tool_name: str, tool_input: dict, business: dict, conversation
             )
         return {"saved": True, "business_notified": notified}
 
+    if tool_name == "get_scheduling_link":
+        base_url = business.get("scheduling_link") or ""
+        if not base_url:
+            return {"error": "No scheduling link configured for this business."}
+        url = _build_prefilled_link(
+            base_url,
+            name=tool_input.get("name", ""),
+            email=tool_input.get("email", ""),
+            phone=tool_input.get("phone", ""),
+        )
+        return {"url": url}
+
     return {"error": f"Unknown tool {tool_name}"}
 
 
@@ -300,6 +375,7 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
     context_chunks = [] if matched_faq else retrieval.retrieve(user_message, top_k=5)
     facts = _get_facts()
     system_prompt = _system_prompt(business, context_chunks, matched_faq=matched_faq, facts=facts)
+    tools = _build_tools(business)
     messages = _load_history(conversation_id)
     collected_text = []
     total_input_tokens = 0
@@ -315,7 +391,7 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
                 model=CLAUDE_MODEL,
                 max_tokens=1024,
                 system=system_prompt,
-                tools=TOOLS,
+                tools=tools,
                 messages=messages,
             )
         except anthropic.APIError:

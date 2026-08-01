@@ -1,0 +1,14 @@
+# Reverse proxy config for the LeadGuard host — see ../DEPLOYMENT_PLAN.md for the full plan.
+# One block per client, each pointing at that client's local port. Caddy handles HTTPS
+# (Let's Encrypt) automatically per subdomain — no manual cert work.
+#
+# provision_client.sh appends new blocks here and reloads Caddy; this file itself is a
+# template/example, not populated with any real client yet.
+#
+# Example block (copy per client, substitute the subdomain and port):
+#
+# client1.yourdomain.com {
+#     reverse_proxy localhost:8001
+# }
+#
+# Reload after editing by hand: sudo systemctl reload caddy

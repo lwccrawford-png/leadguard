@@ -13,6 +13,7 @@ INTENT_LABELS = {
     "general_inquiry": "💬 GENERAL INQUIRY",
     "urgent_crisis": "🚨 URGENT — CRISIS",
     "capacity_reached": "📈 MONTHLY CAP REACHED",
+    "support_request": "🛠️ SUPPORT REQUEST",
 }
 
 

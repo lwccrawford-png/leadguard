@@ -8,19 +8,70 @@
 </head>
 <body>
   <header>
-    <h1>LeadGuard <span class="badge">Dashboard</span></h1>
+    <h1><span id="productName">LeadGuard</span> <span class="badge">Dashboard</span></h1>
   </header>
 
   <nav id="tabs">
-    <button data-tab="settings" class="active">Settings</button>
-    <button data-tab="knowledge">Knowledge</button>
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="settings" class="admin-only">Settings</button>
+    <button data-tab="knowledge" class="admin-only">Knowledge</button>
     <button data-tab="leads">Leads</button>
+    <button data-tab="pipeline" id="pipelineTab" hidden>Pipeline</button>
     <button data-tab="conversations">Conversations</button>
-    <button data-tab="usage">Usage</button>
+    <button data-tab="usage" class="admin-only">Usage</button>
   </nav>
+  <div id="viewModeBanner" hidden style="background:#fffbe6;border-bottom:2px solid #eab308;padding:8px 24px;font-size:13px;color:#78350f;">
+    Viewing as a client would see this — Settings, Knowledge, and Usage are hidden. <a href="#" id="switchToAdmin" style="color:#78350f;font-weight:600;">Switch to admin view →</a>
+  </div>
 
   <main>
-    <section id="tab-settings" class="tab active">
+    <section id="tab-dashboard" class="tab active">
+      <h2>Dashboard</h2>
+      <p class="muted">A snapshot of this business's assistant, at a glance.</p>
+
+      <div class="stat-grid" id="dashStats"></div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <h3>Leads</h3>
+          <div class="dash-leads-summary" id="dashLeadsSummary"></div>
+          <ul class="dash-recent-list" id="dashRecentLeads"></ul>
+          <button type="button" class="dash-goto" data-goto="leads">View all leads →</button>
+        </div>
+
+        <div class="card admin-only">
+          <h3>Knowledge coverage</h3>
+          <ul class="coverage-list" id="dashCoverageList"></ul>
+          <button type="button" class="dash-goto" data-goto="knowledge">Manage knowledge →</button>
+        </div>
+
+        <div class="card dash-placeholder" id="dashPipelineCard" hidden>
+          <h3>Pipeline</h3>
+          <div class="dash-pipeline-summary" id="dashPipelineSummary"></div>
+          <button type="button" class="dash-goto" data-goto="pipeline">View pipeline →</button>
+        </div>
+
+        <div class="card">
+          <h3>Conversations</h3>
+          <p class="muted">Full transcripts of every chat.</p>
+          <button type="button" class="dash-goto" data-goto="conversations">View conversations →</button>
+        </div>
+
+        <div class="card admin-only">
+          <h3>Usage &amp; performance</h3>
+          <p class="muted">Tokens, response time, and knowledge gaps this month.</p>
+          <button type="button" class="dash-goto" data-goto="usage">View usage →</button>
+        </div>
+
+        <div class="card admin-only">
+          <h3>Settings</h3>
+          <p class="muted">Business config, script, scheduling link, embed snippet.</p>
+          <button type="button" class="dash-goto" data-goto="settings">Edit settings →</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab">
       <h2>Business Settings</h2>
       <form id="settingsForm">
         <label>Business name
@@ -53,6 +104,29 @@
         <label>Monthly message limit <span class="hint">(automated replies pause and hand off to the team once hit this month; matches your pricing tier for this client. 0 = unlimited)</span>
           <input name="monthly_message_limit" type="number" min="0" step="10" />
         </label>
+        <label>Lead aging threshold <span class="hint">(the colored dot on unclaimed leads turns amber once a lead has sat untouched this long — pick a faster threshold for businesses that need quick response times)</span>
+          <select name="rot_aging_minutes">
+            <option value="10">10 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="180">3 hours</option>
+            <option value="1440">24 hours</option>
+            <option value="2880">48 hours</option>
+            <option value="4320">72 hours</option>
+          </select>
+        </label>
+        <label>Lead rotting threshold <span class="hint">(the dot turns red once a lead has sat untouched this long — must be equal to or later than the aging threshold above)</span>
+          <select name="rot_rotting_minutes">
+            <option value="10">10 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="180">3 hours</option>
+            <option value="1440">24 hours</option>
+            <option value="2880">48 hours</option>
+            <option value="4320">72 hours</option>
+          </select>
+        </label>
+        <label class="checkbox-label"><input type="checkbox" name="pipeline_enabled" /> Pipeline add-on enabled <span class="hint">(paid feature — adds a second, configurable board for tracking claimed leads through an ongoing sales or membership process)</span></label>
         <button type="submit">Save Settings</button>
         <span id="saveStatus"></span>
       </form>
@@ -157,6 +231,27 @@
           <div class="board-col-cards" data-status="done"></div>
         </div>
       </div>
+    </section>
+
+    <section id="tab-pipeline" class="tab">
+      <h2>Pipeline</h2>
+      <p class="muted">Track claimed leads through your own custom stages — a longer sales cycle or a multi-step membership process.</p>
+
+      <div class="card">
+        <h3>Stages</h3>
+        <form id="pipelineStageForm">
+          <label>Stage name
+            <input name="label" placeholder="e.g. Orientation, Proposal Sent" required />
+          </label>
+          <label class="checkbox-label"><input type="checkbox" name="notes_enabled" /> Enable outcome notes on this stage</label>
+          <label class="checkbox-label"><input type="checkbox" name="is_won" /> This is the Won stage <span class="hint">(only one allowed — adds a configurable product/service dropdown to its cards)</span></label>
+          <button type="submit">Add stage</button>
+          <span id="pipelineStageStatus"></span>
+        </form>
+        <div id="pipelineStageList"></div>
+      </div>
+
+      <div class="board" id="pipelineBoard"></div>
     </section>
 
     <section id="tab-conversations" class="tab">

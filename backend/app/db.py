@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS business (
     flow_script TEXT NOT NULL DEFAULT '',
     accent_color TEXT NOT NULL DEFAULT '#4f46e5',
     monthly_message_limit INTEGER NOT NULL DEFAULT 500,
+    rot_aging_minutes INTEGER NOT NULL DEFAULT 1440,
+    rot_rotting_minutes INTEGER NOT NULL DEFAULT 4320,
+    pipeline_enabled INTEGER NOT NULL DEFAULT 0,
     last_crawled_at TEXT
 );
 
@@ -95,6 +98,61 @@ CREATE TABLE IF NOT EXISTS leads (
     handoff_notified INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
+
+-- Client -> agency support/change requests. Reachable at /support/ with no login,
+-- since the managed-service client typically has no dashboard access at all. Notifies
+-- the agency (not the client's own handoff_webhook_url/handoff_email, which route to
+-- the client's team about their leads) via a separate, agency-level webhook/email set
+-- once in the backend's own .env, shared across every deployed client instance.
+CREATE TABLE IF NOT EXISTS support_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    details TEXT NOT NULL,
+    urgency TEXT NOT NULL DEFAULT 'normal',
+    contact_info TEXT,
+    screenshot_data_uri TEXT,
+    status TEXT NOT NULL DEFAULT 'new',
+    notified INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+-- Pipeline add-on (paid feature, gated by business.pipeline_enabled): a business-configurable
+-- second board for tracking claimed leads through an ongoing sales/membership process, distinct
+-- from the fixed New/Claimed/Done Leads funnel. Up to 8 stages, business-defined labels/order.
+CREATE TABLE IF NOT EXISTS pipeline_stages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    notes_enabled INTEGER NOT NULL DEFAULT 0,
+    is_won INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+-- Only meaningful for the single stage flagged is_won=1 — the product/service dropdown shown
+-- on cards sitting in that stage.
+CREATE TABLE IF NOT EXISTS pipeline_dropdown_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stage_id INTEGER NOT NULL REFERENCES pipeline_stages(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    position INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pipeline_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stage_id INTEGER NOT NULL REFERENCES pipeline_stages(id) ON DELETE CASCADE,
+    name TEXT,
+    email TEXT,
+    phone TEXT,
+    notes TEXT,
+    outcome_notes TEXT,
+    chosen_option_id INTEGER REFERENCES pipeline_dropdown_options(id) ON DELETE SET NULL,
+    claimed_by TEXT,
+    -- Set when this card was promoted from a claimed lead, per BIA_configurable_pipeline_board.md.
+    source_lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 
@@ -132,6 +190,11 @@ def init_db():
             "ALTER TABLE messages ADD COLUMN input_tokens INTEGER",
             "ALTER TABLE messages ADD COLUMN output_tokens INTEGER",
             "ALTER TABLE leads ADD COLUMN discovery_phase TEXT",
+            "ALTER TABLE business ADD COLUMN rot_aging_minutes INTEGER NOT NULL DEFAULT 1440",
+            "ALTER TABLE business ADD COLUMN rot_rotting_minutes INTEGER NOT NULL DEFAULT 4320",
+            "ALTER TABLE business ADD COLUMN pipeline_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE support_requests ADD COLUMN screenshot_data_uri TEXT",
+            "ALTER TABLE support_requests ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
         ]:
             try:
                 conn.execute(migration)

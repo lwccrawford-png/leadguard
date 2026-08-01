@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>__BUSINESS_NAME__ — Live Widget Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  .site-bg {
+    background-image: url("__IMAGE_DATA_URI__");
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+    background-position: top center;
+    background-color: #fff;
+    min-height: 1420px;
+    width: 100%;
+  }
+  .demo-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 2147483001;
+    background: #111; color: #fff; font-family: -apple-system, sans-serif;
+    font-size: 13px; text-align: center; padding: 8px 12px;
+  }
+  .demo-banner strong { color: #86efac; }
+</style>
+</head>
+<body>
+  <div class="demo-banner">LeadGuard demo — this is <strong>__BUSINESS_NAME__'s actual homepage</strong>, with a live AI assistant already working on it. Click the bubble, bottom right.</div>
+  <div class="site-bg"></div>
+
+  <script
+    src="__API_BASE__/widget/widget.js"
+    data-api-base="__API_BASE__"
+    data-business-name="__BUSINESS_NAME__"
+    data-color="__ACCENT_COLOR__"
+    data-greeting="__GREETING__"
+    defer
+  ></script>
+</body>
+</html>

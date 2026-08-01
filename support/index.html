@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Support Request</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --accent: #4f46e5; --bg: #f7f7f9; --border: #e5e5ea; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; background: var(--bg); color: #222;
+    }
+    header { background: var(--accent); color: #fff; padding: 20px 24px; }
+    header h1 { margin: 0; font-size: 19px; }
+    header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+    main { max-width: 520px; margin: 0 auto; padding: 24px; }
+    form { display: flex; flex-direction: column; gap: 14px; background: #fff; padding: 20px; border-radius: 10px; border: 1px solid var(--border); }
+    label { display: flex; flex-direction: column; font-size: 13px; font-weight: 600; color: #444; gap: 4px; }
+    .hint { font-weight: 400; color: #888; font-size: 12px; }
+    input, textarea, select {
+      font-size: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit;
+    }
+    button[type="submit"] {
+      background: var(--accent); color: #fff; border: none; padding: 10px 18px;
+      border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; align-self: flex-start;
+    }
+    #status { margin-top: 12px; font-size: 14px; font-weight: 600; }
+    #status.ok { color: #15803d; }
+    #status.err { color: #c0392b; }
+    .success-box { background: #eafbf0; border: 1px solid #86efac; border-radius: 10px; padding: 20px; text-align: center; display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="pageTitle">Support Request</h1>
+    <p id="pageSub">Let us know what you need — we'll follow up directly.</p>
+  </header>
+
+  <main>
+    <form id="supportForm">
+      <label>What do you need?
+        <select name="category" required>
+          <option value="">Choose one...</option>
+          <option value="Update something">Update something (scheduling link, hours, pricing, etc.)</option>
+          <option value="Something seems broken">Something seems broken</option>
+          <option value="Add a new FAQ or policy">Add a new FAQ or policy</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <label>Details
+        <textarea name="details" rows="5" placeholder="Tell us what you need, as much detail as helps..." required></textarea>
+      </label>
+      <label>How urgent is this?
+        <select name="urgency">
+          <option value="Whenever you get a chance">Whenever you get a chance</option>
+          <option value="This week">This week</option>
+          <option value="Urgent — affecting customers now">Urgent — affecting customers now</option>
+        </select>
+      </label>
+      <label>Best way to reach you if we have questions <span class="hint">(optional)</span>
+        <input type="text" name="contact_info" placeholder="Phone or email" />
+      </label>
+      <label>Screenshot <span class="hint">(optional — attach one if it helps explain the issue)</span>
+        <input type="file" id="screenshotInput" accept="image/*" />
+      </label>
+      <button type="submit">Send request</button>
+      <div id="status"></div>
+    </form>
+
+    <div class="success-box" id="successBox">
+      <strong>Got it — thanks!</strong>
+      <p style="margin-bottom:0;">We'll follow up soon. Submit another request anytime from this same page.</p>
+    </div>
+  </main>
+
+<script>
+fetch("/api/business").then(r => r.json()).then(data => {
+  if (data.name) {
+    document.getElementById("pageTitle").textContent = `${data.name} — Support Request`;
+  }
+  if (data.product_name) {
+    document.title = `${data.product_name} — Support Request`;
+  }
+}).catch(() => {});
+
+function fileToDataUri(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("supportForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const status = document.getElementById("status");
+  const payload = Object.fromEntries(new FormData(e.target).entries());
+  status.textContent = "Sending...";
+  status.className = "";
+  try {
+    const file = document.getElementById("screenshotInput").files[0];
+    if (file) {
+      status.textContent = "Uploading screenshot...";
+      payload.screenshot_data_uri = await fileToDataUri(file);
+    }
+    const res = await fetch("/api/support-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("failed");
+    e.target.style.display = "none";
+    document.getElementById("successBox").style.display = "block";
+  } catch {
+    status.textContent = "Something went wrong sending this — please try again, or contact us directly.";
+    status.className = "err";
+  }
+});
+</script>
+</body>
+</html>

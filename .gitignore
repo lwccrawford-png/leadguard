@@ -4,3 +4,9 @@ backend/data*/*.db
 backend/data*/*.pkl
 __pycache__/
 *.pyc
+
+# Real client names, ports, and internal URLs — CLIENT_DIRECTORY.md's own header warns
+# never to publish it anywhere, and clients.json names real clients/prospects. Keep both
+# local-only even in a private repo.
+ops/CLIENT_DIRECTORY.md
+ops/clients.json

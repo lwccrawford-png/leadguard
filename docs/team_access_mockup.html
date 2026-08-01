@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Team Access — Mockup</title>
+<link rel="stylesheet" href="../dashboard/style.css" />
+<style>
+  .mock-banner { background: #fffbe6; border-bottom: 2px solid #eab308; padding: 10px 24px; font-size: 13px; color: #78350f; }
+  .role-switcher { display: flex; align-items: center; gap: 10px; padding: 16px 24px 0; font-size: 13px; color: #555; }
+  .role-switcher select { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; font-family: inherit; }
+
+  .team-add-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .team-add-form label { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; color: #444; gap: 4px; }
+  .team-add-form input, .team-add-form select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; }
+  .team-add-form button { align-self: flex-end; }
+
+  .role-badge { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 9px; text-transform: uppercase; letter-spacing: .02em; }
+  .role-badge.principal { background: #eef0ff; color: var(--accent); }
+  .role-badge.admin { background: #eafbf0; color: #15803d; }
+  .role-badge.staff { background: #f0f0f4; color: #555; }
+
+  .link-generated { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin: 14px 0; font-size: 13px; }
+  .link-generated code { display: block; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-top: 6px; word-break: break-all; }
+  .cap-error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 8px; padding: 10px 14px; margin: 14px 0; font-size: 13px; }
+
+  .team-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .team-row:last-child { border-bottom: none; }
+  .team-row-name { font-weight: 600; flex: 1; }
+  .team-row-date { font-size: 12px; color: #999; }
+  .team-row.revoked { opacity: .55; }
+  .team-row.revoked .team-row-name::after { content: " (revoked)"; font-weight: 400; color: #999; }
+  .revoke-btn { background: none; border: 1px solid #fca5a5; color: #b91c1c; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .revoke-btn:disabled { opacity: .4; cursor: default; }
+  .no-access { max-width: 480px; margin: 60px auto; text-align: center; color: #888; }
+</style>
+</head>
+<body>
+  <div class="mock-banner">Mockup only — example data, not wired to the backend. Toggle "Viewing as" below to see what each role sees.</div>
+  <header>
+    <h1>LeadGuard <span class="badge">Dashboard</span></h1>
+  </header>
+
+  <div class="role-switcher">
+    Viewing as:
+    <select id="roleSwitch">
+      <option value="staff">Staff (Jordan Kim)</option>
+      <option value="admin">Admin (Marcus Cole)</option>
+      <option value="principal" selected>Principal (Dana Whitfield)</option>
+    </select>
+  </div>
+
+  <nav id="tabs" style="margin-top:16px;">
+    <button class="active">Dashboard</button>
+    <button>Settings</button>
+    <button>Knowledge</button>
+    <button>Leads</button>
+    <button id="teamAccessTab">Team Access</button>
+    <button>Conversations</button>
+    <button>Usage</button>
+  </nav>
+
+  <main>
+    <section id="viewNoAccess" class="tab" style="display:none;">
+      <div class="no-access">
+        <h2>Leads</h2>
+        <p>This is what a Staff member sees — no "Team Access" tab in the nav above. They can claim and work leads, but have no visibility into who else has access or the ability to change it.</p>
+      </div>
+    </section>
+
+    <section id="viewTeamAccess" class="tab active">
+      <h2>Team Access</h2>
+      <p class="muted">Only Principal and Admin can see this page. Add a name, pick a role, and share the generated link. Revoke a link any time to cut off access immediately — it takes effect on their very next action, even in a tab they already have open.</p>
+
+      <div class="card">
+        <h3>Add someone</h3>
+        <form class="team-add-form" id="addForm">
+          <label>Name
+            <input type="text" id="newName" placeholder="e.g. Sam Torres" />
+          </label>
+          <label>Role
+            <select id="newRole">
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+              <option value="principal">Principal</option>
+            </select>
+          </label>
+          <button type="submit">Create link</button>
+        </form>
+        <div id="capError" class="cap-error" style="display:none;"></div>
+        <div id="linkResult" class="link-generated" style="display:none;">
+          Share this link with them — it's the only credential they need:
+          <code id="linkText"></code>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Current access</h3>
+        <div id="teamList"></div>
+      </div>
+    </section>
+  </main>
+
+<script>
+let TEAM = [
+  { id: 1, name: "Dana Whitfield", role: "principal", created: "2026-06-02", revoked: false },
+  { id: 2, name: "Marcus Cole", role: "admin", created: "2026-06-02", revoked: false },
+  { id: 3, name: "Jordan Kim", role: "staff", created: "2026-06-10", revoked: false },
+  { id: 4, name: "Sam Torres", role: "staff", created: "2026-06-10", revoked: false },
+  { id: 5, name: "Priya Nair", role: "staff", created: "2026-05-01", revoked: true },
+];
+let nextId = 6;
+
+function renderTeamList() {
+  const el = document.getElementById("teamList");
+  el.innerHTML = TEAM.map((m) => `
+    <div class="team-row ${m.revoked ? "revoked" : ""}">
+      <span class="role-badge ${m.role}">${m.role}</span>
+      <span class="team-row-name">${m.name}</span>
+      <span class="team-row-date">${m.revoked ? "Revoked" : "Added"} ${m.created}</span>
+      <button class="revoke-btn" data-id="${m.id}" ${m.revoked ? "disabled" : ""}>${m.revoked ? "Revoked" : "Revoke"}</button>
+    </div>`).join("");
+
+  el.querySelectorAll(".revoke-btn:not(:disabled)").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const m = TEAM.find((t) => t.id === Number(btn.dataset.id));
+      m.revoked = true;
+      renderTeamList();
+    });
+  });
+}
+
+document.getElementById("addForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("newName").value.trim();
+  const role = document.getElementById("newRole").value;
+  const capError = document.getElementById("capError");
+  const linkResult = document.getElementById("linkResult");
+  capError.style.display = "none";
+  linkResult.style.display = "none";
+  if (!name) return;
+
+  if (role !== "staff") {
+    const existing = TEAM.find((t) => t.role === role && !t.revoked);
+    if (existing) {
+      capError.textContent = `Only one ${role === "principal" ? "Principal" : "Admin"} allowed — revoke ${existing.name} first to reassign.`;
+      capError.style.display = "block";
+      return;
+    }
+  }
+
+  TEAM.push({ id: nextId, name, role, created: "2026-07-30", revoked: false });
+  nextId++;
+  const token = Math.random().toString(36).slice(2, 10);
+  document.getElementById("linkText").textContent = `https://client-instance.leadguard.app/dashboard/?t=${token}`;
+  linkResult.style.display = "block";
+  document.getElementById("newName").value = "";
+  renderTeamList();
+});
+
+document.getElementById("roleSwitch").addEventListener("change", (e) => {
+  const role = e.target.value;
+  const teamTab = document.getElementById("teamAccessTab");
+  const teamView = document.getElementById("viewTeamAccess");
+  const noAccessView = document.getElementById("viewNoAccess");
+  if (role === "staff") {
+    teamTab.style.display = "none";
+    teamView.classList.remove("active");
+    noAccessView.classList.add("active");
+    document.querySelectorAll("#tabs button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll("#tabs button")[3].classList.add("active");
+  } else {
+    teamTab.style.display = "";
+    noAccessView.classList.remove("active");
+    teamView.classList.add("active");
+    document.querySelectorAll("#tabs button").forEach((b) => b.classList.remove("active"));
+    teamTab.classList.add("active");
+  }
+});
+
+document.querySelectorAll("#tabs button").forEach((btn, i) => {
+  if (i === 4) return;
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#tabs button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  });
+});
+
+renderTeamList();
+</script>
+</body>
+</html>
