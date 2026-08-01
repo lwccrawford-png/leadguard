@@ -1,0 +1,62 @@
+{
+  "objection_library_version": "1.0.0",
+  "objections": [
+    {
+      "objection_id": "too_expensive",
+      "label": "Too Expensive",
+      "contexts": ["repair", "replacement", "membership"],
+      "customer_language": ["That's too much", "I can't afford that", "Why is it so expensive?"],
+      "response_strategy": "Validate, re-anchor to scope/value/safety, offer options or financing if configured, avoid discounting unless authorized.",
+      "sample_response": "I understand. HVAC work can be a big decision. The team can walk through what is included, what is urgent versus optional, and whether payment options are available. Would you like me to have an advisor review options with you?"
+    },
+    {
+      "objection_id": "getting_other_quotes",
+      "label": "Getting Other Quotes",
+      "contexts": ["replacement", "major_repair"],
+      "customer_language": ["I'm getting other estimates", "I need to compare", "Another company is coming out"],
+      "response_strategy": "Support comparison, emphasize clarity, offer advisor call to answer questions, follow up without pressure.",
+      "sample_response": "That makes sense. A system replacement is worth comparing carefully. If helpful, we can review the estimate with you so you understand equipment options, warranty, installation scope, and financing before you decide."
+    },
+    {
+      "objection_id": "talk_to_spouse",
+      "label": "Need to Talk to Spouse or Decision Maker",
+      "contexts": ["replacement", "membership", "repair"],
+      "customer_language": ["I need to talk to my husband", "My wife handles this", "I need to ask the owner"],
+      "response_strategy": "Schedule a follow-up with all decision makers, send summary, avoid pressure.",
+      "sample_response": "Absolutely. I can send a short summary and schedule a time when everyone involved can ask questions. What time would be best for a quick follow-up?"
+    },
+    {
+      "objection_id": "wait_until_next_season",
+      "label": "Wait Until Next Season",
+      "contexts": ["replacement", "maintenance"],
+      "customer_language": ["I'll wait until summer", "Maybe next winter", "It still works for now"],
+      "response_strategy": "Explain scheduling, comfort, and price-risk considerations without scare tactics.",
+      "sample_response": "That may be reasonable if the system is still reliable. The main reason customers plan early is to avoid peak-season delays and rushed decisions. I can set a reminder or schedule a planning consultation before the busy season."
+    },
+    {
+      "objection_id": "home_warranty",
+      "label": "Home Warranty",
+      "contexts": ["repair", "replacement"],
+      "customer_language": ["My home warranty should cover it", "I need to call the warranty company"],
+      "response_strategy": "Respect process, offer documentation support, avoid coverage claim.",
+      "sample_response": "That makes sense. Coverage depends on your warranty provider and policy. We can document the issue after diagnosis and provide the paperwork you need, but the warranty company decides coverage."
+    },
+    {
+      "objection_id": "diy_repair",
+      "label": "DIY Repair",
+      "contexts": ["repair"],
+      "customer_language": ["I'll replace the capacitor myself", "Can you tell me how to fix it?", "I saw a video online"],
+      "response_strategy": "Respect capability, refuse unsafe instructions, offer technician.",
+      "sample_response": "I cannot walk you through internal electrical, refrigerant, gas, or safety-control repairs. Those can be dangerous and may affect warranty. I can help schedule a technician or share simple safe checks like thermostat settings and filter status."
+    },
+    {
+      "objection_id": "membership_not_needed",
+      "label": "Membership Not Needed",
+      "contexts": ["membership"],
+      "customer_language": ["I don't need a maintenance plan", "I only call when something breaks"],
+      "response_strategy": "Tie benefits to prevention, priority, and customer-specific concern.",
+      "sample_response": "That is common. The plan is mainly for customers who want priority scheduling, regular tune-ups, and fewer surprise breakdowns. If you prefer, we can simply set a seasonal reminder and you can decide later."
+    }
+  ]
+}
+

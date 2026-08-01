@@ -1,0 +1,66 @@
+{
+  "entity_schema_version": "1.0.0",
+  "entities": [
+    {
+      "name": "customer",
+      "description": "Person or organization requesting HVAC service.",
+      "required_fields": ["full_name", "phone", "service_address"],
+      "optional_fields": ["email", "customer_type", "preferred_contact_method", "language", "consent_status", "existing_customer"]
+    },
+    {
+      "name": "property",
+      "description": "Service location and building context.",
+      "required_fields": ["service_address"],
+      "optional_fields": ["property_type", "home_age", "square_footage", "floors", "access_notes", "gate_code", "parking_notes", "tenant_landlord_status"]
+    },
+    {
+      "name": "equipment",
+      "description": "HVAC or refrigeration equipment at the property.",
+      "required_fields": ["equipment_type"],
+      "optional_fields": ["brand", "model_number", "serial_number", "age_years", "install_date", "fuel_type", "refrigerant_type", "tonnage", "warranty_status", "last_service_date"]
+    },
+    {
+      "name": "service_request",
+      "description": "Customer's reason for contacting the HVAC business.",
+      "required_fields": ["primary_intent", "problem_summary", "urgency_level"],
+      "optional_fields": ["symptoms", "started_at", "system_running", "safety_flags", "preferred_date", "preferred_time_window", "photos", "video", "lead_source"]
+    },
+    {
+      "name": "appointment",
+      "description": "Scheduled visit or consultation.",
+      "required_fields": ["appointment_type", "scheduled_window", "status"],
+      "optional_fields": ["technician_id", "dispatch_priority", "arrival_eta", "confirmation_status", "reschedule_count", "calendar_event_id"]
+    },
+    {
+      "name": "estimate",
+      "description": "Quoted repair, replacement, installation, or IAQ opportunity.",
+      "required_fields": ["estimate_type", "status"],
+      "optional_fields": ["amount", "presented_at", "expires_at", "financing_discussed", "objection", "follow_up_due_at", "comfort_advisor_id"]
+    },
+    {
+      "name": "membership",
+      "description": "Maintenance agreement or service plan.",
+      "required_fields": ["membership_status"],
+      "optional_fields": ["plan_name", "renewal_date", "visits_remaining", "benefits", "discounts", "payment_method", "auto_renew"]
+    },
+    {
+      "name": "technician",
+      "description": "Field team member assigned to work.",
+      "required_fields": ["technician_id", "name"],
+      "optional_fields": ["skills", "certifications", "service_area", "availability", "truck_inventory", "current_location", "rating"]
+    },
+    {
+      "name": "conversation",
+      "description": "AI or human interaction across web, SMS, voice, or email.",
+      "required_fields": ["conversation_id", "channel", "started_at"],
+      "optional_fields": ["transcript", "summary", "sentiment", "detected_intents", "handoff_reason", "ai_employee_role", "crm_sync_status"]
+    },
+    {
+      "name": "compliance_event",
+      "description": "Recorded compliance decision or boundary enforcement.",
+      "required_fields": ["event_type", "occurred_at", "action_taken"],
+      "optional_fields": ["source_rule", "risk_level", "human_reviewer", "resolution", "audit_notes"]
+    }
+  ]
+}
+

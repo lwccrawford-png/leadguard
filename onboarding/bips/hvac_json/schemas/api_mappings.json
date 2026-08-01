@@ -1,0 +1,55 @@
+{
+  "api_mappings_version": "1.0.0",
+  "canonical_to_platforms": {
+    "ServiceTitan": {
+      "contact": {"full_name": "customer.name", "phone": "customer.phoneNumbers", "email": "customer.email"},
+      "property": {"service_address": "location.address", "access_notes": "location.notes"},
+      "job": {"job_type": "job.type", "problem_summary": "job.summary", "scheduled_window": "job.appointmentWindow", "dispatch_priority": "job.priority"},
+      "estimate": {"amount": "estimate.total", "status": "estimate.status", "presented_at": "estimate.soldOn"},
+      "notes": {"ai_summary": "job.notes", "safety_flags": "job.tags"}
+    },
+    "HousecallPro": {
+      "contact": {"full_name": "customer.name", "phone": "customer.mobile_number", "email": "customer.email"},
+      "property": {"service_address": "address", "access_notes": "private_notes"},
+      "job": {"job_type": "work_status", "problem_summary": "description", "scheduled_window": "schedule"},
+      "estimate": {"amount": "estimate.total_amount", "status": "estimate.status"},
+      "notes": {"ai_summary": "notes"}
+    },
+    "Jobber": {
+      "contact": {"full_name": "client.name", "phone": "client.phone", "email": "client.email"},
+      "property": {"service_address": "property.address"},
+      "job": {"job_type": "request.title", "problem_summary": "request.details", "scheduled_window": "visit.schedule"},
+      "estimate": {"amount": "quote.amounts.total", "status": "quote.status"},
+      "notes": {"ai_summary": "internal_note.message"}
+    },
+    "HubSpot": {
+      "contact": {"full_name": "contact.firstname + contact.lastname", "phone": "contact.phone", "email": "contact.email"},
+      "lead": {"primary_intent": "deal.primary_intent", "urgency_level": "deal.urgency_level", "lead_score": "contact.hs_score"},
+      "deal": {"estimate_type": "deal.pipeline", "amount": "deal.amount", "status": "deal.dealstage"},
+      "task": {"context_summary": "task.body", "due_at": "task.timestamp"}
+    },
+    "Salesforce": {
+      "contact": {"full_name": "Contact.Name", "phone": "Contact.Phone", "email": "Contact.Email"},
+      "lead": {"primary_intent": "Lead.Primary_Intent__c", "urgency_level": "Lead.Urgency__c", "lead_score": "Lead.Score__c"},
+      "opportunity": {"amount": "Opportunity.Amount", "status": "Opportunity.StageName", "estimate_type": "Opportunity.Type"},
+      "task": {"context_summary": "Task.Description", "due_at": "Task.ActivityDate"}
+    }
+  },
+  "webhook_events": [
+    {"event": "conversation.started", "payload": ["tenant_id", "conversation_id", "channel", "contact_hint"]},
+    {"event": "intent.detected", "payload": ["conversation_id", "intent_id", "confidence", "slots"]},
+    {"event": "service_request.qualified", "payload": ["service_request_id", "urgency_level", "problem_summary", "safety_flags"]},
+    {"event": "appointment.booked", "payload": ["appointment_id", "scheduled_start", "scheduled_end", "appointment_type"]},
+    {"event": "handoff.requested", "payload": ["conversation_id", "reason", "severity", "target_queue"]},
+    {"event": "estimate.follow_up_due", "payload": ["estimate_id", "contact_id", "amount", "status"]},
+    {"event": "review.requested", "payload": ["job_id", "contact_id", "channel"]},
+    {"event": "compliance.boundary_triggered", "payload": ["conversation_id", "rule_id", "severity", "action_taken"]}
+  ],
+  "idempotency_keys": {
+    "crm_upsert_contact": "tenant_id:phone_or_email",
+    "appointment_create": "tenant_id:service_request_id:scheduled_start",
+    "task_create": "tenant_id:conversation_id:task_type",
+    "sms_send": "tenant_id:contact_id:template_id:date_bucket"
+  }
+}
+

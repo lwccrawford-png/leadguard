@@ -1,0 +1,151 @@
+{
+  "data_model_version": "1.0.0",
+  "tables": [
+    {
+      "name": "tenants",
+      "primary_key": "tenant_id",
+      "fields": [
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "business_name", "type": "string", "required": true},
+        {"name": "market", "type": "string", "required": true},
+        {"name": "timezone", "type": "string", "required": true},
+        {"name": "service_segments", "type": "array<string>", "required": true},
+        {"name": "active_pack_version", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "contacts",
+      "primary_key": "contact_id",
+      "fields": [
+        {"name": "contact_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "full_name", "type": "string", "required": true},
+        {"name": "phone", "type": "phone", "required": true},
+        {"name": "email", "type": "email", "required": false},
+        {"name": "customer_type", "type": "enum", "values": ["homeowner", "tenant", "landlord", "property_manager", "facility_manager", "commercial_contact"], "required": false},
+        {"name": "preferred_contact_method", "type": "enum", "values": ["phone", "sms", "email", "chat"], "required": false},
+        {"name": "consent_status", "type": "enum", "values": ["unknown", "transactional_allowed", "marketing_opted_in", "opted_out"], "required": true},
+        {"name": "crm_external_id", "type": "string", "required": false}
+      ]
+    },
+    {
+      "name": "properties",
+      "primary_key": "property_id",
+      "fields": [
+        {"name": "property_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "contact_id", "type": "uuid", "required": true},
+        {"name": "service_address", "type": "address", "required": true},
+        {"name": "property_type", "type": "enum", "values": ["single_family", "multi_family", "condo", "apartment", "office", "retail", "restaurant", "warehouse", "industrial", "other"], "required": false},
+        {"name": "square_footage", "type": "integer", "required": false},
+        {"name": "access_notes", "type": "text", "required": false}
+      ]
+    },
+    {
+      "name": "equipment",
+      "primary_key": "equipment_id",
+      "fields": [
+        {"name": "equipment_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "property_id", "type": "uuid", "required": true},
+        {"name": "equipment_type", "type": "enum", "values_ref": "taxonomy.equipment_categories", "required": true},
+        {"name": "brand", "type": "string", "required": false},
+        {"name": "model_number", "type": "string", "required": false},
+        {"name": "serial_number", "type": "string", "required": false},
+        {"name": "age_years", "type": "integer", "required": false},
+        {"name": "install_date", "type": "date", "required": false},
+        {"name": "warranty_status", "type": "enum", "values": ["unknown", "active", "expired", "parts_only", "labor_only", "extended"], "required": false},
+        {"name": "last_service_date", "type": "date", "required": false}
+      ]
+    },
+    {
+      "name": "conversations",
+      "primary_key": "conversation_id",
+      "fields": [
+        {"name": "conversation_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "contact_id", "type": "uuid", "required": false},
+        {"name": "channel", "type": "enum", "values": ["web_chat", "sms", "voice", "email", "facebook", "google_business", "internal"], "required": true},
+        {"name": "ai_employee_role", "type": "string", "required": true},
+        {"name": "started_at", "type": "datetime", "required": true},
+        {"name": "ended_at", "type": "datetime", "required": false},
+        {"name": "detected_intents", "type": "array<string>", "required": false},
+        {"name": "summary", "type": "text", "required": false},
+        {"name": "sentiment", "type": "enum", "values": ["positive", "neutral", "negative", "very_negative"], "required": false},
+        {"name": "handoff_reason", "type": "string", "required": false},
+        {"name": "crm_sync_status", "type": "enum", "values": ["pending", "synced", "failed", "not_required"], "required": true}
+      ]
+    },
+    {
+      "name": "service_requests",
+      "primary_key": "service_request_id",
+      "fields": [
+        {"name": "service_request_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "contact_id", "type": "uuid", "required": true},
+        {"name": "property_id", "type": "uuid", "required": true},
+        {"name": "conversation_id", "type": "uuid", "required": false},
+        {"name": "primary_intent", "type": "string", "required": true},
+        {"name": "problem_summary", "type": "text", "required": true},
+        {"name": "urgency_level", "type": "enum", "values": ["critical_safety", "emergency", "same_day", "next_available", "scheduled", "nurture"], "required": true},
+        {"name": "safety_flags", "type": "array<string>", "required": false},
+        {"name": "lead_source", "type": "string", "required": false},
+        {"name": "status", "type": "enum", "values": ["new", "qualified", "booked", "escalated", "closed", "lost"], "required": true}
+      ]
+    },
+    {
+      "name": "appointments",
+      "primary_key": "appointment_id",
+      "fields": [
+        {"name": "appointment_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "service_request_id", "type": "uuid", "required": true},
+        {"name": "appointment_type", "type": "enum", "values_ref": "taxonomy.job_types", "required": true},
+        {"name": "scheduled_start", "type": "datetime", "required": true},
+        {"name": "scheduled_end", "type": "datetime", "required": true},
+        {"name": "status", "type": "enum", "values_ref": "ontology.controlled_vocabularies.appointment_status", "required": true},
+        {"name": "technician_id", "type": "string", "required": false},
+        {"name": "external_job_id", "type": "string", "required": false},
+        {"name": "confirmation_status", "type": "enum", "values": ["not_sent", "sent", "confirmed", "declined"], "required": false}
+      ]
+    },
+    {
+      "name": "estimates",
+      "primary_key": "estimate_id",
+      "fields": [
+        {"name": "estimate_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "contact_id", "type": "uuid", "required": true},
+        {"name": "appointment_id", "type": "uuid", "required": false},
+        {"name": "estimate_type", "type": "enum", "values": ["repair", "replacement", "installation", "iaq", "ductwork", "commercial"], "required": true},
+        {"name": "amount", "type": "decimal", "required": false},
+        {"name": "status", "type": "enum", "values_ref": "ontology.controlled_vocabularies.estimate_status", "required": true},
+        {"name": "presented_at", "type": "datetime", "required": false},
+        {"name": "follow_up_due_at", "type": "datetime", "required": false},
+        {"name": "objection", "type": "string", "required": false}
+      ]
+    },
+    {
+      "name": "metrics_daily",
+      "primary_key": "metric_daily_id",
+      "fields": [
+        {"name": "metric_daily_id", "type": "uuid", "required": true},
+        {"name": "tenant_id", "type": "uuid", "required": true},
+        {"name": "date", "type": "date", "required": true},
+        {"name": "metric_key", "type": "string", "required": true},
+        {"name": "value", "type": "decimal", "required": true},
+        {"name": "source", "type": "string", "required": true}
+      ]
+    }
+  ],
+  "relationships": [
+    "tenants.tenant_id -> contacts.tenant_id",
+    "contacts.contact_id -> properties.contact_id",
+    "properties.property_id -> equipment.property_id",
+    "contacts.contact_id -> conversations.contact_id",
+    "conversations.conversation_id -> service_requests.conversation_id",
+    "service_requests.service_request_id -> appointments.service_request_id",
+    "appointments.appointment_id -> estimates.appointment_id"
+  ]
+}
+

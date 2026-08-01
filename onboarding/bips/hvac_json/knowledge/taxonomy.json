@@ -1,0 +1,139 @@
+{
+  "taxonomy_id": "hvac_taxonomy_v1",
+  "industry_terms": {
+    "business_segments": [
+      "residential_service",
+      "residential_replacement",
+      "residential_new_construction",
+      "light_commercial",
+      "commercial_service",
+      "commercial_installation",
+      "refrigeration",
+      "mechanical_contracting",
+      "indoor_air_quality"
+    ],
+    "customer_types": [
+      "homeowner",
+      "tenant",
+      "landlord",
+      "property_manager",
+      "facility_manager",
+      "builder",
+      "general_contractor",
+      "commercial_owner",
+      "maintenance_plan_member",
+      "previous_customer",
+      "new_lead"
+    ],
+    "job_types": [
+      "diagnostic",
+      "repair",
+      "maintenance",
+      "tune_up",
+      "replacement_estimate",
+      "installation",
+      "warranty_service",
+      "second_opinion",
+      "emergency_service",
+      "commercial_service",
+      "refrigeration_service",
+      "ductwork",
+      "indoor_air_quality",
+      "membership_visit"
+    ],
+    "equipment_categories": [
+      "central_air_conditioner",
+      "heat_pump",
+      "gas_furnace",
+      "electric_furnace",
+      "boiler",
+      "air_handler",
+      "ductless_mini_split",
+      "packaged_unit",
+      "commercial_rooftop_unit",
+      "vrf_system",
+      "chiller",
+      "thermostat",
+      "zoning_system",
+      "humidifier",
+      "dehumidifier",
+      "air_purifier",
+      "uv_light",
+      "walk_in_cooler",
+      "walk_in_freezer",
+      "ice_machine"
+    ],
+    "failure_modes": [
+      "no_cooling",
+      "no_heat",
+      "weak_airflow",
+      "short_cycling",
+      "system_wont_turn_on",
+      "thermostat_blank",
+      "frozen_coil",
+      "water_leak",
+      "breaker_trips",
+      "unusual_noise",
+      "burning_smell",
+      "gas_smell",
+      "high_utility_bill",
+      "uneven_temperature",
+      "poor_humidity_control",
+      "refrigeration_temperature_high",
+      "compressor_failure",
+      "capacitor_failure",
+      "blower_motor_failure",
+      "dirty_filter",
+      "clogged_drain_line",
+      "refrigerant_leak"
+    ],
+    "urgency_levels": [
+      "critical_safety",
+      "emergency",
+      "same_day",
+      "next_available",
+      "scheduled",
+      "nurture"
+    ],
+    "revenue_categories": [
+      "diagnostic_fee",
+      "repair_revenue",
+      "replacement_revenue",
+      "installation_revenue",
+      "membership_revenue",
+      "maintenance_revenue",
+      "iaq_revenue",
+      "commercial_contract_revenue",
+      "financing_influenced_revenue",
+      "recovered_missed_call_revenue"
+    ]
+  },
+  "classification_rules": [
+    {
+      "if": ["gas_smell", "carbon_monoxide_concern", "smoke", "electrical_burning"],
+      "then": "critical_safety",
+      "action": "stop_troubleshooting_and_escalate"
+    },
+    {
+      "if": ["no_heat", "freezing_weather"],
+      "then": "emergency",
+      "action": "same_day_or_after_hours_dispatch"
+    },
+    {
+      "if": ["no_cooling", "dangerous_heat"],
+      "then": "emergency",
+      "action": "same_day_or_after_hours_dispatch"
+    },
+    {
+      "if": ["system_age_over_12_years", "major_repair", "frequent_breakdowns"],
+      "then": "replacement_opportunity",
+      "action": "offer_comfort_advisor_consult"
+    },
+    {
+      "if": ["not_member", "maintenance_request"],
+      "then": "membership_opportunity",
+      "action": "explain_plan_and_offer_enrollment"
+    }
+  ]
+}
+

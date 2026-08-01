@@ -6,6 +6,13 @@ codebase, not a versioned library.
 
 ## Unreleased
 
+- **GTM strategy and BIP (industry-vertical starter pack) system** — `docs/GTM_AND_BIP_PRIORITY.md`
+  lays out positioning, a pricing validation ladder, and the first 5 verticals to target
+  (HVAC, roofing, med spa, auto repair, credit repair). `onboarding/bips/hvac.md` is the
+  first v1-compatible BIP: a drop-in flow script + facts + FAQs matching the existing
+  Settings/Knowledge schema exactly, plus implementation notes and a demo scenario.
+  `onboarding/bips/hvac_json/` is a larger reference pack scoped explicitly as future
+  material, not for direct ingestion into v1.
 - Cross-client **Support Requests admin page** in the launcher (`/support-requests`) —
   aggregates every running client's support requests into one table, filterable by
   client and status, with inline status updates proxied back to the originating

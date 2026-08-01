@@ -1,0 +1,74 @@
+{
+  "troubleshooting_version": "1.0.0",
+  "policy": {
+    "scope": "Customer-safe triage only. The AI may guide basic external checks but must not provide repair instructions.",
+    "max_questions_before_booking": 5,
+    "safety_override": "Any safety flag immediately exits the tree and escalates."
+  },
+  "trees": [
+    {
+      "tree_id": "tree_no_cooling",
+      "name": "No Cooling",
+      "nodes": [
+        {"id": "start", "question": "Is the thermostat set to cooling and below the current room temperature?", "yes": "airflow", "no": "safe_thermostat_check"},
+        {"id": "safe_thermostat_check", "guidance": "If it is safe and simple, set the thermostat to cooling and a few degrees below room temperature. If it still does not cool, I can schedule service.", "next": "book"},
+        {"id": "airflow", "question": "Is air coming from the vents?", "yes": "outdoor_unit", "no": "filter_check"},
+        {"id": "filter_check", "question": "Is the air filter very dirty or blocked?", "yes": "replace_filter_then_book_if_needed", "no": "book"},
+        {"id": "outdoor_unit", "question": "Does the outdoor unit appear to be running?", "yes": "ice_water", "no": "breaker_one_time"},
+        {"id": "breaker_one_time", "guidance": "If the breaker is safely accessible and tripped, you may reset it once. If it trips again, do not reset it repeatedly. I can schedule a technician.", "next": "book"},
+        {"id": "ice_water", "question": "Do you see ice on the unit or water around the system?", "yes": "book_same_day", "no": "book"}
+      ],
+      "terminal_actions": {
+        "book": "schedule_ac_diagnostic",
+        "book_same_day": "schedule_same_day_if_available",
+        "replace_filter_then_book_if_needed": "offer_booking_after_safe_filter_guidance"
+      }
+    },
+    {
+      "tree_id": "tree_no_heat",
+      "name": "No Heat",
+      "nodes": [
+        {"id": "start", "question": "Before we troubleshoot, do you smell gas, see smoke, or have a carbon monoxide alarm going off?", "yes": "critical", "no": "thermostat"},
+        {"id": "thermostat", "question": "Is the thermostat set to heat and above the current room temperature?", "yes": "airflow", "no": "safe_thermostat_check"},
+        {"id": "safe_thermostat_check", "guidance": "If it is safe and simple, set the thermostat to heat and a few degrees above room temperature. If heat does not start, I can schedule service.", "next": "book"},
+        {"id": "airflow", "question": "Is air blowing from the vents?", "yes": "cold_air", "no": "book"},
+        {"id": "cold_air", "question": "Is the air cool or lukewarm instead of warm?", "yes": "book", "no": "book"}
+      ],
+      "terminal_actions": {
+        "critical": "flow_critical_safety",
+        "book": "schedule_heating_diagnostic"
+      }
+    },
+    {
+      "tree_id": "tree_water_leak",
+      "name": "Water Leak",
+      "nodes": [
+        {"id": "start", "question": "Is water actively leaking and causing property damage?", "yes": "same_day", "no": "source"},
+        {"id": "source", "question": "Is the water near the indoor unit, drain line, ceiling, or outdoor unit?", "yes": "book", "no": "book"},
+        {"id": "safe_guidance", "guidance": "If water is threatening floors or ceilings, protect the area if safe. Avoid opening equipment panels. I can schedule service.", "next": "book"}
+      ],
+      "terminal_actions": {
+        "same_day": "schedule_same_day_or_escalate",
+        "book": "schedule_diagnostic"
+      }
+    },
+    {
+      "tree_id": "tree_thermostat",
+      "name": "Thermostat Issue",
+      "nodes": [
+        {"id": "start", "question": "Is the thermostat display on?", "yes": "settings", "no": "battery"},
+        {"id": "battery", "question": "Does your thermostat use replaceable batteries?", "yes": "battery_guidance", "no": "book"},
+        {"id": "battery_guidance", "guidance": "If you are comfortable, you can replace the batteries. If the display stays blank, I can schedule service.", "next": "book_if_needed"},
+        {"id": "settings", "question": "Is it set to the correct mode: heat, cool, or auto?", "yes": "system_response", "no": "safe_settings_guidance"},
+        {"id": "safe_settings_guidance", "guidance": "You can adjust the mode and setpoint. If the system still does not respond, I can schedule service.", "next": "book_if_needed"},
+        {"id": "system_response", "question": "Does the HVAC system respond when you change the setpoint?", "yes": "monitor", "no": "book"}
+      ],
+      "terminal_actions": {
+        "book": "schedule_diagnostic",
+        "book_if_needed": "offer_booking",
+        "monitor": "provide_safe_monitoring_guidance"
+      }
+    }
+  ]
+}
+

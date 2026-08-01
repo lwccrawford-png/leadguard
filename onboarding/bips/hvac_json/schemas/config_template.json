@@ -1,0 +1,95 @@
+{
+  "config_version": "1.0.0",
+  "tenant_config": {
+    "business_profile": {
+      "business_name": "",
+      "license_numbers": [],
+      "service_segments": [],
+      "brands_serviced": [],
+      "brands_installed": [],
+      "timezone": "",
+      "service_area": {
+        "zip_codes": [],
+        "cities": [],
+        "radius_miles": null,
+        "excluded_areas": []
+      }
+    },
+    "hours": {
+      "standard": {
+        "monday": "",
+        "tuesday": "",
+        "wednesday": "",
+        "thursday": "",
+        "friday": "",
+        "saturday": "",
+        "sunday": ""
+      },
+      "after_hours_enabled": false,
+      "holiday_policy": ""
+    },
+    "booking_rules": {
+      "allow_ai_booking": true,
+      "min_booking_lead_time_minutes": 60,
+      "diagnostic_duration_minutes": 120,
+      "maintenance_duration_minutes": 90,
+      "replacement_consult_duration_minutes": 90,
+      "commercial_duration_minutes": 180,
+      "same_day_capacity_buffer_percent": 15,
+      "requires_human_review_for": ["critical_safety", "commercial_authorization_missing", "out_of_area"]
+    },
+    "pricing_policy": {
+      "diagnostic_fee": null,
+      "after_hours_fee": null,
+      "trip_charge": null,
+      "can_disclose_ranges": false,
+      "approved_price_language": "A technician needs to assess the system before we can confirm repair pricing."
+    },
+    "membership_plans": [
+      {
+        "plan_name": "",
+        "monthly_price": null,
+        "annual_price": null,
+        "included_visits": null,
+        "benefits": [],
+        "discounts": [],
+        "priority_service": false
+      }
+    ],
+    "financing": {
+      "enabled": false,
+      "providers": [],
+      "secure_application_url": "",
+      "approved_language": "We can share financing options, but approval and terms are handled by the financing provider."
+    },
+    "emergency": {
+      "dispatch_phone": "",
+      "on_call_manager_phone": "",
+      "gas_smell_script": "",
+      "co_alarm_script": "",
+      "medical_priority_policy": ""
+    },
+    "communications": {
+      "sms_enabled": true,
+      "voice_enabled": false,
+      "email_enabled": true,
+      "marketing_texts_enabled": false,
+      "opt_out_keywords": ["STOP", "UNSUBSCRIBE", "CANCEL"],
+      "review_link": "",
+      "booking_link": ""
+    },
+    "integrations": {
+      "crm": {"provider": "", "api_key_ref": "", "webhook_secret_ref": ""},
+      "calendar": {"provider": "", "calendar_id": ""},
+      "payments": {"provider": "", "secure_payment_link": ""},
+      "phone": {"provider": "", "number": ""}
+    },
+    "analytics_assumptions": {
+      "average_diagnostic_ticket": null,
+      "average_repair_ticket": null,
+      "average_replacement_ticket": null,
+      "average_membership_value": null,
+      "average_commercial_ticket": null
+    }
+  }
+}

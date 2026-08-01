@@ -1,0 +1,23 @@
+{
+  "kpi_version": "1.0.0",
+  "kpis": [
+    {"kpi_id": "speed_to_answer", "name": "Speed to Answer", "formula": "avg(first_response_at - inbound_received_at)", "unit": "seconds", "owner": "operations", "target_guidance": "Lower is better; segment by channel and business hours."},
+    {"kpi_id": "missed_call_rate", "name": "Missed Call Rate", "formula": "missed_calls / inbound_calls", "unit": "percent", "owner": "operations", "target_guidance": "Track by hour, campaign, and season."},
+    {"kpi_id": "missed_call_recovery_rate", "name": "Missed Call Recovery Rate", "formula": "recovered_missed_calls / missed_calls", "unit": "percent", "owner": "csr_manager", "target_guidance": "Recovered means customer responded or booked after missed call sequence."},
+    {"kpi_id": "booking_rate", "name": "Booking Rate", "formula": "appointments_booked / qualified_service_requests", "unit": "percent", "owner": "operations", "target_guidance": "Segment emergency, maintenance, replacement, commercial."},
+    {"kpi_id": "ai_booking_rate", "name": "AI Booking Rate", "formula": "appointments_booked_by_ai / ai_qualified_service_requests", "unit": "percent", "owner": "ai_ops", "target_guidance": "Watch alongside escalation accuracy."},
+    {"kpi_id": "critical_escalation_accuracy", "name": "Critical Escalation Accuracy", "formula": "(true_positive_critical + true_negative_noncritical) / reviewed_safety_cases", "unit": "percent", "owner": "compliance", "target_guidance": "Requires QA review sample."},
+    {"kpi_id": "estimate_follow_up_rate", "name": "Estimate Follow-Up Rate", "formula": "estimates_followed_up / estimates_presented_not_sold", "unit": "percent", "owner": "sales_manager", "target_guidance": "Should approach 100% for open estimates with consent."},
+    {"kpi_id": "estimate_reactivation_rate", "name": "Estimate Reactivation Rate", "formula": "accepted_after_follow_up / estimates_followed_up", "unit": "percent", "owner": "sales_manager", "target_guidance": "Segment by repair/replacement and amount."},
+    {"kpi_id": "replacement_opportunity_rate", "name": "Replacement Opportunity Rate", "formula": "replacement_candidates_identified / service_requests", "unit": "percent", "owner": "sales_manager", "target_guidance": "Monitor for over-tagging."},
+    {"kpi_id": "membership_conversion_rate", "name": "Membership Conversion Rate", "formula": "memberships_sold / eligible_membership_offers", "unit": "percent", "owner": "csr_manager", "target_guidance": "Segment post-repair and tune-up."},
+    {"kpi_id": "membership_renewal_rate", "name": "Membership Renewal Rate", "formula": "memberships_renewed / memberships_due_for_renewal", "unit": "percent", "owner": "customer_success", "target_guidance": "Include involuntary payment failures separately."},
+    {"kpi_id": "review_conversion_rate", "name": "Review Conversion Rate", "formula": "public_reviews_attributed / review_requests_sent", "unit": "percent", "owner": "marketing", "target_guidance": "Suppress asks for unresolved complaints."},
+    {"kpi_id": "human_escalation_rate", "name": "Human Escalation Rate", "formula": "human_handoffs / ai_conversations", "unit": "percent", "owner": "ai_ops", "target_guidance": "High can be good in safety/commercial contexts; review by reason."},
+    {"kpi_id": "ai_containment_rate", "name": "AI Containment Rate", "formula": "ai_resolved_conversations / ai_conversations", "unit": "percent", "owner": "ai_ops", "target_guidance": "Do not optimize at expense of safety or sales conversion."},
+    {"kpi_id": "revenue_influenced", "name": "Revenue Influenced", "formula": "sum(closed_revenue where ai_assisted == true)", "unit": "currency", "owner": "owner", "target_guidance": "Separate booked, recovered, followed-up, and retained revenue."},
+    {"kpi_id": "recovered_revenue_estimate", "name": "Recovered Revenue Estimate", "formula": "appointments_from_missed_calls * configured.average_ticket_by_job_type", "unit": "currency", "owner": "owner", "target_guidance": "Clearly label as estimate unless tied to actual invoice."},
+    {"kpi_id": "no_show_rate", "name": "No-Show Rate", "formula": "no_show_appointments / scheduled_appointments", "unit": "percent", "owner": "operations", "target_guidance": "Track impact of confirmations and reminders."}
+  ]
+}
+

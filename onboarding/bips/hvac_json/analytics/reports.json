@@ -1,0 +1,68 @@
+{
+  "reports_version": "1.0.0",
+  "reports": [
+    {
+      "report_id": "daily_owner_brief",
+      "name": "Daily Owner Brief",
+      "cadence": "daily",
+      "audience": "owner",
+      "sections": [
+        {"section": "headline", "content": "Plain-language summary of calls answered, appointments booked, emergencies escalated, and revenue influenced."},
+        {"section": "opportunity", "metrics": ["missed_call_recovery_rate", "appointments_from_missed_calls", "replacement_opportunity_rate", "estimate_follow_up_rate"]},
+        {"section": "risk", "metrics": ["critical_escalations", "complaints", "failed_handoffs", "integration_errors"]},
+        {"section": "recommended_actions", "content": "Top 3 actions for manager review."}
+      ]
+    },
+    {
+      "report_id": "weekly_operations_scorecard",
+      "name": "Weekly Operations Scorecard",
+      "cadence": "weekly",
+      "audience": "operations_manager",
+      "sections": [
+        {"section": "demand_by_day_hour", "metrics": ["inbound_calls", "missed_calls", "web_chats", "sms_threads"]},
+        {"section": "booking_performance", "metrics": ["booking_rate", "ai_booking_rate", "no_show_rate", "reschedule_rate"]},
+        {"section": "dispatch_quality", "metrics": ["emergency_response_time", "priority_accuracy", "eta_requests"]},
+        {"section": "csr_load_reduction", "metrics": ["ai_containment_rate", "human_escalation_rate", "repetitive_questions_resolved"]}
+      ]
+    },
+    {
+      "report_id": "monthly_revenue_impact",
+      "name": "Monthly Revenue Impact",
+      "cadence": "monthly",
+      "audience": "owner_and_sales_manager",
+      "sections": [
+        {"section": "revenue_attribution", "metrics": ["revenue_influenced", "recovered_revenue_estimate", "closed_ai_assisted_revenue"]},
+        {"section": "sales_pipeline", "metrics": ["replacement_opportunity_rate", "estimate_reactivation_rate", "financing_discussion_rate"]},
+        {"section": "membership", "metrics": ["membership_conversion_rate", "membership_renewal_rate", "member_churn_rate"]},
+        {"section": "reputation", "metrics": ["review_request_rate", "review_conversion_rate", "average_rating_change"]},
+        {"section": "recommendations", "content": "Suggested workflow, staffing, and campaign improvements."}
+      ]
+    },
+    {
+      "report_id": "compliance_qa_report",
+      "name": "Compliance QA Report",
+      "cadence": "weekly",
+      "audience": "ai_ops_and_compliance",
+      "sections": [
+        {"section": "safety_cases", "metrics": ["critical_escalation_accuracy", "safety_rule_triggers", "missed_safety_flags"]},
+        {"section": "communications_consent", "metrics": ["opt_outs", "marketing_suppression_events", "sms_failures"]},
+        {"section": "restricted_content", "metrics": ["unsafe_repair_refusals", "financing_escalations", "tax_credit_disclaimers"]},
+        {"section": "review_queue", "content": "Sample conversations for human QA."}
+      ]
+    }
+  ],
+  "sample_daily_owner_brief": {
+    "headline": "Yesterday the AI handled 48 customer conversations, booked 14 appointments, recovered 5 missed calls, and escalated 2 urgent safety-related cases to your team.",
+    "revenue_snapshot": {
+      "booked_service_opportunities": 14,
+      "replacement_candidates": 3,
+      "open_estimates_followed_up": 9,
+      "estimated_revenue_influenced": "Use tenant analytics assumptions or actual invoices."
+    },
+    "top_actions": [
+      "Review one commercial request missing authorization details.",
+      "Call back two high-value replacement estimates with financing interest.",
+      "Check Saturday afternoon missed-call spike."
+    ]
+  }
+}

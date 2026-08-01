@@ -1,0 +1,93 @@
+{
+  "automation_version": "1.0.0",
+  "automations": [
+    {
+      "automation_id": "auto_missed_call_recovery",
+      "name": "Missed Call Recovery",
+      "trigger": {"event": "missed_call", "conditions": ["caller_id_present", "within_contact_policy"]},
+      "actions": [
+        {"type": "crm_upsert_contact"},
+        {"type": "sms_send", "template": "missed_call_callback", "delay_minutes": 1},
+        {"type": "ai_voice_callback", "delay_minutes": 3, "condition": "voice_callback_enabled"},
+        {"type": "task_create", "queue": "csr", "delay_minutes": 15, "condition": "no_response"}
+      ],
+      "stop_conditions": ["customer_reached", "opt_out", "human_completed", "max_attempts_reached"],
+      "kpis": ["missed_call_recovery_rate", "appointments_from_missed_calls", "recovered_revenue_estimate"]
+    },
+    {
+      "automation_id": "auto_appointment_confirmation",
+      "name": "Appointment Confirmation",
+      "trigger": {"event": "appointment_created"},
+      "actions": [
+        {"type": "sms_send", "template": "appointment_confirmation"},
+        {"type": "email_send", "template": "appointment_details", "condition": "email_present"},
+        {"type": "calendar_event_create"},
+        {"type": "crm_update", "fields": ["confirmation_status", "appointment_source"]}
+      ],
+      "stop_conditions": ["appointment_cancelled"],
+      "kpis": ["confirmation_rate", "no_show_rate"]
+    },
+    {
+      "automation_id": "auto_technician_en_route",
+      "name": "Technician En Route",
+      "trigger": {"event": "technician_status_changed", "status": "en_route"},
+      "actions": [
+        {"type": "sms_send", "template": "technician_en_route"},
+        {"type": "crm_update", "fields": ["arrival_eta", "technician_id"]}
+      ],
+      "stop_conditions": ["customer_opted_out"],
+      "kpis": ["eta_message_delivery_rate", "where_is_tech_call_reduction"]
+    },
+    {
+      "automation_id": "auto_estimate_follow_up",
+      "name": "Open Estimate Follow-Up",
+      "trigger": {"event": "estimate_status", "status": "presented"},
+      "actions": [
+        {"type": "wait", "duration": "24_hours"},
+        {"type": "sms_or_email_send", "template": "estimate_follow_up_1"},
+        {"type": "wait", "duration": "72_hours"},
+        {"type": "ai_sales_check_in", "template": "estimate_follow_up_objection"},
+        {"type": "task_create", "queue": "sales", "condition": "high_value_no_response"}
+      ],
+      "stop_conditions": ["estimate_accepted", "estimate_declined", "opt_out", "max_attempts_reached"],
+      "kpis": ["estimate_follow_up_rate", "estimate_reactivation_rate", "accepted_after_follow_up"]
+    },
+    {
+      "automation_id": "auto_membership_renewal",
+      "name": "Membership Renewal",
+      "trigger": {"event": "membership_renewal_due", "days_before": 30},
+      "actions": [
+        {"type": "sms_or_email_send", "template": "membership_renewal_notice"},
+        {"type": "ai_csr_follow_up", "delay_days": 7, "condition": "no_response"},
+        {"type": "task_create", "queue": "csr", "condition": "high_value_member_at_risk"}
+      ],
+      "stop_conditions": ["renewed", "cancelled", "opt_out"],
+      "kpis": ["membership_renewal_rate", "member_churn_rate"]
+    },
+    {
+      "automation_id": "auto_seasonal_tune_up",
+      "name": "Seasonal Tune-Up Campaign",
+      "trigger": {"event": "seasonal_campaign_start", "seasons": ["spring", "fall"]},
+      "actions": [
+        {"type": "segment_customers", "segment": "maintenance_due"},
+        {"type": "sms_or_email_send", "template": "seasonal_tune_up"},
+        {"type": "booking_link_send"},
+        {"type": "ai_follow_up", "delay_days": 5, "condition": "no_booking"}
+      ],
+      "stop_conditions": ["appointment_booked", "opt_out", "campaign_end"],
+      "kpis": ["campaign_booking_rate", "maintenance_capacity_filled"]
+    },
+    {
+      "automation_id": "auto_review_request",
+      "name": "Review Request",
+      "trigger": {"event": "job_completed", "conditions": ["no_open_complaint", "review_request_allowed"]},
+      "actions": [
+        {"type": "sentiment_check"},
+        {"type": "sms_or_email_send", "template": "review_request", "condition": "sentiment_non_negative"},
+        {"type": "service_recovery_task", "condition": "sentiment_negative"}
+      ],
+      "stop_conditions": ["review_left", "complaint_created", "max_attempts_reached"],
+      "kpis": ["review_request_rate", "review_conversion_rate", "service_recovery_cases"]
+    }
+  ]
+}

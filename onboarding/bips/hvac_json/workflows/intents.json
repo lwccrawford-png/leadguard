@@ -1,0 +1,231 @@
+{
+  "intent_library_version": "1.0.0",
+  "routing_defaults": {
+    "low_confidence_threshold": 0.62,
+    "human_review_threshold": 0.48,
+    "multi_intent_allowed": true
+  },
+  "intents": [
+    {
+      "intent_id": "emergency_no_cooling",
+      "label": "Emergency No Cooling",
+      "category": "service_request",
+      "example_utterances": ["My AC is out", "No cold air is coming out", "The house is 88 degrees", "Can someone come tonight for AC?"],
+      "required_slots": ["service_address", "phone", "symptoms", "system_running", "vulnerable_occupants", "desired_timing"],
+      "priority": "emergency",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_no_cooling"
+    },
+    {
+      "intent_id": "emergency_no_heat",
+      "label": "Emergency No Heat",
+      "category": "service_request",
+      "example_utterances": ["My heat stopped", "The furnace will not kick on", "We have no heat", "It is freezing inside"],
+      "required_slots": ["service_address", "phone", "fuel_type", "outside_temperature", "vulnerable_occupants", "safety_flags"],
+      "priority": "emergency",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_no_heat"
+    },
+    {
+      "intent_id": "gas_smell",
+      "label": "Gas Smell or Possible Gas Leak",
+      "category": "safety",
+      "example_utterances": ["I smell gas", "It smells like rotten eggs", "Could my furnace be leaking gas?"],
+      "required_slots": ["service_address", "phone", "customer_current_location"],
+      "priority": "critical_safety",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_critical_safety"
+    },
+    {
+      "intent_id": "carbon_monoxide_alarm",
+      "label": "Carbon Monoxide Alarm",
+      "category": "safety",
+      "example_utterances": ["My CO alarm is going off", "The carbon monoxide detector is beeping", "I feel dizzy and the furnace is on"],
+      "required_slots": ["service_address", "phone", "customer_current_location"],
+      "priority": "critical_safety",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_critical_safety"
+    },
+    {
+      "intent_id": "burning_smell_or_smoke",
+      "label": "Burning Smell or Smoke",
+      "category": "safety",
+      "example_utterances": ["It smells like burning", "There is smoke coming from the unit", "The breaker trips and I smell electrical"],
+      "required_slots": ["service_address", "phone", "visible_smoke", "breaker_status"],
+      "priority": "critical_safety",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_critical_safety"
+    },
+    {
+      "intent_id": "schedule_tune_up",
+      "label": "Schedule Tune-Up",
+      "category": "maintenance",
+      "example_utterances": ["I need a tune-up", "Can you service my AC before summer?", "Schedule maintenance"],
+      "required_slots": ["service_address", "phone", "equipment_type", "preferred_date", "membership_status"],
+      "priority": "scheduled",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_maintenance_booking"
+    },
+    {
+      "intent_id": "membership_question",
+      "label": "Membership Question",
+      "category": "membership",
+      "example_utterances": ["What does your maintenance plan include?", "Do members get priority service?", "How much is the service plan?"],
+      "required_slots": ["equipment_count", "customer_type"],
+      "priority": "nurture",
+      "assigned_ai_employee": "ai_membership_specialist",
+      "next_flow": "flow_membership"
+    },
+    {
+      "intent_id": "replacement_quote",
+      "label": "Replacement Quote",
+      "category": "sales",
+      "example_utterances": ["I need a new AC quote", "How much to replace my furnace?", "I want an estimate for a heat pump"],
+      "required_slots": ["service_address", "phone", "equipment_type", "system_age", "home_size", "decision_timeline"],
+      "priority": "same_day",
+      "assigned_ai_employee": "ai_sales_advisor",
+      "next_flow": "flow_replacement_consult"
+    },
+    {
+      "intent_id": "financing_inquiry",
+      "label": "Financing Inquiry",
+      "category": "sales",
+      "example_utterances": ["Do you finance?", "Can I make monthly payments?", "Do you have no-interest options?"],
+      "required_slots": ["service_context", "contact_info"],
+      "priority": "nurture",
+      "assigned_ai_employee": "ai_financing_assistant",
+      "next_flow": "flow_financing"
+    },
+    {
+      "intent_id": "thermostat_issue",
+      "label": "Thermostat Issue",
+      "category": "service_request",
+      "example_utterances": ["My thermostat is blank", "The thermostat won't connect", "The temperature is wrong"],
+      "required_slots": ["thermostat_brand", "display_status", "system_response", "safety_flags"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_knowledge_expert",
+      "next_flow": "tree_thermostat"
+    },
+    {
+      "intent_id": "poor_airflow",
+      "label": "Poor Airflow",
+      "category": "service_request",
+      "example_utterances": ["Barely any air is coming out", "One room has no airflow", "The vents feel weak"],
+      "required_slots": ["affected_rooms", "filter_status", "system_running", "recent_changes"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "flow_airflow"
+    },
+    {
+      "intent_id": "water_leak",
+      "label": "Water Leak Near HVAC",
+      "category": "service_request",
+      "example_utterances": ["Water is leaking from my AC", "There is water around the furnace", "The drain pan is full"],
+      "required_slots": ["leak_location", "amount", "system_running", "property_risk"],
+      "priority": "same_day",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "tree_water_leak"
+    },
+    {
+      "intent_id": "frozen_coil",
+      "label": "Frozen Coil or Ice on Unit",
+      "category": "service_request",
+      "example_utterances": ["There is ice on the AC", "The coil is frozen", "My refrigerant lines are iced up"],
+      "required_slots": ["ice_location", "airflow_status", "filter_status", "system_running"],
+      "priority": "same_day",
+      "assigned_ai_employee": "ai_receptionist",
+      "next_flow": "tree_frozen_coil"
+    },
+    {
+      "intent_id": "technician_eta",
+      "label": "Technician ETA",
+      "category": "customer_service",
+      "example_utterances": ["Where is the tech?", "When will they arrive?", "Are they still coming today?"],
+      "required_slots": ["appointment_id_or_customer_lookup"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_dispatcher",
+      "next_flow": "flow_eta"
+    },
+    {
+      "intent_id": "reschedule_appointment",
+      "label": "Reschedule Appointment",
+      "category": "customer_service",
+      "example_utterances": ["I need to reschedule", "Can we move my appointment?", "Tomorrow won't work"],
+      "required_slots": ["appointment_id_or_customer_lookup", "preferred_date"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_reschedule"
+    },
+    {
+      "intent_id": "cancel_appointment",
+      "label": "Cancel Appointment",
+      "category": "customer_service",
+      "example_utterances": ["Cancel my appointment", "I don't need service anymore", "Please cancel tomorrow"],
+      "required_slots": ["appointment_id_or_customer_lookup", "reason"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_cancellation_save"
+    },
+    {
+      "intent_id": "invoice_or_receipt",
+      "label": "Invoice or Receipt Request",
+      "category": "customer_service",
+      "example_utterances": ["Send me my invoice", "I need a receipt", "Can I get the paperwork?"],
+      "required_slots": ["customer_lookup", "job_or_date"],
+      "priority": "scheduled",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_invoice"
+    },
+    {
+      "intent_id": "warranty_question",
+      "label": "Warranty Question",
+      "category": "customer_service",
+      "example_utterances": ["Is this under warranty?", "Does my warranty cover it?", "I had this installed last year"],
+      "required_slots": ["customer_lookup", "equipment", "install_date", "problem_summary"],
+      "priority": "next_available",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_warranty"
+    },
+    {
+      "intent_id": "commercial_service_request",
+      "label": "Commercial Service Request",
+      "category": "commercial",
+      "example_utterances": ["Our rooftop unit is down", "Tenant says the office is hot", "The cooler is not holding temperature"],
+      "required_slots": ["business_name", "site_contact", "site_address", "equipment_type", "business_impact", "authorization_path"],
+      "priority": "same_day",
+      "assigned_ai_employee": "ai_dispatcher",
+      "next_flow": "flow_commercial_service"
+    },
+    {
+      "intent_id": "complaint",
+      "label": "Complaint or Service Recovery",
+      "category": "customer_service",
+      "example_utterances": ["I'm unhappy", "The tech did not fix it", "I want a manager", "This is unacceptable"],
+      "required_slots": ["customer_lookup", "issue_summary", "desired_resolution"],
+      "priority": "same_day",
+      "assigned_ai_employee": "ai_csr",
+      "next_flow": "flow_complaint_escalation"
+    },
+    {
+      "intent_id": "review_positive",
+      "label": "Positive Review Opportunity",
+      "category": "reputation",
+      "example_utterances": ["Great service", "Your tech was excellent", "Thanks for fixing it"],
+      "required_slots": ["customer_lookup", "job_id"],
+      "priority": "nurture",
+      "assigned_ai_employee": "ai_customer_success",
+      "next_flow": "flow_review_request"
+    },
+    {
+      "intent_id": "rebate_or_tax_credit",
+      "label": "Rebate or Tax Credit Question",
+      "category": "sales",
+      "example_utterances": ["Does this qualify for a tax credit?", "Are there rebates?", "Can I get money back for a heat pump?"],
+      "required_slots": ["equipment_interest", "location", "program_context"],
+      "priority": "nurture",
+      "assigned_ai_employee": "ai_sales_advisor",
+      "next_flow": "flow_incentive_disclaimer"
+    }
+  ]
+}
+

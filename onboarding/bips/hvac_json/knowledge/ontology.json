@@ -1,0 +1,47 @@
+{
+  "ontology_version": "1.0.0",
+  "classes": [
+    {"id": "Business", "label": "HVAC Business", "description": "Tenant company operating HVAC services."},
+    {"id": "Customer", "label": "Customer", "description": "Person or organization requesting help."},
+    {"id": "Property", "label": "Property", "description": "Physical service location."},
+    {"id": "Equipment", "label": "Equipment", "description": "HVAC or refrigeration asset."},
+    {"id": "Component", "label": "Component", "description": "Part within equipment."},
+    {"id": "FailureMode", "label": "Failure Mode", "description": "Observed or suspected malfunction."},
+    {"id": "Service", "label": "Service", "description": "Sellable or schedulable service."},
+    {"id": "Appointment", "label": "Appointment", "description": "Scheduled technician or advisor visit."},
+    {"id": "Technician", "label": "Technician", "description": "Field resource."},
+    {"id": "Estimate", "label": "Estimate", "description": "Quoted scope and price."},
+    {"id": "Invoice", "label": "Invoice", "description": "Completed billable work."},
+    {"id": "Membership", "label": "Membership", "description": "Maintenance plan relationship."},
+    {"id": "Intent", "label": "Intent", "description": "Detected customer goal."},
+    {"id": "SOP", "label": "Standard Operating Procedure", "description": "Repeatable operating workflow."},
+    {"id": "Automation", "label": "Automation", "description": "System-triggered workflow."},
+    {"id": "KPI", "label": "KPI", "description": "Performance metric."},
+    {"id": "ComplianceRule", "label": "Compliance Rule", "description": "Boundary or required behavior."},
+    {"id": "CRMRecord", "label": "CRM Record", "description": "Synced lead, customer, job, estimate, task, or note."},
+    {"id": "BusinessOutcome", "label": "Business Outcome", "description": "Revenue, efficiency, retention, safety, or customer experience result."}
+  ],
+  "relationships": [
+    {"from": "Customer", "type": "owns_or_occupies", "to": "Property"},
+    {"from": "Property", "type": "contains", "to": "Equipment"},
+    {"from": "Equipment", "type": "has_component", "to": "Component"},
+    {"from": "Equipment", "type": "can_experience", "to": "FailureMode"},
+    {"from": "FailureMode", "type": "maps_to", "to": "Intent"},
+    {"from": "Intent", "type": "routes_to", "to": "SOP"},
+    {"from": "Intent", "type": "may_schedule", "to": "Appointment"},
+    {"from": "Appointment", "type": "assigned_to", "to": "Technician"},
+    {"from": "Service", "type": "produces", "to": "Estimate"},
+    {"from": "Estimate", "type": "converts_to", "to": "Invoice"},
+    {"from": "Service", "type": "may_upsell", "to": "Membership"},
+    {"from": "Automation", "type": "updates", "to": "CRMRecord"},
+    {"from": "KPI", "type": "measures", "to": "BusinessOutcome"},
+    {"from": "ComplianceRule", "type": "constrains", "to": "Intent"}
+  ],
+  "controlled_vocabularies": {
+    "appointment_status": ["requested", "scheduled", "confirmed", "dispatched", "en_route", "on_site", "completed", "cancelled", "no_show"],
+    "estimate_status": ["not_created", "drafted", "presented", "accepted", "declined", "expired", "follow_up_due"],
+    "membership_status": ["none", "active", "past_due", "renewal_due", "cancelled", "expired"],
+    "consent_status": ["unknown", "transactional_allowed", "marketing_opted_in", "opted_out"],
+    "handoff_status": ["not_required", "queued", "live_transfer", "voicemail", "completed", "failed"]
+  }
+}

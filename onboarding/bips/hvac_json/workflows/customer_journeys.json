@@ -1,0 +1,65 @@
+{
+  "journey_version": "1.0.0",
+  "journeys": [
+    {
+      "journey_id": "emergency_service",
+      "name": "Emergency Service Journey",
+      "entry_points": ["phone", "missed_call", "web_chat", "sms", "google_business_message"],
+      "stages": [
+        {"stage": "contact_received", "goal": "Answer immediately and detect safety risk.", "owner": "ai_receptionist"},
+        {"stage": "safety_triage", "goal": "Identify gas, CO, smoke, electrical, extreme temperature, medical dependency.", "owner": "ai_receptionist"},
+        {"stage": "qualification", "goal": "Collect minimum viable dispatch information.", "owner": "ai_receptionist"},
+        {"stage": "priority_assignment", "goal": "Classify critical, emergency, same-day, or scheduled.", "owner": "ai_dispatcher"},
+        {"stage": "booking_or_transfer", "goal": "Book according to rules or transfer urgent case.", "owner": "ai_dispatcher"},
+        {"stage": "confirmation", "goal": "Send service window, prep instructions, and consent-aware messages.", "owner": "ai_csr"},
+        {"stage": "dispatch_update", "goal": "Notify customer when technician is assigned/en route.", "owner": "ai_dispatcher"},
+        {"stage": "completion_follow_up", "goal": "Confirm issue resolved, request review, trigger membership offer if appropriate.", "owner": "ai_customer_success"}
+      ],
+      "success_metrics": ["speed_to_answer", "emergency_booking_rate", "critical_escalation_accuracy", "missed_call_recovery_rate"]
+    },
+    {
+      "journey_id": "replacement_estimate",
+      "name": "Replacement Estimate Journey",
+      "entry_points": ["web_form", "phone", "web_chat", "campaign", "technician_recommendation"],
+      "stages": [
+        {"stage": "need_identification", "goal": "Understand comfort issue, equipment age, repair history, and timeline.", "owner": "ai_sales_advisor"},
+        {"stage": "home_context", "goal": "Collect home size, system type, goals, and decision-maker availability.", "owner": "ai_sales_advisor"},
+        {"stage": "education", "goal": "Explain process, efficiency considerations, financing availability, and next step without quoting final price.", "owner": "ai_sales_advisor"},
+        {"stage": "comfort_consult_booking", "goal": "Book advisor visit or virtual consultation.", "owner": "ai_sales_advisor"},
+        {"stage": "pre_visit_nurture", "goal": "Confirm appointment and prepare customer for consultation.", "owner": "ai_customer_success"},
+        {"stage": "estimate_follow_up", "goal": "Follow up on open estimate with objection-specific messaging.", "owner": "ai_sales_advisor"},
+        {"stage": "closed_won_onboarding", "goal": "Explain installation prep and next steps.", "owner": "ai_csr"}
+      ],
+      "success_metrics": ["consult_booking_rate", "estimate_show_rate", "estimate_acceptance_rate", "financing_discussion_rate"]
+    },
+    {
+      "journey_id": "maintenance_membership",
+      "name": "Maintenance Membership Journey",
+      "entry_points": ["repair_completion", "maintenance_request", "seasonal_campaign", "website"],
+      "stages": [
+        {"stage": "eligibility_check", "goal": "Confirm equipment type/count and existing membership status.", "owner": "ai_membership_specialist"},
+        {"stage": "benefit_match", "goal": "Explain benefits relevant to customer concern.", "owner": "ai_membership_specialist"},
+        {"stage": "plan_selection", "goal": "Present configured plan options.", "owner": "ai_membership_specialist"},
+        {"stage": "enrollment", "goal": "Send secure payment/enrollment link or hand off.", "owner": "ai_membership_specialist"},
+        {"stage": "visit_scheduling", "goal": "Schedule first tune-up.", "owner": "ai_csr"},
+        {"stage": "renewal", "goal": "Notify customer before renewal date and handle retention risks.", "owner": "ai_customer_success"}
+      ],
+      "success_metrics": ["membership_conversion_rate", "renewal_rate", "maintenance_booking_rate", "member_retention_rate"]
+    },
+    {
+      "journey_id": "commercial_service",
+      "name": "Commercial Service Journey",
+      "entry_points": ["phone", "web_form", "email", "property_manager_portal"],
+      "stages": [
+        {"stage": "site_identification", "goal": "Capture business, site, contact, access, and billing context.", "owner": "ai_receptionist"},
+        {"stage": "asset_triage", "goal": "Identify equipment, symptoms, tenant impact, product loss risk.", "owner": "ai_dispatcher"},
+        {"stage": "priority_assignment", "goal": "Classify business impact and dispatch urgency.", "owner": "ai_dispatcher"},
+        {"stage": "approval_path", "goal": "Confirm NTE amount, PO requirements, authorization contact.", "owner": "ai_csr"},
+        {"stage": "dispatch", "goal": "Schedule appropriate commercial technician.", "owner": "ai_dispatcher"},
+        {"stage": "post_work_reporting", "goal": "Send summary, invoice path, and maintenance contract offer if applicable.", "owner": "ai_customer_success"}
+      ],
+      "success_metrics": ["commercial_booking_rate", "authorization_capture_rate", "response_time", "contract_opportunity_rate"]
+    }
+  ]
+}
+

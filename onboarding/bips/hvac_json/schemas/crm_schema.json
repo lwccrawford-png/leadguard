@@ -1,0 +1,95 @@
+{
+  "crm_schema_version": "1.0.0",
+  "objects": [
+    {
+      "object": "lead",
+      "fields": [
+        {"field": "lead_source", "type": "string", "required": true},
+        {"field": "primary_intent", "type": "string", "required": true},
+        {"field": "urgency_level", "type": "string", "required": true},
+        {"field": "ai_summary", "type": "text", "required": false},
+        {"field": "lead_score", "type": "integer", "required": false},
+        {"field": "replacement_candidate", "type": "boolean", "required": false},
+        {"field": "membership_candidate", "type": "boolean", "required": false},
+        {"field": "financing_interest", "type": "boolean", "required": false},
+        {"field": "consent_status", "type": "string", "required": true}
+      ]
+    },
+    {
+      "object": "customer",
+      "fields": [
+        {"field": "full_name", "type": "string", "required": true},
+        {"field": "phone", "type": "phone", "required": true},
+        {"field": "email", "type": "email", "required": false},
+        {"field": "service_address", "type": "address", "required": true},
+        {"field": "customer_type", "type": "string", "required": false},
+        {"field": "membership_status", "type": "string", "required": false},
+        {"field": "lifetime_value", "type": "decimal", "required": false},
+        {"field": "last_service_date", "type": "date", "required": false}
+      ]
+    },
+    {
+      "object": "job",
+      "fields": [
+        {"field": "job_type", "type": "string", "required": true},
+        {"field": "problem_summary", "type": "text", "required": true},
+        {"field": "dispatch_priority", "type": "string", "required": true},
+        {"field": "scheduled_window", "type": "datetime_range", "required": true},
+        {"field": "technician_id", "type": "string", "required": false},
+        {"field": "equipment_type", "type": "string", "required": false},
+        {"field": "safety_flags", "type": "array<string>", "required": false},
+        {"field": "ai_qualification_notes", "type": "text", "required": false}
+      ]
+    },
+    {
+      "object": "estimate",
+      "fields": [
+        {"field": "estimate_type", "type": "string", "required": true},
+        {"field": "amount", "type": "decimal", "required": false},
+        {"field": "status", "type": "string", "required": true},
+        {"field": "presented_at", "type": "datetime", "required": false},
+        {"field": "follow_up_due_at", "type": "datetime", "required": false},
+        {"field": "objection", "type": "string", "required": false},
+        {"field": "ai_follow_up_count", "type": "integer", "required": false}
+      ]
+    },
+    {
+      "object": "task",
+      "fields": [
+        {"field": "task_type", "type": "string", "required": true},
+        {"field": "priority", "type": "string", "required": true},
+        {"field": "assigned_queue", "type": "string", "required": true},
+        {"field": "due_at", "type": "datetime", "required": true},
+        {"field": "context_summary", "type": "text", "required": true},
+        {"field": "related_conversation_id", "type": "string", "required": false}
+      ]
+    }
+  ],
+  "standard_tags": [
+    "ai_booked",
+    "ai_assisted",
+    "missed_call_recovered",
+    "after_hours",
+    "critical_safety",
+    "same_day",
+    "replacement_candidate",
+    "membership_candidate",
+    "financing_interested",
+    "commercial",
+    "warranty_question",
+    "complaint",
+    "review_opportunity",
+    "out_of_area"
+  ],
+  "lead_score_model": [
+    {"signal": "emergency_service_request", "points": 20},
+    {"signal": "replacement_quote_request", "points": 30},
+    {"signal": "system_age_over_12", "points": 20},
+    {"signal": "financing_interest", "points": 10},
+    {"signal": "existing_customer", "points": 10},
+    {"signal": "commercial_site", "points": 15},
+    {"signal": "out_of_area", "points": -50},
+    {"signal": "price_shopping_only", "points": -5}
+  ]
+}
+

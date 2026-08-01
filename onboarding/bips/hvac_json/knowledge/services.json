@@ -1,0 +1,106 @@
+{
+  "service_catalog_version": "1.0.0",
+  "services": [
+    {
+      "service_id": "ac_repair",
+      "category": "air_conditioning",
+      "name": "Air Conditioning Repair",
+      "customer_triggers": ["warm_air", "no_cooling", "weak_airflow", "frozen_coil", "water_leak", "noise"],
+      "qualification_required": ["system_type", "symptoms", "urgency", "safety_flags", "system_age"],
+      "default_appointment_type": "diagnostic",
+      "revenue_type": "repair_revenue",
+      "upsell_paths": ["maintenance_membership", "replacement_consultation", "smart_thermostat", "iaq_assessment"]
+    },
+    {
+      "service_id": "ac_replacement",
+      "category": "air_conditioning",
+      "name": "Air Conditioning Replacement",
+      "customer_triggers": ["old_system", "major_repair", "high_utility_bill", "frequent_breakdowns", "home_comfort_issue"],
+      "qualification_required": ["home_size", "system_age", "current_equipment", "comfort_goals", "financing_interest"],
+      "default_appointment_type": "comfort_advisor_consult",
+      "revenue_type": "replacement_revenue",
+      "upsell_paths": ["financing", "membership", "iaq_bundle", "ductwork_assessment", "smart_thermostat"]
+    },
+    {
+      "service_id": "furnace_repair",
+      "category": "heating",
+      "name": "Furnace Repair",
+      "customer_triggers": ["no_heat", "burning_smell", "short_cycling", "pilot_issue", "blower_issue"],
+      "qualification_required": ["fuel_type", "symptoms", "outside_temperature", "safety_flags", "system_age"],
+      "default_appointment_type": "diagnostic",
+      "revenue_type": "repair_revenue",
+      "upsell_paths": ["maintenance_membership", "replacement_consultation", "carbon_monoxide_detector_discussion"]
+    },
+    {
+      "service_id": "heat_pump_service",
+      "category": "heat_pumps",
+      "name": "Heat Pump Service",
+      "customer_triggers": ["not_heating", "not_cooling", "aux_heat_issue", "ice_on_unit", "high_bill"],
+      "qualification_required": ["mode", "symptoms", "weather", "thermostat_setting", "system_age"],
+      "default_appointment_type": "diagnostic",
+      "revenue_type": "repair_revenue",
+      "upsell_paths": ["maintenance_membership", "replacement_consultation", "efficiency_upgrade"]
+    },
+    {
+      "service_id": "maintenance_tune_up",
+      "category": "maintenance",
+      "name": "Seasonal Maintenance Tune-Up",
+      "customer_triggers": ["seasonal_checkup", "prevent_breakdowns", "membership_visit", "system_efficiency"],
+      "qualification_required": ["equipment_type", "preferred_schedule", "membership_status"],
+      "default_appointment_type": "maintenance",
+      "revenue_type": "maintenance_revenue",
+      "upsell_paths": ["membership", "filter_subscription", "iaq_assessment"]
+    },
+    {
+      "service_id": "maintenance_membership",
+      "category": "membership",
+      "name": "Maintenance Membership",
+      "customer_triggers": ["maintenance_request", "priority_service_interest", "discount_interest", "system_protection"],
+      "qualification_required": ["equipment_count", "equipment_type", "homeowner_status"],
+      "default_appointment_type": "membership_enrollment",
+      "revenue_type": "membership_revenue",
+      "upsell_paths": ["second_system_add_on", "iaq_bundle", "annual_renewal"]
+    },
+    {
+      "service_id": "iaq_assessment",
+      "category": "indoor_air_quality",
+      "name": "Indoor Air Quality Assessment",
+      "customer_triggers": ["allergies", "dust", "humidity", "odor", "pets", "poor_sleep", "mold_concern"],
+      "qualification_required": ["concern_type", "household_sensitivity", "system_type", "existing_iaq_products"],
+      "default_appointment_type": "iaq_consult",
+      "revenue_type": "iaq_revenue",
+      "upsell_paths": ["air_purifier", "uv_light", "humidifier", "dehumidifier", "duct_cleaning"]
+    },
+    {
+      "service_id": "ductwork_service",
+      "category": "ductwork",
+      "name": "Ductwork Inspection and Repair",
+      "customer_triggers": ["uneven_rooms", "poor_airflow", "high_bill", "dust", "remodel"],
+      "qualification_required": ["home_age", "problem_rooms", "visible_damage", "access"],
+      "default_appointment_type": "duct_inspection",
+      "revenue_type": "ductwork_revenue",
+      "upsell_paths": ["air_balancing", "duct_sealing", "insulation", "system_sizing_review"]
+    },
+    {
+      "service_id": "commercial_hvac_service",
+      "category": "commercial",
+      "name": "Commercial HVAC Service",
+      "customer_triggers": ["tenant_complaint", "rtu_down", "comfort_issue", "planned_maintenance", "facility_request"],
+      "qualification_required": ["business_name", "site_contact", "equipment_type", "access_rules", "urgency", "billing_contact"],
+      "default_appointment_type": "commercial_diagnostic",
+      "revenue_type": "commercial_service_revenue",
+      "upsell_paths": ["service_contract", "filter_program", "asset_register", "replacement_budgeting"]
+    },
+    {
+      "service_id": "refrigeration_service",
+      "category": "refrigeration",
+      "name": "Commercial Refrigeration Service",
+      "customer_triggers": ["cooler_warm", "freezer_warm", "ice_machine_down", "product_loss_risk"],
+      "qualification_required": ["equipment_type", "temperature", "product_at_risk", "business_hours", "access_rules"],
+      "default_appointment_type": "commercial_refrigeration_emergency",
+      "revenue_type": "refrigeration_revenue",
+      "upsell_paths": ["preventative_maintenance", "monitoring", "replacement_quote"]
+    }
+  ]
+}
+

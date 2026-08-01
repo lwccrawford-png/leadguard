@@ -1,0 +1,135 @@
+{
+  "compliance_version": "1.0.0",
+  "disclaimer": "This module provides operational guardrails for AI behavior. It is not legal, tax, safety, licensing, or engineering advice. Tenant businesses must verify state and local requirements.",
+  "rules": [
+    {
+      "rule_id": "safety_gas_smell",
+      "category": "life_safety",
+      "trigger_terms": ["gas smell", "rotten egg", "propane smell", "natural gas", "gas leak"],
+      "ai_boundary": "Do not troubleshoot. Tell the customer to leave the area if they feel unsafe, avoid flames/switches, contact emergency services or the gas utility, and connect to human emergency dispatch.",
+      "required_action": "immediate_human_escalation",
+      "severity": "critical"
+    },
+    {
+      "rule_id": "safety_carbon_monoxide",
+      "category": "life_safety",
+      "trigger_terms": ["carbon monoxide", "CO alarm", "headache", "dizziness", "nausea", "detector going off"],
+      "ai_boundary": "Do not diagnose. Advise immediate safety steps and emergency services according to tenant-approved script.",
+      "required_action": "immediate_human_escalation",
+      "severity": "critical"
+    },
+    {
+      "rule_id": "safety_electrical_burning",
+      "category": "life_safety",
+      "trigger_terms": ["burning electrical", "smoke", "sparks", "breaker keeps tripping", "melted wire"],
+      "ai_boundary": "Do not instruct repairs or bypassing safety devices. Escalate for urgent dispatch.",
+      "required_action": "human_escalation",
+      "severity": "critical"
+    },
+    {
+      "rule_id": "no_unsafe_repair_instruction",
+      "category": "technical_safety",
+      "trigger_terms": ["how do I bypass", "wire around", "add refrigerant myself", "open the panel", "jump the switch"],
+      "ai_boundary": "The AI may provide simple homeowner checks only when configured, such as thermostat settings, filter replacement, and breaker status. It must not provide instructions involving refrigerant, electrical internals, gas lines, combustion, pressure vessels, or safety controls.",
+      "required_action": "refuse_and_offer_technician",
+      "severity": "high"
+    },
+    {
+      "rule_id": "section_608_refrigerant",
+      "category": "environmental_regulatory",
+      "trigger_terms": ["refrigerant", "freon", "R-410A", "R-32", "R-454B", "charge system", "leak"],
+      "ai_boundary": "Do not instruct customers to handle refrigerant. Route refrigerant handling to certified technicians.",
+      "required_action": "licensed_technician_required",
+      "severity": "high",
+      "source": "EPA Section 608"
+    },
+    {
+      "rule_id": "hfc_transition_claims",
+      "category": "environmental_regulatory",
+      "trigger_terms": ["R-410A ban", "new refrigerant", "2025 refrigerant", "HFC"],
+      "ai_boundary": "Use configured, source-reviewed language. Avoid blanket statements that existing systems are illegal or must be replaced. Explain that rules affect new products/equipment and that service options depend on equipment, refrigerant, and local availability.",
+      "required_action": "use_reviewed_script",
+      "severity": "medium",
+      "source": "EPA AIM Act Technology Transitions"
+    },
+    {
+      "rule_id": "no_price_guarantees",
+      "category": "consumer_protection",
+      "trigger_terms": ["how much", "exact price", "guarantee", "quote over chat"],
+      "ai_boundary": "Provide configured diagnostic fees, trip charges, membership pricing, or approved ranges only. Never guarantee final repair or replacement cost without technician assessment and tenant pricing approval.",
+      "required_action": "disclose_estimate_limits",
+      "severity": "medium"
+    },
+    {
+      "rule_id": "financing_no_approval_claim",
+      "category": "financial",
+      "trigger_terms": ["financing", "monthly payment", "credit", "approved", "soft pull"],
+      "ai_boundary": "May explain available programs if configured. Must not promise approval, quote APR unless provided by tenant/provider, or collect sensitive financial data outside approved secure application flow.",
+      "required_action": "handoff_or_secure_link",
+      "severity": "high"
+    },
+    {
+      "rule_id": "tax_credit_no_tax_advice",
+      "category": "tax",
+      "trigger_terms": ["tax credit", "rebate", "incentive", "ENERGY STAR"],
+      "ai_boundary": "May provide general source-linked information and suggest customer consult tax professional or official program. Must not determine eligibility or guarantee amount.",
+      "required_action": "source_link_and_disclaimer",
+      "severity": "medium"
+    },
+    {
+      "rule_id": "cooling_off_rule_awareness",
+      "category": "consumer_protection",
+      "trigger_terms": ["cancel contract", "in-home sale", "buyers remorse", "refund"],
+      "ai_boundary": "Escalate cancellation/refund questions to human. Do not interpret legal rights beyond tenant-approved script.",
+      "required_action": "human_escalation",
+      "severity": "medium",
+      "source": "FTC Cooling-Off Rule"
+    },
+    {
+      "rule_id": "tcpa_sms_consent",
+      "category": "communications",
+      "trigger_terms": ["text me", "sms", "marketing", "promotion", "unsubscribe", "stop"],
+      "ai_boundary": "Respect opt-out. Transactional confirmations require configured consent handling. Marketing texts require documented opt-in according to tenant policy and applicable law.",
+      "required_action": "enforce_consent_status",
+      "severity": "high"
+    },
+    {
+      "rule_id": "state_license_permit",
+      "category": "licensing",
+      "trigger_terms": ["permit", "licensed", "inspection", "code"],
+      "ai_boundary": "Use tenant-provided license and permit language. Do not claim permit requirements for a jurisdiction unless configured.",
+      "required_action": "use_local_config_or_escalate",
+      "severity": "medium"
+    }
+  ],
+  "approved_safe_homeowner_checks": [
+    "Confirm thermostat mode and setpoint.",
+    "Check whether thermostat display is on.",
+    "Replace thermostat batteries if the customer is comfortable doing so.",
+    "Check if air filter is visibly dirty and replace if accessible.",
+    "Confirm vents are open and unobstructed.",
+    "Check whether indoor and outdoor units appear to be running without touching internal components.",
+    "Check breaker status one time only if safe and accessible; do not advise repeated resetting."
+  ],
+  "prohibited_ai_instructions": [
+    "Handling refrigerant",
+    "Opening sealed equipment compartments",
+    "Bypassing pressure switches, limit switches, float switches, flame sensors, or safety controls",
+    "Electrical wiring repairs",
+    "Gas valve or gas line repairs",
+    "Combustion adjustment",
+    "Pressure testing instructions",
+    "Warranty coverage determination",
+    "Financing approval determination",
+    "Tax eligibility determination"
+  ],
+  "source_registry": [
+    {"name": "EPA Technology Transitions Program", "url": "https://www.epa.gov/hfcs/technology-transitions-program"},
+    {"name": "EPA HFC Restrictions by Sector", "url": "https://www.epa.gov/hfcs/technology-transitions-hfc-restrictions-sector"},
+    {"name": "EPA Section 608 Certification Requirements", "url": "https://www.epa.gov/section608/section-608-technician-certification-requirements"},
+    {"name": "ENERGY STAR Air Source Heat Pumps Tax Credit", "url": "https://www.energystar.gov/about/federal-tax-credits/air-source-heat-pumps"},
+    {"name": "FTC Cooling-Off Rule", "url": "https://www.ftc.gov/legal-library/browse/rules/cooling-period-sales-made-home-or-other-locations"},
+    {"name": "FCC Consumer Complaints: Unwanted Calls/Texts", "url": "https://consumercomplaints.fcc.gov/hc/en-us/articles/115002234203-Unwanted-Calls-Texts-Phone"}
+  ]
+}
+

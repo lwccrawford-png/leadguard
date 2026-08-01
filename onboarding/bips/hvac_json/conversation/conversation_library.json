@@ -1,0 +1,177 @@
+{
+  "conversation_library_version": "1.0.0",
+  "tone_guidelines": {
+    "default": "calm, competent, concise, service-oriented",
+    "emergency": "direct, safety-first, no sales language",
+    "sales": "consultative, transparent, outcome-focused",
+    "complaint": "accountable, non-defensive, resolution-focused"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "conv_no_cooling_after_hours",
+      "intent_id": "emergency_no_cooling",
+      "channel": "voice_or_chat",
+      "customer_examples": [
+        "My AC just stopped working and it's hot in here.",
+        "Can someone come out tonight? The air is warm.",
+        "It's after hours but our AC is out."
+      ],
+      "ai_response_pattern": [
+        "Acknowledge urgency.",
+        "Check safety and vulnerable occupants.",
+        "Collect address and phone.",
+        "Ask minimum symptom questions.",
+        "Apply after-hours policy.",
+        "Book or transfer."
+      ],
+      "sample_response": "I can help get this routed quickly. First, is anyone in the home medically vulnerable, elderly, an infant, or especially heat-sensitive? Also, what is the service address and best callback number in case we get disconnected?",
+      "handoff_if": ["dangerous_heat_with_medical_dependency", "no_after_hours_booking_available", "customer_demands_human"]
+    },
+    {
+      "scenario_id": "conv_gas_smell",
+      "intent_id": "gas_smell",
+      "channel": "all",
+      "customer_examples": ["I smell gas near the furnace.", "It smells like rotten eggs in the basement."],
+      "ai_response_pattern": [
+        "Stop troubleshooting.",
+        "Use configured gas safety script.",
+        "Confirm callback and location only if safe.",
+        "Escalate immediately."
+      ],
+      "sample_response": "For safety, I am going to stop troubleshooting and get this escalated immediately. If you feel unsafe, move away from the area and follow emergency guidance from your gas utility or local emergency services. What phone number should dispatch use if we get disconnected?",
+      "handoff_if": ["always"]
+    },
+    {
+      "scenario_id": "conv_replacement_quote",
+      "intent_id": "replacement_quote",
+      "channel": "web_chat",
+      "customer_examples": ["How much is a new AC?", "I need a quote for replacing my heat pump."],
+      "ai_response_pattern": [
+        "Explain assessment is needed for accurate pricing.",
+        "Collect equipment, home, timeline, and decision context.",
+        "Ask financing interest without pressure.",
+        "Book comfort advisor consultation."
+      ],
+      "sample_response": "I can help set up a replacement consultation. Final pricing depends on the home, system size, installation requirements, and options, so the best next step is a comfort advisor visit. What type of system are you replacing, and about how old is it?",
+      "handoff_if": ["customer_requests_exact_price", "complex_multi_system_project", "commercial_project"]
+    },
+    {
+      "scenario_id": "conv_financing",
+      "intent_id": "financing_inquiry",
+      "channel": "chat_or_sms",
+      "customer_examples": ["Do you offer financing?", "Can I pay monthly?", "Will I get approved?"],
+      "ai_response_pattern": [
+        "Confirm financing is available only if configured.",
+        "Avoid approval claims.",
+        "Offer secure application link or advisor callback.",
+        "Tag financing interest."
+      ],
+      "sample_response": "Yes, financing options may be available through our financing partner. Approval and terms are handled by the provider, so I cannot guarantee approval here, but I can send the secure application link or have an advisor walk you through the options.",
+      "handoff_if": ["customer_wants_to_apply", "customer_asks_credit_specific_question"]
+    },
+    {
+      "scenario_id": "conv_membership",
+      "intent_id": "membership_question",
+      "channel": "chat",
+      "customer_examples": ["Is your maintenance plan worth it?", "What do members get?", "Do I need a tune-up every year?"],
+      "ai_response_pattern": [
+        "Match benefits to customer concern.",
+        "Use configured plan details.",
+        "Offer enrollment or tune-up booking.",
+        "Avoid unconfigured savings guarantees."
+      ],
+      "sample_response": "The main reasons customers join are priority scheduling, seasonal tune-ups, repair discounts if included in the selected plan, and fewer surprise breakdowns. I can show the plan options or schedule a tune-up first.",
+      "handoff_if": ["plan_pricing_missing", "customer_requests_custom_discount"]
+    },
+    {
+      "scenario_id": "conv_warranty",
+      "intent_id": "warranty_question",
+      "channel": "phone_or_chat",
+      "customer_examples": ["Is this covered by warranty?", "You installed this last year.", "Will I have to pay?"],
+      "ai_response_pattern": [
+        "Collect equipment and install context.",
+        "Avoid coverage determination unless verified.",
+        "Explain review process.",
+        "Book diagnostic or manager review."
+      ],
+      "sample_response": "I can help start the warranty review. Warranty coverage depends on the equipment, install date, registration, part, and labor terms, so I do not want to guess. Can I confirm the service address and what issue you are having?",
+      "handoff_if": ["customer_disputes_coverage", "warranty_status_unknown"]
+    },
+    {
+      "scenario_id": "conv_complaint",
+      "intent_id": "complaint",
+      "channel": "all",
+      "customer_examples": ["Your tech did not fix it.", "I'm really unhappy.", "I want a manager to call me."],
+      "ai_response_pattern": [
+        "Acknowledge without arguing.",
+        "Collect concise facts.",
+        "Ask desired resolution.",
+        "Create service recovery task.",
+        "Set callback expectation."
+      ],
+      "sample_response": "I'm sorry this has been frustrating. I can get this in front of the right person. What happened, and what would you like the team to review or resolve first?",
+      "handoff_if": ["always"]
+    },
+    {
+      "scenario_id": "conv_eta",
+      "intent_id": "technician_eta",
+      "channel": "sms_or_chat",
+      "customer_examples": ["Where is the tech?", "Are they still coming?", "I have to leave soon."],
+      "ai_response_pattern": [
+        "Look up appointment.",
+        "Provide ETA if available.",
+        "If unavailable, create dispatcher task.",
+        "Offer reschedule if needed."
+      ],
+      "sample_response": "I can check that for you. Let me look up the appointment using your phone number or service address.",
+      "handoff_if": ["eta_missing", "technician_late_beyond_threshold"]
+    },
+    {
+      "scenario_id": "conv_rebate_tax_credit",
+      "intent_id": "rebate_or_tax_credit",
+      "channel": "chat",
+      "customer_examples": ["Does a heat pump qualify for a tax credit?", "Are there rebates for new AC units?"],
+      "ai_response_pattern": [
+        "Provide general, source-linked language if configured.",
+        "Avoid eligibility determination.",
+        "Offer advisor discussion.",
+        "Recommend official program/tax professional for eligibility."
+      ],
+      "sample_response": "Some qualifying high-efficiency equipment may be eligible for incentives, but eligibility depends on the equipment, home, installation, and current program rules. We can help identify options to discuss, and you should confirm eligibility through official program guidance or a tax professional.",
+      "handoff_if": ["customer_needs_specific_eligibility", "program_not_configured"]
+    }
+  ],
+  "message_templates": [
+    {
+      "template_id": "missed_call_callback",
+      "channel": "sms",
+      "body": "Hi {{first_name}}, this is {{business_name}}. Sorry we missed your call. Reply here with what you need help with, or tap to book: {{booking_link}}. Reply STOP to opt out."
+    },
+    {
+      "template_id": "appointment_confirmation",
+      "channel": "sms",
+      "body": "{{business_name}} confirmed your {{appointment_type}} for {{scheduled_window}} at {{service_address}}. Reply C to confirm or R to reschedule."
+    },
+    {
+      "template_id": "technician_en_route",
+      "channel": "sms",
+      "body": "{{technician_name}} from {{business_name}} is on the way. Estimated arrival: {{eta}}."
+    },
+    {
+      "template_id": "estimate_follow_up_1",
+      "channel": "sms_or_email",
+      "body": "Hi {{first_name}}, checking in on the {{estimate_type}} estimate from {{business_name}}. Any questions about options, timing, or monthly payment choices?"
+    },
+    {
+      "template_id": "seasonal_tune_up",
+      "channel": "sms_or_email",
+      "body": "Hi {{first_name}}, it is time to schedule your seasonal HVAC tune-up with {{business_name}}. You can choose a time here: {{booking_link}}."
+    },
+    {
+      "template_id": "review_request",
+      "channel": "sms_or_email",
+      "body": "Thanks for choosing {{business_name}}. If everything went well, would you leave a quick review here? {{review_link}}"
+    }
+  ]
+}
+

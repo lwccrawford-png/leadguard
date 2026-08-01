@@ -1,0 +1,119 @@
+{
+  "sop_version": "1.0.0",
+  "sops": [
+    {
+      "sop_id": "sop_missed_call_recovery",
+      "name": "Missed Call Recovery",
+      "owner_role": "ai_receptionist",
+      "trigger": "missed_call_event",
+      "steps": [
+        "Create or match customer record by caller ID.",
+        "Send transactional callback SMS if consent policy permits.",
+        "Place AI callback if configured and within allowed hours.",
+        "Ask reason for call and detect safety intent first.",
+        "Qualify and book if possible.",
+        "If no response, create follow-up task and send second attempt after configured delay.",
+        "Report recovered call value using configured average ticket assumptions."
+      ],
+      "success_criteria": ["contact_made", "appointment_booked", "task_created"],
+      "failure_handling": "Notify CSR queue after max attempts."
+    },
+    {
+      "sop_id": "sop_after_hours_service",
+      "name": "After-Hours Service",
+      "owner_role": "ai_dispatcher",
+      "trigger": "inbound_after_hours_service_request",
+      "steps": [
+        "Detect critical safety issue.",
+        "Apply after-hours service policy.",
+        "Disclose after-hours fee only if configured.",
+        "Classify urgency.",
+        "Book on-call appointment or transfer to on-call manager.",
+        "Send confirmation with arrival expectations.",
+        "Create high-priority dispatch note."
+      ],
+      "success_criteria": ["emergency_captured", "customer_confirmed", "dispatch_notified"],
+      "failure_handling": "Escalate to on-call manager if booking API unavailable."
+    },
+    {
+      "sop_id": "sop_estimate_follow_up",
+      "name": "Estimate Follow-Up",
+      "owner_role": "ai_sales_advisor",
+      "trigger": "estimate_presented_not_accepted",
+      "steps": [
+        "Wait configured follow-up interval.",
+        "Send personalized follow-up referencing service context.",
+        "Ask whether customer has questions, timing concerns, price concerns, or needs financing.",
+        "Route objection to objection playbook.",
+        "Offer call with comfort advisor for replacement estimates.",
+        "Update estimate status and next follow-up date.",
+        "Stop after opt-out, rejection, or max attempts."
+      ],
+      "success_criteria": ["estimate_accepted", "advisor_call_booked", "reason_lost_captured"],
+      "failure_handling": "Move to nurture campaign after max attempts."
+    },
+    {
+      "sop_id": "sop_membership_offer_after_repair",
+      "name": "Post-Repair Membership Offer",
+      "owner_role": "ai_membership_specialist",
+      "trigger": "repair_completed AND membership_status == none",
+      "steps": [
+        "Wait until job completion and customer satisfaction confirmed.",
+        "Explain membership benefit tied to the completed repair.",
+        "Present configured plan options.",
+        "Offer enrollment link or human callback.",
+        "If declined, capture reason and schedule seasonal reminder if allowed."
+      ],
+      "success_criteria": ["membership_sold", "future_reminder_created", "decline_reason_captured"],
+      "failure_handling": "Suppress offer if complaint or unresolved issue exists."
+    },
+    {
+      "sop_id": "sop_review_request",
+      "name": "Review Request",
+      "owner_role": "ai_customer_success",
+      "trigger": "job_completed AND customer_sentiment != negative",
+      "steps": [
+        "Confirm customer is satisfied if sentiment unknown.",
+        "Send review link according to tenant review policy.",
+        "If positive reply, request public review.",
+        "If negative reply, route to service recovery instead of public review ask.",
+        "Update review_request_status."
+      ],
+      "success_criteria": ["review_link_clicked", "public_review_left", "service_recovery_case_created"],
+      "failure_handling": "Do not repeatedly request after no response beyond configured limit."
+    },
+    {
+      "sop_id": "sop_warranty_question",
+      "name": "Warranty Question Handling",
+      "owner_role": "ai_csr",
+      "trigger": "intent == warranty_question",
+      "steps": [
+        "Match customer and equipment record.",
+        "Collect install date, model, serial, and problem summary when missing.",
+        "Explain that warranty status must be verified.",
+        "Avoid confirming coverage unless CRM has verified warranty field.",
+        "Book diagnostic or create manager review task.",
+        "Record warranty_claim_context."
+      ],
+      "success_criteria": ["warranty_context_captured", "appointment_or_review_created"],
+      "failure_handling": "Escalate to service manager if customer disputes coverage."
+    },
+    {
+      "sop_id": "sop_commercial_authorization",
+      "name": "Commercial Authorization Capture",
+      "owner_role": "ai_dispatcher",
+      "trigger": "commercial_service_request",
+      "steps": [
+        "Capture company, site, contact, billing contact, and service address.",
+        "Ask for PO, NTE amount, landlord authorization, or property manager approval requirements.",
+        "Store access instructions.",
+        "Flag product loss, tenant impact, or business closure risk.",
+        "Book commercial technician or escalate to coordinator.",
+        "Send confirmation to site and billing contacts if permitted."
+      ],
+      "success_criteria": ["authorization_path_captured", "commercial_job_created"],
+      "failure_handling": "Queue coordinator review if authorization is incomplete."
+    }
+  ]
+}
+

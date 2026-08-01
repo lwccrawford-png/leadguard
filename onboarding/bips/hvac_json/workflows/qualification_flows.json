@@ -1,0 +1,92 @@
+{
+  "qualification_version": "1.0.0",
+  "global_minimum_booking_slots": [
+    "full_name",
+    "phone",
+    "service_address",
+    "primary_problem",
+    "preferred_contact_method",
+    "customer_type",
+    "consent_status"
+  ],
+  "flows": [
+    {
+      "flow_id": "flow_critical_safety",
+      "name": "Critical Safety Triage",
+      "goal": "Stop unsafe conversation paths and connect the customer to urgent help.",
+      "steps": [
+        {"ask": "Are you and everyone else in a safe location right now?", "slot": "customer_current_location", "type": "boolean_or_text"},
+        {"say": "For safety, I am going to pause troubleshooting and get this escalated immediately.", "condition": "always"},
+        {"action": "show_or_say_configured_emergency_script", "condition": "gas_smell_or_co_or_smoke"},
+        {"ask": "What is the service address?", "slot": "service_address", "type": "address"},
+        {"ask": "What phone number should dispatch use if we get disconnected?", "slot": "phone", "type": "phone"},
+        {"action": "live_transfer", "target": "emergency_dispatch_line"},
+        {"action": "create_compliance_event", "severity": "critical"}
+      ],
+      "do_not": ["diagnose", "provide_repair_steps", "sell", "ask_nonessential_questions"]
+    },
+    {
+      "flow_id": "flow_no_cooling",
+      "name": "No Cooling Qualification",
+      "goal": "Determine urgency and book AC diagnostic or emergency appointment.",
+      "steps": [
+        {"ask": "Is the system completely not cooling, or is it cooling poorly?", "slot": "cooling_severity", "type": "enum"},
+        {"ask": "Is air blowing from the vents?", "slot": "airflow_status", "type": "enum"},
+        {"ask": "Is the outdoor unit running?", "slot": "outdoor_unit_running", "type": "unknown_allowed"},
+        {"ask": "Do you see ice or water around the system?", "slot": "ice_or_water", "type": "multi_boolean"},
+        {"ask": "Is anyone in the home elderly, medically vulnerable, an infant, or heat-sensitive?", "slot": "vulnerable_occupants", "type": "boolean"},
+        {"ask": "About how old is the system?", "slot": "system_age", "type": "number_or_unknown"},
+        {"action": "classify_priority", "rules": ["dangerous_heat", "vulnerable_occupants", "complete_failure"]},
+        {"action": "book_appointment", "appointment_type": "ac_diagnostic"},
+        {"action": "tag_opportunity", "condition": "system_age >= 12", "tag": "replacement_candidate"}
+      ]
+    },
+    {
+      "flow_id": "flow_no_heat",
+      "name": "No Heat Qualification",
+      "goal": "Determine safety and urgency before booking heating diagnostic.",
+      "steps": [
+        {"ask": "Do you smell gas, see smoke, or have a carbon monoxide alarm going off?", "slot": "safety_flags", "type": "safety_screen"},
+        {"action": "route_to_flow_critical_safety", "condition": "safety_flags_present"},
+        {"ask": "Is this a gas furnace, electric furnace, heat pump, boiler, or something else?", "slot": "equipment_type", "type": "enum_unknown_allowed"},
+        {"ask": "Is the system blowing cold air, not turning on, or turning on and off?", "slot": "symptoms", "type": "enum_multi"},
+        {"ask": "What is the temperature inside and outside, if you know?", "slot": "temperature_context", "type": "text"},
+        {"ask": "Is anyone in the home medically vulnerable, elderly, or an infant?", "slot": "vulnerable_occupants", "type": "boolean"},
+        {"action": "classify_priority"},
+        {"action": "book_appointment", "appointment_type": "heating_diagnostic"}
+      ]
+    },
+    {
+      "flow_id": "flow_replacement_consult",
+      "name": "Replacement Consultation Qualification",
+      "goal": "Book high-quality replacement appointments with decision context.",
+      "steps": [
+        {"ask": "What system are you considering replacing?", "slot": "equipment_type", "type": "enum"},
+        {"ask": "About how old is it?", "slot": "system_age", "type": "number_or_unknown"},
+        {"ask": "What is driving the replacement: breakdown, high bills, comfort issues, renovation, or planning ahead?", "slot": "replacement_driver", "type": "enum_multi"},
+        {"ask": "Is there already a repair estimate or another quote?", "slot": "existing_estimate", "type": "boolean_or_text"},
+        {"ask": "What size is the home or building, roughly?", "slot": "square_footage", "type": "number_or_unknown"},
+        {"ask": "Who should be present for the consultation?", "slot": "decision_makers", "type": "text"},
+        {"ask": "Would monthly payment options be helpful to discuss?", "slot": "financing_interest", "type": "boolean"},
+        {"action": "book_appointment", "appointment_type": "comfort_advisor_consult"},
+        {"action": "send_pre_consult_confirmation"}
+      ]
+    },
+    {
+      "flow_id": "flow_commercial_service",
+      "name": "Commercial Service Qualification",
+      "goal": "Capture site, asset, authorization, and business impact.",
+      "steps": [
+        {"ask": "What is the business name and site address?", "slot": "business_site", "type": "text_address"},
+        {"ask": "Who will be on site and what is their phone number?", "slot": "site_contact", "type": "contact"},
+        {"ask": "What type of equipment is affected?", "slot": "equipment_type", "type": "enum_unknown_allowed"},
+        {"ask": "Is this affecting customers, tenants, employees, inventory, or operations?", "slot": "business_impact", "type": "enum_multi"},
+        {"ask": "Is there a not-to-exceed amount, PO requirement, or approval contact?", "slot": "authorization_path", "type": "text"},
+        {"ask": "Are there access instructions, roof access requirements, gate codes, or loading dock notes?", "slot": "access_notes", "type": "text"},
+        {"action": "classify_priority"},
+        {"action": "book_appointment", "appointment_type": "commercial_diagnostic"}
+      ]
+    }
+  ]
+}
+

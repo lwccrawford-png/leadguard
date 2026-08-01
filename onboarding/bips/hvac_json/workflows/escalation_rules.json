@@ -1,0 +1,71 @@
+{
+  "escalation_version": "1.0.0",
+  "default_targets": {
+    "critical_safety": "emergency_dispatch_line",
+    "after_hours": "on_call_manager",
+    "complaint": "service_manager",
+    "financing": "comfort_advisor_or_finance_link",
+    "payment": "billing_department",
+    "warranty": "service_manager",
+    "commercial_authorization": "commercial_coordinator"
+  },
+  "rules": [
+    {
+      "rule_id": "esc_critical_safety",
+      "trigger": "safety_flag in [gas_smell, carbon_monoxide_alarm, smoke, electrical_burning]",
+      "severity": "critical",
+      "response_time_sla": "immediate",
+      "ai_action": "stop_normal_flow_and_live_transfer",
+      "crm_action": "create_high_priority_case"
+    },
+    {
+      "rule_id": "esc_medical_dependency",
+      "trigger": "no_cooling_or_no_heat AND vulnerable_occupants == true",
+      "severity": "high",
+      "response_time_sla": "5_minutes",
+      "ai_action": "book_earliest_available_or_on_call_transfer",
+      "crm_action": "tag_medical_priority"
+    },
+    {
+      "rule_id": "esc_complaint_manager",
+      "trigger": "intent == complaint OR sentiment == very_negative OR customer_requests_manager",
+      "severity": "high",
+      "response_time_sla": "business_hours_30_minutes",
+      "ai_action": "acknowledge_and_collect_resolution_request",
+      "crm_action": "create_service_recovery_task"
+    },
+    {
+      "rule_id": "esc_payment_dispute",
+      "trigger": "refund_request OR charge_dispute OR invoice_dispute",
+      "severity": "medium",
+      "response_time_sla": "business_hours_4_hours",
+      "ai_action": "collect_invoice_context_and_handoff",
+      "crm_action": "create_billing_case"
+    },
+    {
+      "rule_id": "esc_financing_application",
+      "trigger": "customer_wants_to_apply_for_financing",
+      "severity": "medium",
+      "response_time_sla": "same_business_day",
+      "ai_action": "send_secure_provider_link_or_handoff",
+      "crm_action": "tag_financing_interested"
+    },
+    {
+      "rule_id": "esc_low_confidence",
+      "trigger": "intent_confidence < 0.48 OR answer_confidence < 0.70",
+      "severity": "medium",
+      "response_time_sla": "next_available",
+      "ai_action": "ask_clarifying_question_then_handoff_if_unresolved",
+      "crm_action": "create_review_needed_note"
+    },
+    {
+      "rule_id": "esc_out_of_area",
+      "trigger": "service_address outside configured service_area",
+      "severity": "low",
+      "response_time_sla": "none",
+      "ai_action": "explain_service_area_and_capture_lead_if_allowed",
+      "crm_action": "tag_out_of_area"
+    }
+  ]
+}
+

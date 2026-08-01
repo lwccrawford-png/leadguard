@@ -1,0 +1,61 @@
+{
+  "graph_version": "1.0.0",
+  "nodes": [
+    {"id": "no_cooling", "type": "failure_mode", "label": "No Cooling"},
+    {"id": "no_heat", "type": "failure_mode", "label": "No Heat"},
+    {"id": "gas_smell", "type": "safety_flag", "label": "Gas Smell"},
+    {"id": "co_alarm", "type": "safety_flag", "label": "Carbon Monoxide Alarm"},
+    {"id": "frozen_coil", "type": "failure_mode", "label": "Frozen Coil"},
+    {"id": "water_leak", "type": "failure_mode", "label": "Water Leak"},
+    {"id": "high_bill", "type": "customer_problem", "label": "High Utility Bill"},
+    {"id": "old_system", "type": "sales_signal", "label": "System Over 12 Years Old"},
+    {"id": "maintenance_due", "type": "lifecycle_signal", "label": "Maintenance Due"},
+    {"id": "not_member", "type": "customer_state", "label": "Not a Maintenance Member"},
+    {"id": "ac_repair", "type": "service", "label": "AC Repair"},
+    {"id": "furnace_repair", "type": "service", "label": "Furnace Repair"},
+    {"id": "replacement_consult", "type": "service", "label": "Replacement Consultation"},
+    {"id": "membership", "type": "offer", "label": "Maintenance Membership"},
+    {"id": "financing", "type": "offer", "label": "Financing"},
+    {"id": "iaq_assessment", "type": "service", "label": "Indoor Air Quality Assessment"},
+    {"id": "critical_escalation", "type": "workflow", "label": "Critical Safety Escalation"},
+    {"id": "same_day_dispatch", "type": "workflow", "label": "Same-Day Dispatch"},
+    {"id": "estimate_follow_up", "type": "workflow", "label": "Estimate Follow-Up"},
+    {"id": "review_request", "type": "workflow", "label": "Review Request"}
+  ],
+  "edges": [
+    {"from": "gas_smell", "relationship": "requires", "to": "critical_escalation"},
+    {"from": "co_alarm", "relationship": "requires", "to": "critical_escalation"},
+    {"from": "no_cooling", "relationship": "maps_to_service", "to": "ac_repair"},
+    {"from": "no_cooling", "relationship": "may_require", "to": "same_day_dispatch"},
+    {"from": "no_heat", "relationship": "maps_to_service", "to": "furnace_repair"},
+    {"from": "no_heat", "relationship": "may_require", "to": "same_day_dispatch"},
+    {"from": "frozen_coil", "relationship": "maps_to_service", "to": "ac_repair"},
+    {"from": "water_leak", "relationship": "maps_to_service", "to": "ac_repair"},
+    {"from": "high_bill", "relationship": "may_indicate", "to": "old_system"},
+    {"from": "old_system", "relationship": "creates_opportunity", "to": "replacement_consult"},
+    {"from": "replacement_consult", "relationship": "may_offer", "to": "financing"},
+    {"from": "maintenance_due", "relationship": "may_offer", "to": "membership"},
+    {"from": "not_member", "relationship": "may_offer", "to": "membership"},
+    {"from": "ac_repair", "relationship": "after_completion", "to": "review_request"},
+    {"from": "furnace_repair", "relationship": "after_completion", "to": "review_request"},
+    {"from": "replacement_consult", "relationship": "if_not_closed", "to": "estimate_follow_up"},
+    {"from": "high_bill", "relationship": "may_offer", "to": "iaq_assessment"}
+  ],
+  "inference_rules": [
+    {
+      "rule_id": "replacement_candidate",
+      "conditions": ["system_age >= 12", "repair_estimate >= configured.major_repair_threshold"],
+      "infer": "replacement_consult_recommended"
+    },
+    {
+      "rule_id": "membership_candidate",
+      "conditions": ["membership_status == none", "appointment_type in [repair, maintenance, tune_up]"],
+      "infer": "membership_offer_allowed"
+    },
+    {
+      "rule_id": "critical_safety_override",
+      "conditions": ["safety_flag in [gas_smell, co_alarm, smoke, electrical_burning]"],
+      "infer": "all_sales_and_troubleshooting_suppressed"
+    }
+  ]
+}
