@@ -89,7 +89,17 @@ def render_page_text(url: str) -> str:
     """Render the page with real Chrome (executes JavaScript) and extract the
     visible text — unlike a plain HTTP fetch, this actually sees content on
     JS-rendered sites (React/Vue/Angular-built marketing pages), which a
-    simple requests+BeautifulSoup crawl sees as an empty shell."""
+    simple requests+BeautifulSoup crawl sees as an empty shell.
+
+    --virtual-time-budget doesn't reliably cap wall-clock time on pages with
+    third-party embeds that keep making live network calls (a Google Reviews
+    widget was observed hanging a render for 3+ minutes at ~4% CPU — waiting
+    on network, not doing real work). Chrome's own --timeout flag doesn't
+    reliably help either on pages like that; the subprocess timeout below is
+    the one mechanism that's actually proven to cut a stuck render short and
+    let the pipeline continue non-fatally. Raising it further won't make
+    stubborn sites reliable — some will always need the manual BIP fallback
+    (see onboarding/bips/), which is the intended v1 workflow, not a last resort."""
     from bs4 import BeautifulSoup
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -100,7 +110,7 @@ def render_page_text(url: str) -> str:
                 "--dump-dom", "--virtual-time-budget=4000",
                 url,
             ],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=45,
         )
         if not result.stdout:
             return ""

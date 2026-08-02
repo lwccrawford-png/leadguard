@@ -345,7 +345,11 @@ async def generate_demo(req: GenerateDemoRequest):
         ],
         capture_output=True,
         text=True,
-        timeout=90,
+        # Worst case: screenshot() up to 60s + render_page_text() up to 45s (both in
+        # generate_site_demo.py) + a Claude summarize call + a few knowledge POSTs —
+        # keep real headroom above that sum so a slow-but-recoverable site doesn't get
+        # cut off mid-pipeline and turn a graceful "skip knowledge" into a hard failure.
+        timeout=150,
     )
     if not out_path.exists():
         return {"ok": False, "message": result.stderr[-500:] or "screenshot failed"}

@@ -6,6 +6,12 @@ codebase, not a versioned library.
 
 ## Unreleased
 
+- Raised the demo generator's headless-Chrome DOM render timeout (30s → 45s) and the
+  launcher's outer subprocess timeout (90s → 150s) after a real HVAC prospect site
+  (heavy with third-party widgets) hung for 3+ minutes at near-zero CPU — a
+  `--virtual-time-budget`/network-wait quirk, not a slow render. A bigger number won't
+  make every site reliable; the manual BIP fallback (`onboarding/bips/`) stays the
+  intended path for sites like this, not a last resort.
 - **GTM strategy and BIP (industry-vertical starter pack) system** — `docs/GTM_AND_BIP_PRIORITY.md`
   lays out positioning, a pricing validation ladder, and the first 5 verticals to target
   (HVAC, roofing, med spa, auto repair, credit repair). `onboarding/bips/hvac.md` is the
