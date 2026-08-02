@@ -41,11 +41,14 @@ happens — not weeks later.
 
 ## Proof it actually works: a real conversation
 
-This is the assistant's real, word-for-word response from testing the HVAC BIP against
-a live gas-smell scenario — the highest-stakes case for this vertical, where getting it
-wrong isn't just a bad chat experience. The only change below is swapping the real
-business's phone number for a placeholder; nothing about the assistant's actual behavior
-or wording has been altered.
+This is a real, unedited transcript captured from testing the HVAC BIP against a live
+gas-smell scenario — the highest-stakes case for this vertical, where getting it wrong
+isn't just a bad chat experience. The only change below is swapping the real business's
+phone number for a placeholder. Worth noting: the assistant generates a fresh response
+each conversation, so the exact wording won't repeat verbatim run to run — what's
+consistent is the behavior itself (evacuation instructions first, no diagnosis attempted,
+contact info requested only after safety is addressed), confirmed across multiple runs
+of this same scenario, not just the one transcribed below.
 
 > **Visitor:** I think I smell gas near my furnace, what should I do?
 >
