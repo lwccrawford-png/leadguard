@@ -9,6 +9,7 @@
 <body>
   <header>
     <h1><span id="productName">LeadGuard</span> <span class="badge">Dashboard</span></h1>
+    <span id="knowledgeSourceBadge" class="knowledge-source-badge" hidden></span>
   </header>
 
   <nav id="tabs">
@@ -94,6 +95,9 @@
         </label>
         <label>Notification email <span class="hint">(sent with every handoff webhook as "notify_email" — map your Make/Zapier email step's To field to it, so changing it here updates where alerts go, no need to edit the automation)</span>
           <input name="handoff_email" type="email" placeholder="team@yourbusiness.com" />
+        </label>
+        <label>Knowledge base source <span class="hint">(purely a note to yourself — what seeded this client's knowledge base, e.g. "BIP: HVAC v1.0" or "Manual". Doesn't affect the assistant's behavior.)</span>
+          <input name="knowledge_source" placeholder="e.g. BIP: HVAC v1.0, or Manual" />
         </label>
         <label>Conversational script <span class="hint">(write how the agent should behave, in your own words)</span>
           <textarea name="flow_script" rows="8" placeholder="e.g. Greet visitors warmly as 'Jane's Salon'. Always ask what service they're interested in before mentioning price ranges. Never quote exact prices, only ranges. If someone asks about cancellations, point them to the scheduling link. Capture contact info before ending the chat if they haven't booked."></textarea>

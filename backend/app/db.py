@@ -18,7 +18,12 @@ CREATE TABLE IF NOT EXISTS business (
     rot_aging_minutes INTEGER NOT NULL DEFAULT 1440,
     rot_rotting_minutes INTEGER NOT NULL DEFAULT 4320,
     pipeline_enabled INTEGER NOT NULL DEFAULT 0,
-    last_crawled_at TEXT
+    last_crawled_at TEXT,
+    -- Free-text provenance for what seeded this client's knowledge base — e.g.
+    -- "BIP: HVAC v1.0" or "Manual". Purely informational (nothing reads this to change
+    -- chat behavior); exists so it's visible at a glance which clients came from a BIP
+    -- versus hand-built, instead of BIP content being indistinguishable once pasted in.
+    knowledge_source TEXT NOT NULL DEFAULT ''
 );
 
 -- A "source" is either a crawled site page (source_type='site', url set) or a manually
@@ -195,6 +200,7 @@ def init_db():
             "ALTER TABLE business ADD COLUMN pipeline_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE support_requests ADD COLUMN screenshot_data_uri TEXT",
             "ALTER TABLE support_requests ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
+            "ALTER TABLE business ADD COLUMN knowledge_source TEXT NOT NULL DEFAULT ''",
         ]:
             try:
                 conn.execute(migration)

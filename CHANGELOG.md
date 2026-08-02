@@ -6,6 +6,13 @@ codebase, not a versioned library.
 
 ## Unreleased
 
+- **Knowledge base source tag** — a new `knowledge_source` field on the business record
+  (e.g. "BIP: HVAC v1.0" or "Manual"), editable from Settings, shown as a badge on the
+  dashboard header and on each client's card in the launcher. Purely informational —
+  doesn't affect chat behavior — but closes a real gap: previously a BIP's content was
+  indistinguishable from hand-written content once pasted in, with zero record anywhere
+  of which clients were BIP-seeded.
+
 - Raised the demo generator's headless-Chrome DOM render timeout (30s → 45s) and the
   launcher's outer subprocess timeout (90s → 150s) after a real HVAC prospect site
   (heavy with third-party widgets) hung for 3+ minutes at near-zero CPU — a

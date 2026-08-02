@@ -29,6 +29,7 @@ class BusinessSettings(BaseModel):
     rot_aging_minutes: int = 1440
     rot_rotting_minutes: int = 4320
     pipeline_enabled: bool = False
+    knowledge_source: str = ""
 
 
 class LeadUpdate(BaseModel):
@@ -82,7 +83,8 @@ def update_business(settings: BusinessSettings):
         conn.execute(
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
-               monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=? WHERE id=1""",
+               monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
+               knowledge_source=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -97,6 +99,7 @@ def update_business(settings: BusinessSettings):
                 settings.rot_aging_minutes,
                 settings.rot_rotting_minutes,
                 int(settings.pipeline_enabled),
+                settings.knowledge_source,
             ),
         )
     return {"ok": True}

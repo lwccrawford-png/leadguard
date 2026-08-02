@@ -119,6 +119,13 @@ def client_card_html(c: dict) -> str:
     admin_href = f"http://localhost:{c['port']}/dashboard/"
     client_href = f"http://localhost:{c['port']}/dashboard/?view=client"
     disabled = "" if running else "disabled"
+    knowledge_source = ""
+    if running:
+        try:
+            knowledge_source = fetch_business(c["port"]).get("knowledge_source", "")
+        except Exception:
+            pass
+    kb_html = f'<span class="kb-source-pill">{knowledge_source}</span>' if knowledge_source else ""
     return f"""
     <div class="card">
       <div class="card-head">
@@ -131,7 +138,7 @@ def client_card_html(c: dict) -> str:
         <a class="btn btn-admin {'btn-disabled' if not running else ''}" href="{admin_href}" target="_blank" {disabled}>🔑 Admin view</a>
         <a class="btn btn-client {'btn-disabled' if not running else ''}" href="{client_href}" target="_blank" {disabled}>🗂 Client view</a>
       </div>
-      <div class="card-meta">port :{c['port']} &middot; {visitor_target or "no demo generated yet"}</div>
+      <div class="card-meta">port :{c['port']} &middot; {visitor_target or "no demo generated yet"} {kb_html}</div>
     </div>"""
 
 
@@ -171,6 +178,7 @@ PAGE_CSS = """
   .btn-client { background: #f0f0f4; color: #444; }
   .btn-disabled { opacity: .45; pointer-events: none; }
   .card-meta { margin-top: 10px; font-size: 11.5px; color: #999; }
+  .kb-source-pill { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #eef2ff; color: #4f46e5; font-weight: 600; }
   form.generate { background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; padding: 20px; max-width: 520px; }
   form.generate label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; margin-top: 12px; }
   form.generate input, form.generate select { width: 100%; padding: 8px 10px; border: 1px solid #e5e5ea; border-radius: 6px; font-size: 14px; }

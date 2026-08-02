@@ -52,8 +52,17 @@ async function loadBusiness() {
     if (brand) brand.textContent = data.product_name;
   }
   const form = $("#settingsForm");
-  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes"]) {
+  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
+  }
+  const kbBadge = document.getElementById("knowledgeSourceBadge");
+  if (kbBadge) {
+    if (data.knowledge_source) {
+      kbBadge.textContent = data.knowledge_source;
+      kbBadge.hidden = false;
+    } else {
+      kbBadge.hidden = true;
+    }
   }
   ROT_CONFIG.agingMinutes = data.rot_aging_minutes ?? 1440;
   ROT_CONFIG.rottingMinutes = data.rot_rotting_minutes ?? 4320;

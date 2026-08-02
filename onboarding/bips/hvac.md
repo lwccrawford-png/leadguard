@@ -4,6 +4,14 @@ Version: 1.0
 Use with: LeadGuard v1 Settings and Knowledge tabs
 Primary template family: Local Service Business
 
+## After Applying This BIP
+
+Set Settings -> "Knowledge base source" to `BIP: HVAC v1.0` (bump the version if this
+file changes later). This is purely a visible note to yourself — it doesn't affect the
+assistant's behavior — but without it there's no way to tell a BIP-seeded client apart
+from a hand-built one once the content is pasted in. Shows up as a badge on the
+dashboard header and on the client's card in the launcher.
+
 ## Implementation Notes
 
 Best-fit HVAC clients:
