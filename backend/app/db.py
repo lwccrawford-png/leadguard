@@ -68,6 +68,11 @@ CREATE TABLE IF NOT EXISTS business_facts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     label TEXT NOT NULL,
     value TEXT NOT NULL,
+    -- 'bip' if written by the Fast BIP Import tool, 'manual' for anything hand-typed
+    -- in the dashboard or pulled in by the site crawl. Powers the knowledge-composition
+    -- readout (what fraction of a client's knowledge base is LeadGuard's reusable
+    -- vertical content vs. content specific to them) — doesn't affect chat behavior.
+    source TEXT NOT NULL DEFAULT 'manual',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -80,6 +85,7 @@ CREATE TABLE IF NOT EXISTS faqs (
     answer TEXT NOT NULL,
     category TEXT,
     priority INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL DEFAULT 'manual',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -201,6 +207,8 @@ def init_db():
             "ALTER TABLE support_requests ADD COLUMN screenshot_data_uri TEXT",
             "ALTER TABLE support_requests ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
             "ALTER TABLE business ADD COLUMN knowledge_source TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business_facts ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
+            "ALTER TABLE faqs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
         ]:
             try:
                 conn.execute(migration)

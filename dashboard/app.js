@@ -28,6 +28,7 @@ document.querySelectorAll("#tabs button").forEach((btn) => {
       loadFaqs();
       loadFacts();
       loadFaqSchema();
+      loadComposition();
     }
     if (btn.dataset.tab === "leads") loadLeads();
     if (btn.dataset.tab === "conversations") loadConversations();
@@ -196,8 +197,25 @@ $("#faqForm").addEventListener("submit", async (e) => {
   status.textContent = res.ok ? "Added ✓" : "Error adding FAQ";
   if (res.ok) e.target.reset();
   loadFaqs();
+  loadComposition();
   setTimeout(() => (status.textContent = ""), 2500);
 });
+
+async function loadComposition() {
+  const res = await fetch("/api/knowledge/composition");
+  const data = await res.json();
+  const card = $("#compositionCard");
+  if (data.total_rows === 0) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const pct = Math.round((data.bip_share ?? 0) * 100);
+  $("#compositionFill").style.width = `${pct}%`;
+  $("#compositionText").textContent =
+    `${pct}% from a LeadGuard BIP (${data.total_from_bip} of ${data.total_rows} rows) — ` +
+    `${data.facts_from_bip}/${data.facts_total} facts, ${data.faqs_from_bip}/${data.faqs_total} FAQs.`;
+}
 
 async function loadFaqs() {
   const res = await fetch("/api/knowledge/faqs");
@@ -214,6 +232,7 @@ async function loadFaqs() {
     btn.addEventListener("click", async () => {
       await fetch(`/api/knowledge/faqs/${btn.dataset.id}`, { method: "DELETE" });
       loadFaqs();
+      loadComposition();
     });
   });
 }
@@ -231,6 +250,7 @@ $("#factForm").addEventListener("submit", async (e) => {
   status.textContent = res.ok ? "Added ✓" : "Error adding fact";
   if (res.ok) e.target.reset();
   loadFacts();
+  loadComposition();
   setTimeout(() => (status.textContent = ""), 2500);
 });
 
@@ -249,6 +269,7 @@ async function loadFacts() {
     btn.addEventListener("click", async () => {
       await fetch(`/api/knowledge/facts/${btn.dataset.id}`, { method: "DELETE" });
       loadFacts();
+      loadComposition();
     });
   });
 }

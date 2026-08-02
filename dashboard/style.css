@@ -143,6 +143,8 @@ table button.delete { background: none; border: none; color: #c0392b; cursor: po
 .conv-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; align-items: start; }
 #conversationDetail { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 480px; overflow-y: auto; }
 .muted { color: #999; font-size: 13px; }
+.composition-bar { height: 10px; border-radius: 999px; background: #eee; overflow: hidden; margin: 8px 0; }
+.composition-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s ease; }
 .msg-row { margin-bottom: 10px; }
 .msg-role { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--accent); }
 .msg-content { font-size: 13px; white-space: pre-wrap; }

@@ -28,6 +28,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
+import bip_parser
+
 
 class GenerateDemoRequest(BaseModel):
     url: str
@@ -39,6 +41,7 @@ PROJECT_ROOT = OPS_DIR.parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 WIDGET_DIR = PROJECT_ROOT / "widget"
 CLIENTS_PATH = OPS_DIR / "clients.json"
+BIPS_DIR = PROJECT_ROOT / "onboarding" / "bips"
 
 app = FastAPI(title="LeadGuard Demo Launcher")
 
@@ -100,6 +103,21 @@ def put_business(port: int, payload: dict):
     urllib.request.urlopen(req, timeout=5)
 
 
+def post_json(port: int, path: str, payload: dict):
+    req = urllib.request.Request(
+        f"http://localhost:{port}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    urllib.request.urlopen(req, timeout=5)
+
+
+def fetch_composition(port: int) -> dict:
+    with urllib.request.urlopen(f"http://localhost:{port}/api/knowledge/composition", timeout=5) as resp:
+        return json.loads(resp.read())
+
+
 def next_free_port(clients: list) -> int:
     used = {c["port"] for c in clients}
     port = 8010
@@ -120,12 +138,20 @@ def client_card_html(c: dict) -> str:
     client_href = f"http://localhost:{c['port']}/dashboard/?view=client"
     disabled = "" if running else "disabled"
     knowledge_source = ""
+    bip_share = None
     if running:
         try:
             knowledge_source = fetch_business(c["port"]).get("knowledge_source", "")
         except Exception:
             pass
-    kb_html = f'<span class="kb-source-pill">{knowledge_source}</span>' if knowledge_source else ""
+        try:
+            bip_share = fetch_composition(c["port"]).get("bip_share")
+        except Exception:
+            pass
+    kb_label = knowledge_source or ("Manual" if bip_share is not None else "")
+    if bip_share is not None:
+        kb_label += f" · {round(bip_share * 100)}% BIP content"
+    kb_html = f'<span class="kb-source-pill">{kb_label}</span>' if kb_label else ""
     return f"""
     <div class="card">
       <div class="card-head">
@@ -224,6 +250,7 @@ NAV_HTML = """
 <div class="topnav">
   <a href="/">Launcher</a>
   <a href="/support-requests">Support requests</a>
+  <a href="/bip-import">BIP import</a>
 </div>
 """
 
@@ -503,6 +530,209 @@ async def proxy_update_status(client_id: str, request_id: int, body: dict):
         return {"ok": True}
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
+
+
+class BipApplyRequest(BaseModel):
+    client_id: str
+    values: dict
+
+
+BIP_IMPORT_JS = """
+let currentBip = null;
+
+async function loadBipList() {
+  const res = await fetch('/bip-import/list');
+  const bips = await res.json();
+  const sel = document.getElementById('bipSelect');
+  sel.innerHTML = '<option value="">Choose a BIP...</option>' +
+    bips.map(b => `<option value="${b.id}">${b.title} (v${b.version})</option>`).join('');
+}
+
+async function loadBip() {
+  const bipId = document.getElementById('bipSelect').value;
+  const fieldsDiv = document.getElementById('placeholderFields');
+  const previewDiv = document.getElementById('preview');
+  fieldsDiv.innerHTML = '';
+  previewDiv.hidden = true;
+  document.getElementById('applyBtn').disabled = true;
+  if (!bipId) { currentBip = null; return; }
+  const res = await fetch(`/bip-import/${bipId}`);
+  currentBip = await res.json();
+  fieldsDiv.innerHTML = currentBip.placeholders.map(p => `
+    <label>${p.replace(/_/g, ' ')}
+      <input data-placeholder="${p}" oninput="renderPreview()" placeholder="Fill in from the intake form..." />
+    </label>`).join('');
+  renderPreview();
+}
+
+function currentValues() {
+  const values = {};
+  document.querySelectorAll('#placeholderFields input').forEach(input => {
+    values[input.dataset.placeholder] = input.value;
+  });
+  return values;
+}
+
+function substitute(text, values) {
+  for (const [key, value] of Object.entries(values)) {
+    text = text.split('{{' + key + '}}').join(value || `{{${key}}}`);
+  }
+  return text;
+}
+
+function renderPreview() {
+  if (!currentBip) return;
+  const values = currentValues();
+  const previewDiv = document.getElementById('preview');
+  previewDiv.hidden = false;
+  document.getElementById('previewScript').textContent = substitute(currentBip.flow_script, values);
+  document.getElementById('previewFacts').innerHTML = currentBip.facts.map(f =>
+    `<tr><td>${f.label}</td><td>${substitute(f.value, values)}</td></tr>`).join('');
+  document.getElementById('previewFaqs').innerHTML = currentBip.faqs.map(f =>
+    `<tr><td>${substitute(f.question, values)}</td><td>${substitute(f.answer, values)}</td></tr>`).join('');
+  document.getElementById('applyBtn').disabled = !document.getElementById('clientSelect').value;
+}
+
+document.getElementById('clientSelect').addEventListener('change', renderPreview);
+
+async function applyBip() {
+  const bipId = document.getElementById('bipSelect').value;
+  const clientId = document.getElementById('clientSelect').value;
+  const statusEl = document.getElementById('applyStatus');
+  statusEl.textContent = 'Applying...';
+  const res = await fetch(`/bip-import/${bipId}/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId, values: currentValues() }),
+  });
+  const data = await res.json();
+  statusEl.textContent = data.ok
+    ? `Applied — ${data.facts_added} facts, ${data.faqs_added} FAQs written, knowledge_source set to "${data.knowledge_source}".`
+    : `Failed: ${data.message}`;
+}
+"""
+
+
+@app.get("/bip-import", response_class=HTMLResponse)
+def bip_import_page():
+    clients = load_clients()
+    client_options = "\n".join(f'<option value="{c["id"]}">{c["name"]} (:{c["port"]})</option>' for c in clients)
+    return f"""<!doctype html>
+<html><head><title>BIP Import — LeadGuard Launcher</title><style>{PAGE_CSS}</style>
+<style>
+  .bip-row {{ display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }}
+  .bip-row select {{ padding: 8px 10px; border-radius: 6px; border: 1px solid #ddd; min-width: 260px; }}
+  #placeholderFields {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; margin-bottom: 20px; }}
+  #placeholderFields label {{ display: flex; flex-direction: column; font-size: 12px; font-weight: 600; color: #555; gap: 4px; text-transform: capitalize; }}
+  #placeholderFields input {{ font-size: 13px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 5px; font-weight: 400; text-transform: none; }}
+  #preview {{ background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 16px; margin-bottom: 16px; }}
+  #preview h4 {{ margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #888; }}
+  #previewScript {{ white-space: pre-wrap; font-size: 13px; background: #f7f7f9; padding: 10px; border-radius: 6px; margin: 0 0 16px; }}
+  #preview table {{ width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 16px; }}
+  #preview td {{ padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: top; }}
+  #applyBtn {{ padding: 10px 20px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }}
+  #applyBtn:disabled {{ background: #ccc; cursor: not-allowed; }}
+  #applyStatus {{ margin-left: 12px; font-size: 13px; font-weight: 600; }}
+</style>
+</head>
+<body>
+  {NAV_HTML}
+  <h1>BIP Import</h1>
+  <div class="sub">Load a vertical starter pack, fill in the client's specifics once, review, then write it to a client instance.</div>
+
+  <div class="bip-row">
+    <select id="bipSelect" onchange="loadBip()"><option value="">Loading BIPs...</option></select>
+    <select id="clientSelect"><option value="">Choose a client...</option>{client_options}</select>
+  </div>
+
+  <div id="placeholderFields"></div>
+
+  <div id="preview" hidden>
+    <h4>Flow Script Preview</h4>
+    <pre id="previewScript"></pre>
+    <h4>Facts Preview</h4>
+    <table><tbody id="previewFacts"></tbody></table>
+    <h4>FAQs Preview</h4>
+    <table><tbody id="previewFaqs"></tbody></table>
+    <button id="applyBtn" onclick="applyBip()" disabled>Apply to selected client</button>
+    <span id="applyStatus"></span>
+  </div>
+
+  <script>{BIP_IMPORT_JS}</script>
+  <script>loadBipList();</script>
+</body></html>"""
+
+
+@app.get("/bip-import/list")
+def bip_import_list():
+    return bip_parser.list_bips(BIPS_DIR)
+
+
+@app.get("/bip-import/{bip_id}")
+def bip_import_get(bip_id: str):
+    path = BIPS_DIR / f"{bip_id}.md"
+    if not path.exists():
+        return JSONResponse({"ok": False, "message": "unknown BIP"}, status_code=404)
+    return bip_parser.parse_bip(path)
+
+
+@app.post("/bip-import/{bip_id}/apply")
+def bip_import_apply(bip_id: str, req: BipApplyRequest):
+    path = BIPS_DIR / f"{bip_id}.md"
+    if not path.exists():
+        return JSONResponse({"ok": False, "message": "unknown BIP"}, status_code=404)
+    parsed = bip_parser.parse_bip(path)
+
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == req.client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    if not is_running(client["port"]):
+        return JSONResponse({"ok": False, "message": f"{client['name']} isn't running — start it first"}, status_code=400)
+
+    knowledge_source = f"BIP: {parsed['title']} v{parsed['version']}"
+    try:
+        business = fetch_business(client["port"])
+        business["flow_script"] = bip_parser.substitute(parsed["flow_script"], req.values)
+        business["knowledge_source"] = knowledge_source
+        put_business(client["port"], business)
+    except Exception as e:
+        return JSONResponse({"ok": False, "message": f"could not write flow script: {e}"}, status_code=500)
+
+    facts_added = 0
+    for fact in parsed["facts"]:
+        try:
+            post_json(client["port"], "/api/knowledge/facts", {
+                "label": fact["label"],
+                "value": bip_parser.substitute(fact["value"], req.values),
+                "source": "bip",
+            })
+            facts_added += 1
+        except Exception:
+            pass
+
+    faqs_added = 0
+    for faq in parsed["faqs"]:
+        try:
+            post_json(client["port"], "/api/knowledge/faqs", {
+                "question": bip_parser.substitute(faq["question"], req.values),
+                "answer": bip_parser.substitute(faq["answer"], req.values),
+                "category": faq.get("category", ""),
+                "priority": faq.get("priority", 0),
+                "source": "bip",
+            })
+            faqs_added += 1
+        except Exception:
+            pass
+
+    return {
+        "ok": True,
+        "facts_added": facts_added,
+        "faqs_added": faqs_added,
+        "facts_total": len(parsed["facts"]),
+        "faqs_total": len(parsed["faqs"]),
+        "knowledge_source": knowledge_source,
+    }
 
 
 if __name__ == "__main__":

@@ -50,11 +50,13 @@ class FaqInput(BaseModel):
     answer: str
     category: str = ""
     priority: int = 0
+    source: str = "manual"
 
 
 class FactInput(BaseModel):
     label: str
     value: str
+    source: str = "manual"
 
 
 class SupportRequestInput(BaseModel):
@@ -148,8 +150,8 @@ def add_faq(faq: FaqInput):
     now = datetime.now(timezone.utc).isoformat()
     with db_session() as conn:
         cur = conn.execute(
-            "INSERT INTO faqs (question, answer, category, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (faq.question, faq.answer, faq.category, faq.priority, now, now),
+            "INSERT INTO faqs (question, answer, category, priority, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (faq.question, faq.answer, faq.category, faq.priority, faq.source, now, now),
         )
         row = conn.execute("SELECT * FROM faqs WHERE id = ?", (cur.lastrowid,)).fetchone()
     faq_matching.rebuild_index()
@@ -180,6 +182,30 @@ def delete_faq(faq_id: int):
     return {"ok": True}
 
 
+@router.get("/knowledge/composition")
+def knowledge_composition():
+    """How much of this client's knowledge base is LeadGuard's reusable BIP content
+    vs. content specific to them (hand-typed or pulled from their own site crawl) —
+    a signal of how dependent a given client's assistant is on our vertical expertise
+    vs. their own material. Purely a reporting aid, computed on read, not cached."""
+    with db_session() as conn:
+        facts_total = conn.execute("SELECT COUNT(*) c FROM business_facts").fetchone()["c"]
+        facts_bip = conn.execute("SELECT COUNT(*) c FROM business_facts WHERE source='bip'").fetchone()["c"]
+        faqs_total = conn.execute("SELECT COUNT(*) c FROM faqs").fetchone()["c"]
+        faqs_bip = conn.execute("SELECT COUNT(*) c FROM faqs WHERE source='bip'").fetchone()["c"]
+    total = facts_total + faqs_total
+    from_bip = facts_bip + faqs_bip
+    return {
+        "facts_total": facts_total,
+        "facts_from_bip": facts_bip,
+        "faqs_total": faqs_total,
+        "faqs_from_bip": faqs_bip,
+        "total_rows": total,
+        "total_from_bip": from_bip,
+        "bip_share": round(from_bip / total, 4) if total else None,
+    }
+
+
 @router.get("/knowledge/facts")
 def list_facts():
     with db_session() as conn:
@@ -194,8 +220,8 @@ def add_fact(fact: FactInput):
     now = datetime.now(timezone.utc).isoformat()
     with db_session() as conn:
         cur = conn.execute(
-            "INSERT INTO business_facts (label, value, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            (fact.label, fact.value, now, now),
+            "INSERT INTO business_facts (label, value, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (fact.label, fact.value, fact.source, now, now),
         )
         row = conn.execute("SELECT * FROM business_facts WHERE id = ?", (cur.lastrowid,)).fetchone()
     return dict(row)

@@ -6,6 +6,20 @@ codebase, not a versioned library.
 
 ## Unreleased
 
+- **Fast BIP Import** (`/bip-import` on the launcher) — the near-term improvement
+  scoped in `docs/CLAUDE_CODE_HANDOFF_HVAC_BIP.md`. Parses a BIP markdown file
+  (`ops/bip_parser.py`), renders one form field per `{{PLACEHOLDER}}`, shows a live
+  substituted preview, and on Apply writes the flow script + all facts + all FAQs to
+  the selected client in one action — versus the ~26 manual API calls this took by
+  hand for the Kettle Moraine demo. Unfilled placeholders are left intact rather than
+  guessed. Every row written this way is tagged `source: bip` (new column on
+  `business_facts`/`faqs`) and the client's `knowledge_source` is set automatically.
+- **Knowledge composition readout** — `GET /api/knowledge/composition` computes what
+  fraction of a client's facts/FAQs came from a BIP vs. content specific to them
+  (hand-typed or site-crawled). Shown as a progress bar on the dashboard's Knowledge
+  tab and a percentage on each client's card in the launcher — a proxy for how
+  dependent a given client still is on the starter pack vs. how customized they've
+  become since setup.
 - **Knowledge base source tag** — a new `knowledge_source` field on the business record
   (e.g. "BIP: HVAC v1.0" or "Manual"), editable from Settings, shown as a badge on the
   dashboard header and on each client's card in the launcher. Purely informational —

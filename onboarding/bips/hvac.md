@@ -4,13 +4,25 @@ Version: 1.0
 Use with: LeadGuard v1 Settings and Knowledge tabs
 Primary template family: Local Service Business
 
-## After Applying This BIP
+## Applying This BIP
 
-Set Settings -> "Knowledge base source" to `BIP: HVAC v1.0` (bump the version if this
-file changes later). This is purely a visible note to yourself — it doesn't affect the
-assistant's behavior — but without it there's no way to tell a BIP-seeded client apart
-from a hand-built one once the content is pasted in. Shows up as a badge on the
-dashboard header and on the client's card in the launcher.
+Preferred path: the launcher's **BIP Import** page (`/bip-import`). It parses this
+file directly, gives you one field per `{{PLACEHOLDER}}` to fill in from the intake
+form, shows a live preview of the substituted script/facts/FAQs, and on Apply writes
+everything to the selected client — flow script, all 21 facts, all 8 FAQs — tagging
+each row `source: bip` and setting "Knowledge base source" to `BIP: HVAC / Home
+Comfort v1.0` automatically. Any placeholder left blank stays as literal `{{...}}`
+text, same as pasting it in by hand — fill it in later once you have the answer.
+
+Manual path (still works, e.g. if you're editing outside the launcher): copy the
+Flow Script into Settings, add the Facts and FAQs rows below by hand, and set
+Settings -> "Knowledge base source" to `BIP: HVAC v1.0` yourself.
+
+Either way, the knowledge-composition bar on the client's Knowledge tab (and the pill
+on its card in the launcher) shows what fraction of their knowledge base is this BIP's
+content vs. content specific to them — useful for judging how dependent a given
+client's assistant still is on the starter pack vs. how much you or the client have
+customized since.
 
 ## Implementation Notes
 
