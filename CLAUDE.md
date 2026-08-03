@@ -18,6 +18,15 @@ as originally built.
   tools), source-priority routing, client profiling, human handoff, admin
   review workflow. Current implementation status is tracked in
   `docs/V1_GAP_ANALYSIS.md`.
+- **`docs/PRODUCT_STRATEGY_HANDOFF.md`** — how we talk about it: this is a
+  Business Intelligence Platform, not an AI chatbot/agency — AI is the
+  interface, the product is the customer's captured business knowledge.
+  Governs all marketing/positioning copy (site, pitch decks, outreach) and
+  the vocabulary to use/avoid. Its 5-layer architecture is the long-term
+  vision, not current state — v1 implements Layer 1 (structured knowledge)
+  and one Layer 5 channel (website widget) only; don't let marketing copy
+  claim the rest (voice, SMS, CRM writeback, multi-role "digital workforce")
+  before it's built.
 
 ## Operating mode
 

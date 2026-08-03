@@ -6,6 +6,20 @@ codebase, not a versioned library.
 
 ## Unreleased
 
+- **Marketing site** (`marketing/index.html`) — a standalone, self-contained landing
+  page: hero + problem framing + "Meet Evie" (the product's assistant persona,
+  customer-renameable) + honest "bones of the product" section (structured knowledge,
+  lead capture/handoff, AI-search discoverability, Pipeline add-on — no forward-looking
+  claims about channels that don't exist yet) + a real safety-transcript proof section
+  + a founding-client offer. Currently branded "EvolveIQ" pending trademark/domain
+  checks — the actual product backend still runs as "LeadGuard" (`PRODUCT_NAME` in
+  `backend/.env`), not yet renamed; see `docs/PRODUCT_STRATEGY_HANDOFF.md` for the
+  positioning this follows.
+- **`docs/PRODUCT_STRATEGY_HANDOFF.md`** — governing positioning doc: this is a
+  Business Intelligence Platform, not an AI chatbot/agency; AI is the interface, the
+  knowledge is the product. Its 5-layer architecture is the long-term vision, not
+  current state — flagged inline so marketing copy doesn't overclaim ahead of what's
+  built.
 - **Fast BIP Import** (`/bip-import` on the launcher) — the near-term improvement
   scoped in `docs/CLAUDE_CODE_HANDOFF_HVAC_BIP.md`. Parses a BIP markdown file
   (`ops/bip_parser.py`), renders one form field per `{{PLACEHOLDER}}`, shows a live
