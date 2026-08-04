@@ -38,10 +38,24 @@ internal data."
    pointed at the internal pool instead of the customer-facing one, with its
    own system prompt (no `capture_lead` / `get_scheduling_link` tools — those
    are meaningless internally) and no lead/conversation records created.
-   Manual document ingestion reuses the existing `add_manual_document`
-   pattern against the internal tables — this is the direct answer to
-   "hold links to documents for recall," the same mechanism already proven
-   for customer-facing manual docs, just writing to a different pool.
+
+   **Content-first, not links-only.** The assistant answers directly from
+   ingested content — reusing the existing `add_manual_document` pattern
+   (paste text, it gets chunked and retrieved) against the internal tables
+   — because that's the actual value prop: "here's the answer," not "here's
+   a document, go read it." A links-only system is barely better than a
+   file list with a search bar.
+
+   `internal_sources` also carries an optional `reference_url` field for
+   content that shouldn't be duplicated and kept in sync by hand — a Google
+   Doc HR updates weekly, a shared drive folder, a training video. For
+   those, an answer can point to the source ("the full onboarding checklist
+   is here: [link]") instead of a stored copy going stale.
+
+   **Explicitly not in scope:** file upload or parsing (PDF/Word
+   extraction, OCR). Text paste plus an optional link covers training
+   content, policies, and process docs without that added complexity —
+   consistent with how customer-facing manual documents already work.
 3. **Auth via the already-built Team Access Links** (`docs/BIA_team_access_links.md`)
    rather than a new auth system. Any valid, non-revoked Team Access token
    (Principal, Admin, or Staff) can *query* Internal Mode — the whole point
