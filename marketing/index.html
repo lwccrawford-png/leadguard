@@ -185,12 +185,33 @@ header.nav {
 .section-head h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 3.4vw, 40px); margin: 16px 0 14px; text-wrap: balance; color: var(--ink); }
 .section-head p { color: var(--ink-dim); font-size: 17px; max-width: 56ch; }
 
-.feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.feature-card { background: var(--card); padding: 30px 26px; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); transition: transform 0.18s ease, box-shadow 0.18s ease; }
-.feature-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-.feature-card .num { font-family: var(--serif); font-style: italic; color: var(--amber-deep); font-size: 14px; font-variant-numeric: tabular-nums; }
-.feature-card h3 { font-family: var(--serif); font-weight: 600; font-size: 19px; margin: 10px 0 8px; color: var(--ink); }
-.feature-card p { color: var(--ink-dim); font-size: 14.5px; margin: 0; }
+.benefits-carousel { outline: none; }
+.benefits-track {
+  position: relative; min-height: 260px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.benefit-slide {
+  position: absolute; inset: 0; padding: 44px 56px;
+  opacity: 0; transform: translateX(14px); pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.benefit-slide.is-active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+.benefit-slide .num { font-family: var(--serif); font-style: italic; color: var(--amber-deep); font-size: 16px; font-variant-numeric: tabular-nums; }
+.benefit-slide h3 { font-family: var(--serif); font-weight: 600; font-size: clamp(22px, 2.6vw, 30px); margin: 12px 0 14px; color: var(--ink); text-wrap: balance; }
+.benefit-slide p { color: var(--ink-dim); font-size: 17px; line-height: 1.6; margin: 0; max-width: 62ch; }
+.carousel-controls { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 24px; }
+.carousel-arrow {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--card);
+  color: var(--ink); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.carousel-arrow:hover { border-color: var(--amber); color: var(--amber-deep); background: var(--amber-pale); }
+.carousel-dots { display: flex; align-items: center; gap: 9px; }
+.carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: var(--line); cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
+.carousel-dot.is-active { background: var(--amber); transform: scale(1.3); }
+@media (prefers-reduced-motion: reduce) { .benefit-slide { transition: opacity 0.4s ease; transform: none !important; } }
 
 /* ---------- architecture / layers ---------- */
 .arch { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -261,7 +282,6 @@ header.nav {
 .offer-terms li::before { content: '—'; color: rgba(255,255,255,0.6); flex-shrink: 0; }
 .offer-card .btn-primary { background: #0e1a3d; color: #ffffff; box-shadow: 0 14px 30px -12px rgba(14,26,61,0.5); }
 .offer-card .btn-primary:hover { background: #1a2c63; }
-.offer-fine { font-size: 12.5px; color: rgba(255,255,255,0.65); margin-top: 22px; }
 
 /* ---------- final CTA ---------- */
 .final { padding: 110px 0 80px; text-align: center; background: var(--bg); }
@@ -280,7 +300,8 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .evie-grid { grid-template-columns: 1fr; }
   .evie-preview { align-items: flex-start; }
   .evie-bubble { margin-right: 0; }
-  .feature-grid { grid-template-columns: 1fr; }
+  .benefits-track { min-height: 340px; }
+  .benefit-slide { padding: 32px 26px; }
   .arch-layer { grid-template-columns: 1fr; text-align: left; gap: 6px; }
   .arch-layer .layer-tag { justify-self: start; }
   .bip-contents { grid-template-columns: repeat(2, 1fr); }
@@ -362,17 +383,31 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <span class="eyebrow">What it does</span>
-      <h2>One intelligence layer. Every kind of conversation.</h2>
-      <p>Your knowledge, put to work the moment someone needs it — day or night, whether they're ready to buy or just have a question.</p>
+      <span class="eyebrow">What's actually at stake</span>
+      <h2>The cost of staying the same.</h2>
+      <p>Not a features list — this is what's actually on the line if your website keeps doing what it's always done.</p>
     </div>
-    <div class="feature-grid">
-      <div class="feature-card"><div class="num">01</div><h3>Answers instantly</h3><p>Every question gets a real answer, drawn from what your business actually knows — not a generic script.</p></div>
-      <div class="feature-card"><div class="num">02</div><h3>Qualifies every visitor</h3><p>Asks the right follow-up questions to tell a real opportunity from a casual browse, before your team gets involved.</p></div>
-      <div class="feature-card"><div class="num">03</div><h3>Books what it can</h3><p>Sends visitors straight to your scheduling link the moment they're ready — no back-and-forth required.</p></div>
-      <div class="feature-card"><div class="num">04</div><h3>Knows when to step back</h3><p>Recognizes urgency, complaints, and anything outside its knowledge — and hands it to your team, safely and clearly.</p></div>
-      <div class="feature-card"><div class="num">05</div><h3>Preserves what your team knows</h3><p>Institutional knowledge stops walking out the door when someone leaves — it's captured, structured, and reusable.</p></div>
-      <div class="feature-card"><div class="num">06</div><h3>Nothing happens in the dark</h3><p>Every conversation and every lead lands on a real dashboard — claimed, tracked, and never lost in an inbox.</p></div>
+    <div class="benefits-carousel" id="benefitsCarousel" tabindex="0">
+      <div class="benefits-track">
+        <div class="benefit-slide is-active"><div class="num">01</div><h3>Stop losing customers to whoever answers first</h3><p>Most inquiries happen after hours, mid-job, or while you're with someone else. An unanswered visitor isn't a lost lead — it's a lead your competitor picks up instead.</p></div>
+        <div class="benefit-slide"><div class="num">02</div><h3>Stay findable as search itself changes</h3><p>Google's own results are now Gemini-powered. ChatGPT and Perplexity are becoming where people ask "who does this near me." If your real answers aren't structured for AI to read, you disappear from that conversation — even if a human would have found you.</p></div>
+        <div class="benefit-slide"><div class="num">03</div><h3>Protect the knowledge that walks out the door</h3><p>When your most experienced person leaves, their answers leave with them. EvolveIQ captures what your team actually knows once, so it doesn't vanish with the next resignation letter.</p></div>
+        <div class="benefit-slide"><div class="num">04</div><h3>It doesn't guess — and says so</h3><p>Generic chatbots hallucinate or dead-end in "I didn't understand that." EvolveIQ tells a visitor plainly when something's outside what it knows, and hands it to your team — nothing customers hear is ever made up.</p></div>
+        <div class="benefit-slide"><div class="num">05</div><h3>Know exactly what customers are actually asking</h3><p>Every conversation is logged and reviewable, so you're working from real questions — not guesses about what your FAQ should cover.</p></div>
+        <div class="benefit-slide"><div class="num">06</div><h3>Support that scales without burning out your team</h3><p>The same three questions, fifty times a day, are what wear out a front desk. EvolveIQ takes the repetitive load so your team's time goes to what actually needs a person.</p></div>
+      </div>
+      <div class="carousel-controls">
+        <button class="carousel-arrow" type="button" data-dir="-1" aria-label="Previous benefit">←</button>
+        <div class="carousel-dots">
+          <button class="carousel-dot is-active" type="button" data-index="0" aria-label="Go to benefit 1"></button>
+          <button class="carousel-dot" type="button" data-index="1" aria-label="Go to benefit 2"></button>
+          <button class="carousel-dot" type="button" data-index="2" aria-label="Go to benefit 3"></button>
+          <button class="carousel-dot" type="button" data-index="3" aria-label="Go to benefit 4"></button>
+          <button class="carousel-dot" type="button" data-index="4" aria-label="Go to benefit 5"></button>
+          <button class="carousel-dot" type="button" data-index="5" aria-label="Go to benefit 6"></button>
+        </div>
+        <button class="carousel-arrow" type="button" data-dir="1" aria-label="Next benefit">→</button>
+      </div>
     </div>
   </div>
 </section>
@@ -382,7 +417,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
     <div class="section-head">
       <span class="eyebrow">The bones of the product</span>
       <h2>Not a script in a box. A real system underneath.</h2>
-      <p>Every answer is built on the same structured knowledge — here's what's actually running, not a pitch about someday.</p>
+      <p>Every answer is built on the same structured knowledge, so what a visitor hears always matches what your business actually knows.</p>
     </div>
     <div class="arch-stack">
       <div class="arch-layer is-live">
@@ -499,7 +534,6 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         <li>Not producing real conversations? Cancel before month two.</li>
       </ul>
       <a class="btn-primary" href="mailto:hello@evolveiq.com?subject=Show%20me%20EvolveIQ%20on%20my%20site">Show me EvolveIQ on my own site →</a>
-      <p class="offer-fine">Founding cohort — limited setup slots each month while we tune the process by hand.</p>
     </div>
   </div>
 </section>
@@ -518,6 +552,54 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   </div>
 </footer>
 
+<script>
+(function () {
+  var root = document.getElementById('benefitsCarousel');
+  if (!root) return;
+  var slides = root.querySelectorAll('.benefit-slide');
+  var dots = root.querySelectorAll('.carousel-dot');
+  var prevBtn = root.querySelector('[data-dir="-1"]');
+  var nextBtn = root.querySelector('[data-dir="1"]');
+  var AUTO_MS = 6500;
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var index = 0;
+  var timer = null;
+  var userControlled = false;
 
+  function show(i) {
+    index = (i + slides.length) % slides.length;
+    for (var n = 0; n < slides.length; n++) slides[n].classList.toggle('is-active', n === index);
+    for (var m = 0; m < dots.length; m++) dots[m].classList.toggle('is-active', m === index);
+  }
+  function next() { show(index + 1); }
+  function prev() { show(index - 1); }
+  function stopAuto() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function startAuto() {
+    if (reducedMotion || userControlled) return;
+    stopAuto();
+    timer = setInterval(next, AUTO_MS);
+  }
+  function onManual(fn) {
+    return function () { fn(); userControlled = true; stopAuto(); };
+  }
+
+  prevBtn.addEventListener('click', onManual(prev));
+  nextBtn.addEventListener('click', onManual(next));
+  dots.forEach(function (dot, n) {
+    dot.addEventListener('click', onManual(function () { show(n); }));
+  });
+  root.addEventListener('mouseenter', stopAuto);
+  root.addEventListener('mouseleave', startAuto);
+  root.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') onManual(next)();
+    if (e.key === 'ArrowLeft') onManual(prev)();
+  });
+
+  show(0);
+  startAuto();
+})();
+</script>
 </body>
 </html>
