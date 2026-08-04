@@ -116,16 +116,35 @@ internal data."
 
 ## Cost / Pricing / Feature-Scope Impact
 
-- **Pricing:** Should be a distinct paid add-on, not bundled into the $99
-  Core tier and not silently folded into the Pipeline add-on either — it's
-  a different value prop (employee productivity/training) with a different
-  cost driver (headcount-scaled token usage) than either existing tier.
-  Exact price point is a business decision, not an engineering one — not
-  set here.
+- **Pricing:** Distinct paid add-on, not bundled into the $99 Core tier and
+  not folded into the Pipeline add-on — different value prop (employee
+  productivity/training) with a different cost driver (headcount-scaled
+  token usage) than either.
+
+  **Proposed: $49/month flat**, decided 2026-08-04. Reasoning:
+  - *Bottom-up cost*: a typical internal Q&A turn (system prompt + retrieved
+    knowledge context + a few conversational turns) runs roughly 2,000
+    input / 300 output tokens at current Sonnet-tier pricing — a few cents
+    per conversation. A small team (10-20 employees) asking occasional
+    questions lands around **$10-20/month in raw API cost**; a larger team
+    with a heavy daily habit could run meaningfully higher, which is what
+    the usage cap below exists to bound.
+  - *Market comparable, rejected*: internal-knowledge-assistant tools
+    (Guru, Tettra, Glean) mostly charge per-seat, $8-20/employee/month —
+    the wrong shape here, since Core and Pipeline are both flat pricing
+    with no seat-counting, and per-seat billing reintroduces the CRM-like
+    complexity the GTM doc already says to avoid.
+  - Flat pricing keeps it consistent with how the rest of the product is
+    sold and administered.
 - **Profitability:** New recurring cost, directly proportional to adoption
-  and usage habits. Needs its own usage cap (parallel to
-  `monthly_message_limit`) so a business with heavy internal usage doesn't
-  silently erode margin on a flat add-on price.
+  and usage habits. Needs its own usage cap — **proposed default: 250-300
+  internal conversations/month included**, comfortable for a small team
+  with healthy margin over the typical $10-20 cost. On hitting the cap,
+  mirror the existing customer-widget behavior (stops auto-answering,
+  points the employee to ask a person, resets next cycle) rather than
+  surprise metered overage billing. A business that regularly blows past
+  the cap is a real signal to introduce a second tier later, not something
+  to solve preemptively now.
 - **Setup effort:** A real onboarding step per business that opts in —
   someone has to populate the internal knowledge pool (facts, FAQs, and any
   documents), separately from the customer-facing knowledge base. Not
@@ -148,13 +167,13 @@ was tested against real scenarios rather than assumed correct.
 
 ## Recommendation
 
-Approve as scoped, with two decisions still needed from you before build:
-1. **Price point** for the add-on (see Cost/Pricing above — not set here).
-2. **Usage cap default** for internal-mode messages, so cost stays bounded
-   per business the same way `monthly_message_limit` already bounds the
-   customer-facing widget.
+Approve as scoped: $49/month flat add-on, 250-300 internal
+conversations/month included by default, cap behavior mirrors the existing
+customer-widget cap (stops auto-answering and points to a person, resets
+next cycle — no surprise metered billing). Both numbers are proposed, not
+yet confirmed — flag if either should change before this gets built.
 
 Everything else in the concrete scope above (separate tables, reused
 plumbing, Team Access auth, Principal/Admin-only content management,
 Staff-and-above query access) is a considered recommendation ready to build
-once those two numbers are set.
+once pricing is confirmed.
