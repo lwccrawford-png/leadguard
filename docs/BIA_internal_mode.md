@@ -1,0 +1,160 @@
+# Business Impact Analysis — Internal Mode
+
+Prepared 2026-08-04, per the Business Impact Gate in `V1_ARCHITECTURE_SPEC.md`
+(new tables + a new recurring-cost driver + a new pricing tier — explicitly gated).
+Not yet approved; no code changes have been made.
+
+## What's being proposed
+
+A second, employee-facing use of the same underlying platform: a knowledge
+assistant for onboarding, training, and daily recall — "what's our policy on
+X," "where's the install checklist," "how do we handle a warranty claim" —
+answered from the business's own internal documentation, the same way the
+public widget answers customer questions from the business's public-facing
+knowledge.
+
+This is explicitly **not** a mode toggle on the existing public widget. The
+public widget has no authentication — anyone on the business's website can
+open it. Internal content (HR policy, negotiation floors, vendor contacts,
+training material) must never sit behind that same unauthenticated door. The
+real design question isn't "should this exist," it's "how do we build it
+without creating a path for internal content to leak to a customer, or
+customer-facing content-management workflows to silently start touching
+internal data."
+
+### Concrete scope
+
+1. **Separate internal knowledge tables** — `internal_facts`,
+   `internal_faqs`, `internal_sources`, `internal_chunks` — structurally
+   identical in shape to the existing `business_facts` / `faqs` / `sources` /
+   `chunks`, but a fully separate pool. Deliberately not a `visibility` flag
+   bolted onto the existing tables (see Architectural Review, #10) — a
+   structural separation is much harder to accidentally cross-contaminate
+   than a shared table every future code path has to remember to filter
+   correctly. One missed filter on the shared-table approach means internal
+   pricing guidance shown to a real customer; that failure mode doesn't
+   exist if the pools are separate tables entirely.
+2. **Reuses the existing chat engine's retrieval and Claude-call pattern**,
+   pointed at the internal pool instead of the customer-facing one, with its
+   own system prompt (no `capture_lead` / `get_scheduling_link` tools — those
+   are meaningless internally) and no lead/conversation records created.
+   Manual document ingestion reuses the existing `add_manual_document`
+   pattern against the internal tables — this is the direct answer to
+   "hold links to documents for recall," the same mechanism already proven
+   for customer-facing manual docs, just writing to a different pool.
+3. **Auth via the already-built Team Access Links** (`docs/BIA_team_access_links.md`)
+   rather than a new auth system. Any valid, non-revoked Team Access token
+   (Principal, Admin, or Staff) can *query* Internal Mode — the whole point
+   is new/tenured employees getting answers without asking a person. Only
+   Principal/Admin can *add or edit* internal content, mirroring the
+   existing split where Staff gets working access and Principal/Admin
+   configure.
+4. **A new authenticated route** (e.g. `/internal`, gated the same way
+   dashboard routes already are) rendering a chat interface reusing the
+   widget's existing rendering code, not the public `/widget` mount.
+5. **Its own usage cap**, separate from `monthly_message_limit` — internal
+   usage scales with employee headcount and habit, not website traffic, so
+   it needs a cost lever independent of the customer-facing cap.
+
+## Architectural Review (per the spec's own required questions)
+
+1. **Does this already exist?** No — nothing employee-facing exists today;
+   every piece of the product is either customer-facing (widget) or
+   agency-facing (dashboard, launcher).
+2. **Can an existing component be extended?** Substantially yes for the
+   *plumbing* — same chat-call pattern, same retrieval approach, same
+   manual-document ingestion function (parameterized by which pool it writes
+   to), same Team Access auth already built. What's genuinely new is the
+   *content store* (deliberately separate, see below) and a second
+   dashboard-style management surface for it.
+3. **Technical debt created?** Moderate. A second, parallel
+   content-management surface means two places that need to stay in sync if
+   future features touch "how knowledge is structured" — a real risk if
+   only one side gets updated. Mitigated by sharing the underlying
+   ingestion/retrieval functions across both pools (parameterized, not
+   forked) rather than duplicating logic.
+4. **Duplicate functionality?** Yes, deliberately — a second knowledge store
+   that mirrors the shape of the first. This is a safety-motivated
+   duplication (see the leak-risk reasoning above), not accidental
+   redundancy, and it's the one place in this BIA where "less code" would
+   mean "less safe."
+5. **Increases infrastructure?** No new external services — same SQLite
+   database (more tables), same FastAPI app, same Claude API. No new vendor.
+6. **Increases token usage?** Yes, meaningfully. Every internal Q&A
+   interaction is a new Claude call, and volume scales with employee
+   headcount and habit — a materially different, harder-to-predict cost
+   driver than customer-widget traffic, which is naturally capped by actual
+   website visitors.
+7. **Increases operating cost?** Yes, per #6 — a new recurring cost that
+   scales with adoption, not with leads. This is exactly the kind of cost
+   the Business Impact Gate exists to flag before it's built, not after.
+8. **Increases implementation complexity?** Yes, moderately-to-substantially
+   — four new tables, a new authenticated route, a new chat variant/system
+   prompt, a new dashboard-style management UI for internal content, and
+   real care spent verifying there is zero code path where internal content
+   reaches the customer-facing endpoint. Comparable in size to the Pipeline
+   board BIA, and a notch larger given the security stakes need actual
+   verification, not just a feature check.
+9. **Does it justify the complexity with customer value?** Yes, if
+   positioned as a distinct value prop rather than a bolt-on. Onboarding
+   new hires and not losing institutional knowledge when someone
+   experienced leaves are real, different pains from "capture more website
+   leads" — and it extends the product's own "give your business's
+   knowledge a voice" story to an internal audience, which is a genuine,
+   differentiated upsell, not scope creep on Core.
+10. **Is there a simpler solution?**
+    - A `visibility` flag on the existing tables instead of separate ones —
+      rejected. Cheaper to build, but every future retrieval code path has
+      to remember to filter by visibility correctly forever; one miss is a
+      real data leak to a real customer. Not worth the savings.
+    - Point businesses at a plain wiki/Google Doc for this — rejected; it
+      throws away the actual differentiator (same AI voice, same platform,
+      no second tool for the business to manage and keep updated).
+    - Build it as a fully separate product — rejected; throws away real,
+      working plumbing (auth, chat engine, ingestion pattern) that makes
+      this cheap to build *well* rather than cheap to build *badly*.
+
+## Cost / Pricing / Feature-Scope Impact
+
+- **Pricing:** Should be a distinct paid add-on, not bundled into the $99
+  Core tier and not silently folded into the Pipeline add-on either — it's
+  a different value prop (employee productivity/training) with a different
+  cost driver (headcount-scaled token usage) than either existing tier.
+  Exact price point is a business decision, not an engineering one — not
+  set here.
+- **Profitability:** New recurring cost, directly proportional to adoption
+  and usage habits. Needs its own usage cap (parallel to
+  `monthly_message_limit`) so a business with heavy internal usage doesn't
+  silently erode margin on a flat add-on price.
+- **Setup effort:** A real onboarding step per business that opts in —
+  someone has to populate the internal knowledge pool (facts, FAQs, and any
+  documents), separately from the customer-facing knowledge base. Not
+  automatic, not reusable from the customer-facing crawl.
+- **Support burden:** New surface area for "why doesn't it know X" support
+  requests, scoped to whichever businesses opt into the add-on — contained,
+  not a Core-wide support cost increase.
+
+## Effort Estimate
+
+Comparable to or slightly larger than the Pipeline board BIA. Pipeline was
+three tables with a fairly self-contained Kanban UI; this is roughly four
+tables (facts/FAQs/sources/chunks equivalents) plus a new authenticated
+route, a new chat-engine variant, and — the part that actually deserves
+care, not just time — verifying there is no code path by which internal
+content reaches the public widget's retrieval. That verification is a
+correctness requirement, not a nice-to-have; it should be tested explicitly
+before this ships, the same way the HVAC BIP's safety-escalation behavior
+was tested against real scenarios rather than assumed correct.
+
+## Recommendation
+
+Approve as scoped, with two decisions still needed from you before build:
+1. **Price point** for the add-on (see Cost/Pricing above — not set here).
+2. **Usage cap default** for internal-mode messages, so cost stays bounded
+   per business the same way `monthly_message_limit` already bounds the
+   customer-facing widget.
+
+Everything else in the concrete scope above (separate tables, reused
+plumbing, Team Access auth, Principal/Admin-only content management,
+Staff-and-above query access) is a considered recommendation ready to build
+once those two numbers are set.
