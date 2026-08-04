@@ -46,11 +46,18 @@ internal data."
    a document, go read it." A links-only system is barely better than a
    file list with a search bar.
 
-   `internal_sources` also carries an optional `reference_url` field for
-   content that shouldn't be duplicated and kept in sync by hand — a Google
-   Doc HR updates weekly, a shared drive folder, a training video. For
-   those, an answer can point to the source ("the full onboarding checklist
-   is here: [link]") instead of a stored copy going stale.
+   `internal_sources` also carries an optional `reference_url` field, and
+   **the answer format is "here's the answer — here's where to find it,"
+   not one or the other.** When a source has a `reference_url`, every
+   answer drawn from it includes the link, not just as a fallback for
+   content that isn't fully ingested. This does two things at once: meets
+   the immediate need (a direct answer, no digging required) and trains
+   the employee for next time (they learn where the source document
+   actually lives, building real familiarity with company resources
+   instead of permanent dependency on asking the assistant). It's also
+   the natural fix for content that shouldn't be duplicated and kept in
+   sync by hand — a Google Doc HR updates weekly, a shared drive folder, a
+   training video — where the link is the only way to stay current.
 
    **Explicitly not in scope:** file upload or parsing (PDF/Word
    extraction, OCR). Text paste plus an optional link covers training
