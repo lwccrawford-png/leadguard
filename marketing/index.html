@@ -313,6 +313,8 @@ header.nav {
   background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 32px 30px;
   box-shadow: var(--shadow);
 }
+.roi-narrative { font-size: 15px; line-height: 1.55; color: var(--ink); margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.roi-narrative strong { color: var(--amber-deep); font-variant-numeric: tabular-nums; }
 .roi-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; font-size: 14.5px; color: var(--ink-dim); }
 .roi-amount { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .roi-unit { font-weight: 400; font-size: 12px; color: var(--ink-faint); }
@@ -699,6 +701,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         </div>
       </div>
       <div class="roi-output">
+        <p class="roi-narrative" id="roiNarrative">If EvolveIQ captures about <strong>$1,500</strong> a month in extra business and saves you about <strong>$1,819</strong> you'd otherwise spend on staffing for this, that's <strong>$3,319</strong> in total value — for a <strong>$99</strong> subscription.</p>
         <div class="roi-line">
           <span>Captured revenue</span>
           <span class="roi-amount" id="roiCaptured">$1,500<span class="roi-unit">/mo</span></span>
@@ -848,6 +851,10 @@ I'm going to flag this for our emergency team right now so they're aware and rea
     document.getElementById('roiFrontDesk').innerHTML = fmt.format(frontDesk) + '<span class="roi-unit">/mo</span>';
     document.getElementById('roiTotal').innerHTML = fmt.format(total) + '<span class="roi-unit">/mo</span>';
     document.getElementById('roiMultiple').textContent = multiple.toFixed(1) + 'x your investment';
+    document.getElementById('roiNarrative').innerHTML =
+      'If EvolveIQ captures about <strong>' + fmt.format(captured) + '</strong> a month in extra business and saves you about ' +
+      '<strong>' + fmt.format(frontDesk) + '</strong> you\'d otherwise spend on staffing for this, that\'s ' +
+      '<strong>' + fmt.format(total) + '</strong> in total value — for a <strong>' + fmt.format(CORE_MONTHLY_COST) + '</strong> subscription.';
   }
 
   [profitEl, bookingsEl, hoursEl, wageEl].forEach(function (el) {
