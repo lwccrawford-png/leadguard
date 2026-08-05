@@ -326,6 +326,13 @@ header.nav {
 .price-block .amount .accent { color: var(--amber-pale); }
 .price-block .unit { font-size: 13px; color: rgba(255,255,255,0.68); text-transform: uppercase; letter-spacing: 0.08em; }
 .price-div { width: 1px; height: 40px; background: rgba(255,255,255,0.28); }
+.plan-label {
+  display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.15); padding: 5px 14px; border-radius: 999px;
+  margin-bottom: 18px;
+}
+.price-asterisk { font-size: 0.5em; color: rgba(255,255,255,0.75); margin-left: 2px; }
+.price-note { font-size: 12.5px; color: rgba(255,255,255,0.72); max-width: 440px; margin: 0 auto 26px; }
 .offer-terms { list-style: none; margin: 0 0 32px; padding: 0; display: grid; gap: 10px; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto; }
 .offer-terms li { display: flex; gap: 10px; font-size: 14.5px; color: rgba(255,255,255,0.88); }
 .offer-terms li::before { content: '—'; color: rgba(255,255,255,0.6); flex-shrink: 0; }
@@ -684,17 +691,19 @@ I'm going to flag this for our emergency team right now so they're aware and rea
       <span class="eyebrow">Founding client offer</span>
       <h2>Your website, working as hard as you do.</h2>
       <p class="desc">We'll capture your business's knowledge, configure your industry's intelligence pack around it, and have it live and answering visitors within days — then tune it with you for 30 days.</p>
+      <span class="plan-label">EvolveIQ Core</span>
       <div class="price-row">
         <div class="price-block">
-          <div class="amount"><span class="accent">$99</span></div>
+          <div class="amount"><span class="accent">$99</span><sup class="price-asterisk">*</sup></div>
           <div class="unit">per month</div>
         </div>
         <div class="price-div"></div>
         <div class="price-block">
-          <div class="amount">$399</div>
+          <div class="amount">$399<sup class="price-asterisk">*</sup></div>
           <div class="unit">one-time setup</div>
         </div>
       </div>
+      <p class="price-note">*EvolveIQ Core, our standard package — includes up to 500 visitor messages a month. Doesn't include add-ons like Pipeline. Need more volume? Ask us.</p>
       <ul class="offer-terms">
         <li>Your industry's Business Intelligence Pack, configured around your business</li>
         <li>Live on your website within days, not weeks</li>
