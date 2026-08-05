@@ -19,6 +19,7 @@ risk corrupting) a real, actively-used client instance like LMTLSS.
 """
 import json
 import pathlib
+import shutil
 import subprocess
 import time
 import urllib.error
@@ -47,7 +48,15 @@ app = FastAPI(title="LeadGuard Demo Launcher")
 
 
 def load_clients():
-    return json.loads(CLIENTS_PATH.read_text())
+    clients = json.loads(CLIENTS_PATH.read_text())
+    migrated = False
+    for c in clients:
+        if "type" not in c:
+            c["type"] = "demo" if c["id"].startswith("prospect_") else "client"
+            migrated = True
+    if migrated:
+        save_clients(clients)
+    return clients
 
 
 def save_clients(clients):
@@ -78,6 +87,38 @@ def start_client(client: dict):
         if is_running(client["port"]):
             return {"ok": True, "message": f"{client['name']} started on :{client['port']}"}
     return {"ok": False, "message": f"{client['name']} did not start — check {log_path}"}
+
+
+def stop_client(client: dict) -> dict:
+    if not is_running(client["port"]):
+        return {"ok": True, "message": f"{client['name']} is already stopped"}
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f"tcp:{client['port']}"], capture_output=True, text=True, timeout=5
+        )
+        pids = [p for p in result.stdout.split() if p.strip()]
+        for pid in pids:
+            subprocess.run(["kill", pid], timeout=5)
+    except Exception as e:
+        return {"ok": False, "message": f"could not stop {client['name']}: {e}"}
+    for _ in range(20):
+        time.sleep(0.2)
+        if not is_running(client["port"]):
+            return {"ok": True, "message": f"{client['name']} stopped"}
+    return {"ok": False, "message": f"{client['name']} did not stop in time"}
+
+
+def delete_client_data(client: dict):
+    """Best-effort removal of a client's data directory. Refuses to touch anything
+    outside BACKEND_DIR — data_dir comes from clients.json, a trusted local file, but
+    this stays defensive since the operation is irreversible."""
+    data_path = (BACKEND_DIR / client["data_dir"]).resolve()
+    try:
+        data_path.relative_to(BACKEND_DIR.resolve())
+    except ValueError:
+        return  # outside BACKEND_DIR — refuse to touch it
+    if data_path.exists():
+        shutil.rmtree(data_path, ignore_errors=True)
 
 
 def fetch_support_requests(port: int) -> list:
@@ -152,6 +193,15 @@ def client_card_html(c: dict) -> str:
     if bip_share is not None:
         kb_label += f" · {round(bip_share * 100)}% BIP content"
     kb_html = f'<span class="kb-source-pill">{kb_label}</span>' if kb_label else ""
+    start_pause_html = (
+        f'<button class="btn btn-pause" data-client="{c["id"]}" onclick="stopClient(\'{c["id"]}\', \'{c["name"]}\')">⏸ Pause</button>'
+        if running else
+        f'<button class="btn btn-start" data-client="{c["id"]}" onclick="startClient(\'{c["id"]}\')">▶ Start environment</button>'
+    )
+    promote_html = (
+        f'<button class="btn btn-promote" onclick="promoteClient(\'{c["id"]}\', \'{c["name"]}\')">⬆ Promote to client</button>'
+        if c.get("type") == "demo" else ""
+    )
     return f"""
     <div class="card">
       <div class="card-head">
@@ -159,10 +209,12 @@ def client_card_html(c: dict) -> str:
         {status_html}
       </div>
       <div class="card-actions">
-        <button class="btn btn-start" data-client="{c['id']}" onclick="startClient('{c['id']}')">▶ Start environment</button>
+        {start_pause_html}
         <a class="btn btn-visitor {'btn-disabled' if not running else ''}" href="{visitor_href}" target="_blank" {disabled}>🌐 Visitor view</a>
         <a class="btn btn-admin {'btn-disabled' if not running else ''}" href="{admin_href}" target="_blank" {disabled}>🔑 Admin view</a>
         <a class="btn btn-client {'btn-disabled' if not running else ''}" href="{client_href}" target="_blank" {disabled}>🗂 Client view</a>
+        {promote_html}
+        <button class="btn btn-delete" onclick="deleteClient('{c['id']}', '{c['name']}')">🗑 Delete</button>
       </div>
       <div class="card-meta">port :{c['port']} &middot; {visitor_target or "no demo generated yet"} {kb_html}</div>
     </div>"""
@@ -204,6 +256,14 @@ PAGE_CSS = """
   .btn-client { background: #f0f0f4; color: #444; }
   .btn-disabled { opacity: .45; pointer-events: none; }
   .card-meta { margin-top: 10px; font-size: 11.5px; color: #999; }
+  .btn-pause { background: #fff7e6; color: #b45309; }
+  .btn-promote { background: #eafbf0; color: #15803d; }
+  .btn-delete { background: #fef2f2; color: #b91c1c; }
+  .launcher-tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid #e5e5ea; }
+  .launcher-tab { background: none; border: none; padding: 10px 16px; font-size: 14px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 2px solid transparent; }
+  .launcher-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+  .launcher-view { display: none; }
+  .launcher-view.active { display: block; }
   .kb-source-pill { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #eef2ff; color: #4f46e5; font-weight: 600; }
   form.generate { background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; padding: 20px; max-width: 520px; }
   form.generate label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; margin-top: 12px; }
@@ -220,6 +280,37 @@ async function startClient(id) {
   const res = await fetch(`/start/${id}`, { method: "POST" });
   const data = await res.json();
   window.location.reload();
+}
+
+async function stopClient(id, name) {
+  const btn = document.querySelector(`button[data-client="${id}"]`);
+  btn.textContent = "Pausing...";
+  btn.disabled = true;
+  const res = await fetch(`/stop/${id}`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || `Could not pause ${name}`);
+  window.location.reload();
+}
+
+async function deleteClient(id, name) {
+  if (!confirm(`Permanently delete "${name}"? This removes all its leads, conversations, and knowledge base — it cannot be undone.`)) return;
+  const res = await fetch(`/delete/${id}`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || `Could not delete ${name}`);
+  window.location.reload();
+}
+
+async function promoteClient(id, name) {
+  if (!confirm(`Move "${name}" from Demos to Clients?`)) return;
+  const res = await fetch(`/promote/${id}`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || `Could not promote ${name}`);
+  window.location.reload();
+}
+
+function showLauncherTab(view) {
+  document.querySelectorAll(".launcher-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".launcher-view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
 }
 
 document.getElementById("genForm")?.addEventListener("submit", async (e) => {
@@ -258,7 +349,10 @@ NAV_HTML = """
 @app.get("/", response_class=HTMLResponse)
 def home():
     clients = load_clients()
-    cards = "\n".join(client_card_html(c) for c in clients)
+    client_cards = "\n".join(client_card_html(c) for c in clients if c.get("type") == "client") \
+        or '<p class="sub">No clients yet.</p>'
+    demo_cards = "\n".join(client_card_html(c) for c in clients if c.get("type") == "demo") \
+        or '<p class="sub">No demos yet — generate one below.</p>'
     options = "\n".join(f'<option value="{c["id"]}">{c["name"]} (:{c["port"]})</option>' for c in clients)
     return f"""<!doctype html>
 <html><head><title>LeadGuard Launcher</title><style>{PAGE_CSS}</style></head>
@@ -266,21 +360,33 @@ def home():
   {NAV_HTML}
   <h1>LeadGuard Demo Launcher</h1>
   <div class="sub">Local control panel — no terminal needed. Bookmark this page.</div>
-  <div class="grid">{cards}</div>
 
-  <h1 style="font-size:16px;">Create a new personalized demo</h1>
-  <div class="sub">Screenshots a prospect's real homepage and drops a live widget on top.</div>
-  <form class="generate" id="genForm">
-    <label>Prospect's website URL</label>
-    <input name="url" type="url" placeholder="https://prospect.com" required />
-    <label>Prospect's business name</label>
-    <input name="name" type="text" placeholder="Prospect Business" required />
-    <label>Start from which client's config as a template?</label>
-    <select name="client_id">{options}</select>
-    <div class="sub" style="margin-top:4px;">Creates its own independent instance seeded from this — never edits the template client itself.</div>
-    <button type="submit">Generate demo</button>
-    <div id="genStatus"></div>
-  </form>
+  <div class="launcher-tabs">
+    <button class="launcher-tab active" data-view="clients" onclick="showLauncherTab('clients')">Clients</button>
+    <button class="launcher-tab" data-view="demos" onclick="showLauncherTab('demos')">Demos</button>
+  </div>
+
+  <div class="launcher-view active" id="view-clients">
+    <div class="grid">{client_cards}</div>
+  </div>
+
+  <div class="launcher-view" id="view-demos">
+    <div class="grid">{demo_cards}</div>
+
+    <h1 style="font-size:16px;">Create a new personalized demo</h1>
+    <div class="sub">Screenshots a prospect's real homepage and drops a live widget on top.</div>
+    <form class="generate" id="genForm">
+      <label>Prospect's website URL</label>
+      <input name="url" type="url" placeholder="https://prospect.com" required />
+      <label>Prospect's business name</label>
+      <input name="name" type="text" placeholder="Prospect Business" required />
+      <label>Start from which client's config as a template?</label>
+      <select name="client_id">{options}</select>
+      <div class="sub" style="margin-top:4px;">Creates its own independent instance seeded from this — never edits the template client itself.</div>
+      <button type="submit">Generate demo</button>
+      <div id="genStatus"></div>
+    </form>
+  </div>
 
   <script>{PAGE_JS}</script>
 </body></html>"""
@@ -293,6 +399,39 @@ def start(client_id: str):
     if not client:
         return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
     return start_client(client)
+
+
+@app.post("/stop/{client_id}")
+def stop(client_id: str):
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    return stop_client(client)
+
+
+@app.post("/delete/{client_id}")
+def delete(client_id: str):
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    stop_client(client)
+    delete_client_data(client)
+    clients = [c for c in clients if c["id"] != client_id]
+    save_clients(clients)
+    return {"ok": True, "message": f"{client['name']} deleted"}
+
+
+@app.post("/promote/{client_id}")
+def promote(client_id: str):
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    client["type"] = "client"
+    save_clients(clients)
+    return {"ok": True, "message": f"{client['name']} promoted to client status"}
 
 
 @app.get("/file")
@@ -344,6 +483,7 @@ async def generate_demo(req: GenerateDemoRequest):
             "accent_color": template.get("accent_color", "#4f46e5"),
             "widget_demo": None,
             "sales_demo": None,
+            "type": "demo",
         }
         started = start_client(prospect)
         if not started["ok"]:
