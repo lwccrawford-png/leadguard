@@ -30,6 +30,7 @@ class BusinessSettings(BaseModel):
     rot_rotting_minutes: int = 4320
     pipeline_enabled: bool = False
     knowledge_source: str = ""
+    greeting: str = ""
 
 
 class LeadUpdate(BaseModel):
@@ -86,7 +87,7 @@ def update_business(settings: BusinessSettings):
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
-               knowledge_source=? WHERE id=1""",
+               knowledge_source=?, greeting=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -102,6 +103,7 @@ def update_business(settings: BusinessSettings):
                 settings.rot_rotting_minutes,
                 int(settings.pipeline_enabled),
                 settings.knowledge_source,
+                settings.greeting,
             ),
         )
     return {"ok": True}

@@ -76,6 +76,16 @@ button[type="submit"], button#crawlBtn, .card button {
   cursor: pointer;
   font-size: 14px;
 }
+.btn-secondary {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+.btn-secondary:hover { background: var(--bg); }
 #crawlStatus, #docStatus { margin-left: 10px; font-size: 13px; color: #666; }
 #saveStatus { margin-left: 10px; font-size: 13px; font-weight: 700; }
 

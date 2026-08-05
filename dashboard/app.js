@@ -44,6 +44,17 @@ document.querySelectorAll(".dash-goto").forEach((btn) => {
   });
 });
 
+function greetingPreset(assistantName, businessName) {
+  return assistantName
+    ? `Hi! I'm ${assistantName} from ${businessName || "the team"} — ask me anything or book an appointment.`
+    : `Hi! I'm the AI assistant for ${businessName || "this business"} — ask me anything or book an appointment.`;
+}
+
+document.getElementById("useGreetingPreset")?.addEventListener("click", () => {
+  const form = $("#settingsForm");
+  form.elements["greeting"].value = greetingPreset(form.elements["assistant_name"].value, form.elements["name"].value);
+});
+
 async function loadBusiness() {
   const res = await fetch("/api/business");
   const data = await res.json();
@@ -53,7 +64,7 @@ async function loadBusiness() {
     if (brand) brand.textContent = data.product_name;
   }
   const form = $("#settingsForm");
-  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source"]) {
+  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
   }
   const kbBadge = document.getElementById("knowledgeSourceBadge");
@@ -72,9 +83,7 @@ async function loadBusiness() {
   $("#pipelineTab").hidden = !PIPELINE_ENABLED;
   const apiBase = window.location.origin;
   const displayName = data.assistant_name || data.name || "Chat with us";
-  const greeting = data.assistant_name
-    ? `Hi! I'm ${data.assistant_name} from ${data.name || "the team"} — ask me anything or book an appointment.`
-    : `Hi! I'm the AI assistant for ${data.name || "this business"} — ask me anything or book an appointment.`;
+  const greeting = data.greeting || greetingPreset(data.assistant_name, data.name);
   $("#embedSnippet").textContent =
     `<script\n` +
     `  src="${apiBase}/widget/widget.js"\n` +

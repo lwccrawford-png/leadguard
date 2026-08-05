@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS business (
     -- "BIP: HVAC v1.0" or "Manual". Purely informational (nothing reads this to change
     -- chat behavior); exists so it's visible at a glance which clients came from a BIP
     -- versus hand-built, instead of BIP content being indistinguishable once pasted in.
-    knowledge_source TEXT NOT NULL DEFAULT ''
+    knowledge_source TEXT NOT NULL DEFAULT '',
+    -- Custom initial greeting shown when the widget opens. Empty means "use the
+    -- auto-generated preset" (built from assistant_name/name) — set here to override it.
+    greeting TEXT NOT NULL DEFAULT ''
 );
 
 -- A "source" is either a crawled site page (source_type='site', url set) or a manually
@@ -207,6 +210,7 @@ def init_db():
             "ALTER TABLE support_requests ADD COLUMN screenshot_data_uri TEXT",
             "ALTER TABLE support_requests ADD COLUMN status TEXT NOT NULL DEFAULT 'new'",
             "ALTER TABLE business ADD COLUMN knowledge_source TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN greeting TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business_facts ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
             "ALTER TABLE faqs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
         ]:

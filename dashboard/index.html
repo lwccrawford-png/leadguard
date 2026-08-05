@@ -84,6 +84,10 @@
         <label>Assistant image URL <span class="hint">(optional — a small avatar/logo shown on the chat bubble and header; paste a link to an image)</span>
           <input name="assistant_image_url" type="url" placeholder="https://yoursite.com/avatar.png" />
         </label>
+        <label>Initial greeting <span class="hint">(shown when the widget first opens — leave blank to use the auto-generated preset based on the assistant/business name)</span>
+          <textarea name="greeting" rows="2" placeholder="e.g. Hi! I'm Aiden from Jane's Salon — ask me anything or book an appointment."></textarea>
+          <button type="button" id="useGreetingPreset" class="btn-secondary" style="align-self:flex-start; margin-top:4px;">Fill with preset</button>
+        </label>
         <label>Website URL <span class="hint">(for the site scan — optional)</span>
           <input name="website_url" placeholder="https://example.com" />
         </label>
