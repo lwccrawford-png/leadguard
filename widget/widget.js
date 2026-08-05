@@ -88,7 +88,9 @@
     ".header{background:" +
     ACCENT +
     ";color:#fff;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;}" +
-    ".close{cursor:pointer;opacity:.85;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin:-8px -10px -8px 0;}" +
+    ".headerActions{display:flex;align-items:center;margin:-8px -10px -8px 0;}" +
+    ".close,.reset{cursor:pointer;opacity:.85;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;width:36px;height:36px;}" +
+    ".reset{font-size:16px;}" +
     ".messages{flex:1;overflow-y:auto;padding:12px;background:#f7f7f9;display:flex;flex-direction:column;gap:8px;}" +
     ".msg{max-width:80%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.35;white-space:pre-wrap;}" +
     ".msg.user{align-self:flex-end;background:" +
@@ -139,7 +141,7 @@
   panel.innerHTML =
     '<div class="header">' +
     headerTitleHtml +
-    '<span class="close">✕</span></div>' +
+    '<span class="headerActions"><span class="reset" title="Start a new conversation">↺</span><span class="close">✕</span></span></div>' +
     '<div class="messages"></div>' +
     '<div class="inputRow"><input type="text" placeholder="Type a message..." /><button>Send</button></div>';
   root.appendChild(panel);
@@ -148,6 +150,7 @@
   var inputEl = panel.querySelector("input");
   var sendBtn = panel.querySelector("button");
   var closeBtn = panel.querySelector(".close");
+  var resetBtn = panel.querySelector(".reset");
 
   function addMessage(role, text) {
     var el = document.createElement("div");
@@ -185,6 +188,19 @@
   });
   closeBtn.addEventListener("click", function () {
     panel.classList.remove("open");
+  });
+  resetBtn.addEventListener("click", function () {
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {}
+    sessionId = "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try {
+      localStorage.setItem(SESSION_KEY, sessionId);
+    } catch (e) {}
+    messagesEl.innerHTML = "";
+    greeted = false;
+    addMessage("assistant", GREETING);
+    greeted = true;
   });
 
   var sending = false;

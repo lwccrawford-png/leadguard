@@ -10,19 +10,20 @@
   <header>
     <h1><span id="productName">LeadGuard</span> <span class="badge">Dashboard</span></h1>
     <span id="knowledgeSourceBadge" class="knowledge-source-badge" hidden></span>
+    <a href="/support/" target="_blank" class="header-support-link">🛠 Support</a>
   </header>
 
   <nav id="tabs">
     <button data-tab="dashboard" class="active">Dashboard</button>
     <button data-tab="settings" class="admin-only">Settings</button>
-    <button data-tab="knowledge" class="admin-only">Knowledge</button>
+    <button data-tab="knowledge">Knowledge</button>
     <button data-tab="leads">Leads <span class="tab-badge" id="unresolvedBadge" hidden>0</span></button>
     <button data-tab="pipeline" id="pipelineTab" hidden>Pipeline</button>
     <button data-tab="conversations">Conversations</button>
     <button data-tab="usage" class="admin-only">Usage</button>
   </nav>
   <div id="viewModeBanner" hidden style="background:#fffbe6;border-bottom:2px solid #eab308;padding:8px 24px;font-size:13px;color:#78350f;">
-    Viewing as a client would see this — Settings, Knowledge, and Usage are hidden. <a href="#" id="switchToAdmin" style="color:#78350f;font-weight:600;">Switch to admin view →</a>
+    Viewing as a client would see this — Settings and Usage are hidden. <a href="#" id="switchToAdmin" style="color:#78350f;font-weight:600;">Switch to admin view →</a>
   </div>
 
   <main>
@@ -40,7 +41,7 @@
           <button type="button" class="dash-goto" data-goto="leads">View all leads →</button>
         </div>
 
-        <div class="card admin-only">
+        <div class="card">
           <h3>Knowledge coverage</h3>
           <ul class="coverage-list" id="dashCoverageList"></ul>
           <button type="button" class="dash-goto" data-goto="knowledge">Manage knowledge →</button>
@@ -153,6 +154,10 @@
 
     <section id="tab-knowledge" class="tab">
       <h2>Knowledge Base</h2>
+      <div class="card" id="unresolvedKnowledgeCard" hidden>
+        <h3>❓ Unanswered questions <span class="hint">(things visitors asked that weren't in the knowledge base — add the real answer as an FAQ below, then mark it resolved)</span></h3>
+        <ul class="unresolved-list" id="unresolvedKnowledgeList"></ul>
+      </div>
       <div class="card" id="compositionCard" hidden>
         <h3>Knowledge composition <span class="hint">(how much of this comes from a LeadGuard BIP vs. content specific to this client — purely informational)</span></h3>
         <div id="compositionBar" class="composition-bar"><div id="compositionFill" class="composition-fill"></div></div>
@@ -160,9 +165,12 @@
       </div>
       <div class="card">
         <h3>Site scan</h3>
-        <p>Crawl the website URL set in Settings.</p>
-        <button id="crawlBtn">Crawl Site Now</button>
-        <span id="crawlStatus"></span>
+        <p>Last crawled: <span id="lastCrawledAt">never</span></p>
+        <div class="admin-only">
+          <p>Crawl the website URL set in Settings.</p>
+          <button id="crawlBtn">Crawl Site Now</button>
+          <span id="crawlStatus"></span>
+        </div>
       </div>
       <div class="card">
         <h3>Add content manually</h3>

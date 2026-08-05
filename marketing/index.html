@@ -274,17 +274,6 @@ header.nav {
 .bubble.assistant { align-self: flex-end; background: var(--amber-pale); border: 1px solid rgba(47, 95, 224, 0.35); color: #4a3106; border-bottom-right-radius: 4px; white-space: pre-line; }
 .proof-note { text-align: center; color: var(--ink-faint); font-size: 13px; max-width: 480px; margin: 20px auto 0; }
 
-/* ---------- flywheel ---------- */
-.flywheel-list { max-width: 560px; margin: 34px auto 0; counter-reset: fw; }
-.fw-step { display: flex; gap: 16px; align-items: baseline; padding: 13px 0; border-bottom: 1px dashed var(--line); }
-.fw-step:last-child { border-bottom: none; }
-.fw-step::before {
-  counter-increment: fw; content: counter(fw);
-  font-family: var(--serif); font-style: italic; color: var(--amber-deep); font-size: 15px; min-width: 20px; font-variant-numeric: tabular-nums;
-}
-.fw-step span { font-size: 16px; color: var(--ink); }
-.fw-loop { text-align: center; margin-top: 18px; font-size: 13px; color: var(--moss); font-weight: 600; letter-spacing: 0.04em; }
-
 /* ---------- ROI calculator ---------- */
 .roi { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .roi-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: start; margin-top: 10px; }
@@ -655,21 +644,6 @@ I'm going to flag this for our emergency team right now so they're aware and rea
       </div>
     </div>
     <p class="proof-note">No diagnosis attempted. No downplaying the risk. Safety comes before the sale — and a real lead still gets captured for follow-up once the visitor is safe.</p>
-  </div>
-</section>
-
-<section class="section">
-  <div class="wrap" style="max-width:640px; text-align:center; margin-left:auto; margin-right:auto;">
-    <span class="eyebrow" style="justify-content:center;">No black box</span>
-    <h2 style="font-family:var(--serif); font-weight:600; font-size:clamp(26px,3.4vw,36px); margin:16px 0 0;">Every gap becomes a real answer — not a guess.</h2>
-    <div class="flywheel-list">
-      <div class="fw-step"><span>A visitor asks something the knowledge base doesn't cover</span></div>
-      <div class="fw-step"><span>The assistant says so plainly and hands off — it doesn't make something up</span></div>
-      <div class="fw-step"><span>You see exactly what was asked in your conversation history</span></div>
-      <div class="fw-step"><span>You add the real answer once, in your own words</span></div>
-      <div class="fw-step"><span>It's part of the knowledge base for every visitor after</span></div>
-    </div>
-    <p class="fw-loop">— you stay in control of what it knows, always —</p>
   </div>
 </section>
 

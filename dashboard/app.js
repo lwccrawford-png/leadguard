@@ -29,6 +29,7 @@ document.querySelectorAll("#tabs button").forEach((btn) => {
       loadFacts();
       loadFaqSchema();
       loadComposition();
+      loadUnresolvedKnowledge();
     }
     if (btn.dataset.tab === "leads") loadLeads();
     if (btn.dataset.tab === "conversations") loadConversations();
@@ -78,6 +79,8 @@ async function loadBusiness() {
       kbBadge.hidden = true;
     }
   }
+  const lastCrawledEl = document.getElementById("lastCrawledAt");
+  if (lastCrawledEl) lastCrawledEl.textContent = data.last_crawled_at ? fmtDate(data.last_crawled_at) : "never";
   ROT_CONFIG.agingMinutes = data.rot_aging_minutes ?? 1440;
   ROT_CONFIG.rottingMinutes = data.rot_rotting_minutes ?? 4320;
   form.elements["pipeline_enabled"].checked = !!data.pipeline_enabled;
@@ -212,6 +215,49 @@ $("#faqForm").addEventListener("submit", async (e) => {
   setTimeout(() => (status.textContent = ""), 2500);
 });
 
+async function loadUnresolvedKnowledge() {
+  const res = await fetch("/api/leads");
+  const rows = await res.json();
+  const open = rows.filter((r) => r.intent === "unresolved_question" && (r.status || "new") !== "done");
+  const card = $("#unresolvedKnowledgeCard");
+  if (open.length === 0) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  $("#unresolvedKnowledgeList").innerHTML = open
+    .map(
+      (r) => `
+      <li data-id="${r.id}">
+        <span class="unresolved-note">${esc(r.notes || "(no detail captured)")}</span>
+        <span class="unresolved-actions">
+          <button class="add-as-faq" data-id="${r.id}" data-note="${esc(r.notes || "")}">Add as FAQ</button>
+          <button class="mark-resolved" data-id="${r.id}">Mark resolved</button>
+        </span>
+      </li>`
+    )
+    .join("");
+
+  $("#unresolvedKnowledgeList")
+    .querySelectorAll("button.add-as-faq")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelector('#faqForm [name="question"]').value = btn.dataset.note;
+        document.querySelector('#faqForm [name="answer"]').focus();
+        document.querySelector("#faqForm").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+
+  $("#unresolvedKnowledgeList")
+    .querySelectorAll("button.mark-resolved")
+    .forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await patchLead(btn.dataset.id, { status: "done" });
+        loadUnresolvedKnowledge();
+      });
+    });
+}
+
 async function loadComposition() {
   const res = await fetch("/api/knowledge/composition");
   const data = await res.json();
@@ -236,7 +282,7 @@ async function loadFaqs() {
     rows
       .map(
         (f) =>
-          `<tr><td>${esc(f.question)}</td><td>${esc(f.answer).slice(0, 100)}${f.answer.length > 100 ? "…" : ""}</td><td>${esc(f.category)}</td><td><button class="delete" data-id="${f.id}" data-kind="faq">Remove</button></td></tr>`
+          `<tr data-id="${f.id}"><td>${esc(f.question)}</td><td>${esc(f.answer).slice(0, 100)}${f.answer.length > 100 ? "…" : ""}</td><td>${esc(f.category)}</td><td class="row-actions"><button class="edit" data-id="${f.id}">Edit</button><button class="delete" data-id="${f.id}" data-kind="faq">Remove</button></td></tr>`
       )
       .join("") || `<tr><td colspan="4" class="muted">No FAQs added yet.</td></tr>`;
   tbody.querySelectorAll("button.delete").forEach((btn) => {
@@ -245,6 +291,35 @@ async function loadFaqs() {
       loadFaqs();
       loadComposition();
     });
+  });
+  tbody.querySelectorAll("button.edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const faq = rows.find((r) => String(r.id) === btn.dataset.id);
+      if (faq) startFaqEdit(btn.closest("tr"), faq);
+    });
+  });
+}
+
+function startFaqEdit(tr, faq) {
+  tr.innerHTML = `
+    <td><input class="edit-question" value="${esc(faq.question)}" /></td>
+    <td><textarea class="edit-answer" rows="3">${esc(faq.answer)}</textarea></td>
+    <td><input class="edit-category" value="${esc(faq.category || "")}" /></td>
+    <td class="row-actions"><button class="save">Save</button><button class="cancel">Cancel</button></td>
+  `;
+  tr.querySelector(".cancel").addEventListener("click", () => loadFaqs());
+  tr.querySelector(".save").addEventListener("click", async () => {
+    const question = tr.querySelector(".edit-question").value.trim();
+    const answer = tr.querySelector(".edit-answer").value.trim();
+    const category = tr.querySelector(".edit-category").value.trim();
+    if (!question || !answer) return;
+    await fetch(`/api/knowledge/faqs/${faq.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, answer, category, priority: faq.priority }),
+    });
+    loadFaqs();
+    loadComposition();
   });
 }
 
@@ -273,7 +348,7 @@ async function loadFacts() {
     rows
       .map(
         (f) =>
-          `<tr><td>${esc(f.label)}</td><td>${esc(f.value)}</td><td><button class="delete" data-id="${f.id}" data-kind="fact">Remove</button></td></tr>`
+          `<tr data-id="${f.id}"><td>${esc(f.label)}</td><td>${esc(f.value)}</td><td class="row-actions"><button class="edit" data-id="${f.id}">Edit</button><button class="delete" data-id="${f.id}" data-kind="fact">Remove</button></td></tr>`
       )
       .join("") || `<tr><td colspan="3" class="muted">No facts added yet.</td></tr>`;
   tbody.querySelectorAll("button.delete").forEach((btn) => {
@@ -282,6 +357,33 @@ async function loadFacts() {
       loadFacts();
       loadComposition();
     });
+  });
+  tbody.querySelectorAll("button.edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const fact = rows.find((r) => String(r.id) === btn.dataset.id);
+      if (fact) startFactEdit(btn.closest("tr"), fact);
+    });
+  });
+}
+
+function startFactEdit(tr, fact) {
+  tr.innerHTML = `
+    <td><input class="edit-label" value="${esc(fact.label)}" /></td>
+    <td><input class="edit-value" value="${esc(fact.value)}" /></td>
+    <td class="row-actions"><button class="save">Save</button><button class="cancel">Cancel</button></td>
+  `;
+  tr.querySelector(".cancel").addEventListener("click", () => loadFacts());
+  tr.querySelector(".save").addEventListener("click", async () => {
+    const label = tr.querySelector(".edit-label").value.trim();
+    const value = tr.querySelector(".edit-value").value.trim();
+    if (!label || !value) return;
+    await fetch(`/api/knowledge/facts/${fact.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, value }),
+    });
+    loadFacts();
+    loadComposition();
   });
 }
 
