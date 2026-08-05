@@ -143,14 +143,16 @@ header.nav {
 }
 
 /* ---------- rhythm section (the problem) ---------- */
-.problem { padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-soft); }
-.problem-lines { max-width: 720px; margin: 12px auto 0; }
-.problem-line { display: flex; gap: 22px; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 15px; }
-.problem-line:last-child { border-bottom: none; }
-.problem-line .yes { color: var(--ink); font-family: var(--serif); font-style: italic; }
-.problem-line .no { color: var(--ink-faint); }
-.problem-line .arrow { color: var(--amber-deep); }
-.problem-close { text-align: center; margin-top: 12px; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--amber-deep); }
+.advantage { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.advantage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 34px; }
+.advantage-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px 26px; box-shadow: var(--shadow-sm); }
+.advantage-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--amber-pale);
+  display: flex; align-items: center; justify-content: center; color: var(--amber-deep); margin-bottom: 16px;
+}
+.advantage-icon svg { width: 22px; height: 22px; }
+.advantage-card h3 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0 0 8px; color: var(--ink); }
+.advantage-card p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; margin: 0; }
 
 /* ---------- what evie can do (scrolling columns) ---------- */
 .can-do { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -366,6 +368,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .can-do-grid { grid-template-columns: 1fr; }
   .scroll-col { height: 280px; }
   .roi-grid { grid-template-columns: 1fr; }
+  .advantage-grid { grid-template-columns: 1fr; }
   .benefits-track { min-height: 340px; }
   .benefit-slide { padding: 32px 26px; }
   .arch-layer { grid-template-columns: 1fr; text-align: left; gap: 6px; }
@@ -388,9 +391,9 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow">Your website's best employee</span>
-      <h1>We make your website your <em>best employee.</em></h1>
-      <p class="lede">It keeps booking clients, supporting your team, and growing your bottom line — while you do what only you can do. Powered by AI that moves at the pace your business changes, so you're never waiting on an expensive website revision to stay accurate.</p>
+      <span class="eyebrow">Built for the modern business</span>
+      <h1>Conversations that <em>convert.</em></h1>
+      <p class="lede">EvolveIQ provides a customized customer experience through smart conversations that educate customers and convert that interest into revenue and saved time for your business.</p>
       <div class="cta-row">
         <a class="btn-primary" href="#offer">See your business's knowledge in action →</a>
         <a class="btn-ghost" href="#how">How it works</a>
@@ -406,19 +409,45 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   </div>
 </section>
 
-<section class="problem">
+<section class="section advantage">
   <div class="wrap">
-    <div class="section-head" style="margin-bottom:0;">
-      <span class="eyebrow">The problem</span>
-      <h2 style="font-family:var(--serif); font-weight:600; font-size:clamp(26px,3.2vw,36px); margin:16px 0 0;">Businesses evolve every day. Their websites don't.</h2>
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:680px;">
+      <span class="eyebrow" style="justify-content:center;">Why EvolveIQ</span>
+      <h2>The EvolveIQ Advantage</h2>
+      <p style="margin:0 auto; max-width:60ch;">Most business owners update their website once a year, if that — but the business itself changes every day. Your cancellation policy gets revised. A new service gets added. Your best technician figures out a faster way to handle a warranty claim. Evie keeps your site as current as you are, so your profit and your website grow together instead of drifting apart.</p>
     </div>
-    <div class="problem-lines">
-      <div class="problem-line"><span class="arrow">—</span><span class="yes">Their employees learn.</span><span class="no">Their websites don't.</span></div>
-      <div class="problem-line"><span class="arrow">—</span><span class="yes">Their processes improve.</span><span class="no">Their websites don't.</span></div>
-      <div class="problem-line"><span class="arrow">—</span><span class="yes">Their services expand.</span><span class="no">Their websites don't.</span></div>
-      <div class="problem-line"><span class="arrow">—</span><span class="yes">Their expertise compounds.</span><span class="no">Their websites stay static.</span></div>
+    <div class="advantage-grid">
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H9l-4 4V4z"/><path d="M8 9h8M8 12h5"/></svg></div>
+        <h3>Instant, Accurate Answers</h3>
+        <p>Every question gets a real answer drawn from your actual business knowledge — not a generic script, and never a guess.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
+        <h3>Always-On Availability</h3>
+        <p>Evie works nights, weekends, and holidays — capturing the business that used to go straight to voicemail.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div>
+        <h3>Built-In Lead Qualification</h3>
+        <p>Every visitor is qualified before your team gets involved — so your time goes to real opportunities, not tire-kickers.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <h3>AI Search Visibility</h3>
+        <p>Structured FAQ data keeps your business visible as search itself shifts toward AI-powered results.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>Full Transparency</h3>
+        <p>Every conversation is logged and reviewable — nothing your customers ask, or your assistant answers, happens in the dark.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+        <h3>Fast, Industry-Ready Setup</h3>
+        <p>Live in days, not weeks, thanks to industry-specific starter packs — no blank page, no guesswork.</p>
+      </div>
     </div>
-    <p class="problem-close">Customers interact with an outdated version of the business. EvolveIQ fixes that.</p>
   </div>
 </section>
 
