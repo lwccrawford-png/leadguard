@@ -48,6 +48,18 @@ nav#tabs button.active {
   border-bottom-color: var(--accent);
   font-weight: 600;
 }
+.tab-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
 
 main { max-width: 860px; margin: 0 auto; padding: 24px; }
 .tab { display: none; }

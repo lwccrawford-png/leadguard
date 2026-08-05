@@ -44,6 +44,8 @@ document.querySelectorAll(".dash-goto").forEach((btn) => {
   });
 });
 
+document.getElementById("unresolvedFilter")?.addEventListener("change", () => loadLeads());
+
 function greetingPreset(assistantName, businessName) {
   return assistantName
     ? `Hi! I'm ${assistantName} from ${businessName || "the team"} — ask me anything or book an appointment.`
@@ -421,7 +423,20 @@ const INTENT_LABELS = {
 
 async function loadLeads() {
   const res = await fetch("/api/leads");
-  const rows = await res.json();
+  const allRows = await res.json();
+
+  const unresolvedOpen = allRows.filter((r) => r.intent === "unresolved_question" && (r.status || "new") !== "done");
+  const badge = document.getElementById("unresolvedBadge");
+  if (badge) {
+    badge.textContent = unresolvedOpen.length;
+    badge.hidden = unresolvedOpen.length === 0;
+  }
+  const unresolvedCard = document.getElementById("unresolvedCard");
+  const hasAnyUnresolved = allRows.some((r) => r.intent === "unresolved_question");
+  if (unresolvedCard) unresolvedCard.hidden = !hasAnyUnresolved;
+
+  const filterOn = document.getElementById("unresolvedFilter")?.checked;
+  const rows = filterOn ? allRows.filter((r) => r.intent === "unresolved_question") : allRows;
 
   for (const status of ["new", "claimed", "done"]) {
     const col = document.querySelector(`.board-col-cards[data-status="${status}"]`);

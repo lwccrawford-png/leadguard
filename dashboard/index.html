@@ -16,7 +16,7 @@
     <button data-tab="dashboard" class="active">Dashboard</button>
     <button data-tab="settings" class="admin-only">Settings</button>
     <button data-tab="knowledge" class="admin-only">Knowledge</button>
-    <button data-tab="leads">Leads</button>
+    <button data-tab="leads">Leads <span class="tab-badge" id="unresolvedBadge" hidden>0</span></button>
     <button data-tab="pipeline" id="pipelineTab" hidden>Pipeline</button>
     <button data-tab="conversations">Conversations</button>
     <button data-tab="usage" class="admin-only">Usage</button>
@@ -230,6 +230,10 @@
     <section id="tab-leads" class="tab">
       <h2>Leads</h2>
       <p class="muted">Drag a card to change its status. Click "Claim" to put your name on it. Click notes to edit.</p>
+      <div class="card" id="unresolvedCard" hidden>
+        <h3>❓ Unanswered questions <span class="hint">(things visitors asked that weren't in the knowledge base — add the real answer as an FAQ, then mark it done)</span></h3>
+        <label class="checkbox-label"><input type="checkbox" id="unresolvedFilter" /> Show only unanswered questions</label>
+      </div>
       <div class="board" id="leadsBoard">
         <div class="board-col" data-status="new">
           <h3>New <span class="count" id="count-new">0</span></h3>
