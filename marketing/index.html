@@ -82,14 +82,22 @@ header.nav {
 .nav-links { display: flex; align-items: center; justify-content: center; gap: 28px; flex: 1; }
 .nav-links a { font-size: 13.5px; font-weight: 600; color: var(--ink-dim); text-decoration: none; white-space: nowrap; transition: color 0.15s ease; }
 .nav-links a:hover { color: var(--amber-deep); }
+.nav-badge-mobile { display: none; }
 .nav-toggle {
   display: none; flex-direction: column; justify-content: center; gap: 4px;
   width: 34px; height: 34px; padding: 8px; border: none; background: none; cursor: pointer; flex-shrink: 0;
 }
 .nav-toggle span { display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--ink); }
+.nav-ctas { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.nav-badge {
+  font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 999px;
+  border: 1.5px solid var(--amber); color: var(--amber-deep); background: var(--amber-pale); text-decoration: none; white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.nav-badge:hover { border-color: var(--amber-deep); background: var(--amber); color: #ffffff; transform: translateY(-1px); }
 .nav-cta {
   font-size: 13.5px; font-weight: 700; padding: 9px 18px; border-radius: 999px;
-  background: var(--amber); color: #ffffff; text-decoration: none; flex-shrink: 0;
+  background: var(--amber); color: #ffffff; text-decoration: none; flex-shrink: 0; white-space: nowrap;
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .nav-cta:hover { background: var(--amber-soft); transform: translateY(-1px); }
@@ -410,7 +418,12 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .nav-links.is-open { display: flex; }
   .nav-links a { padding: 12px 0; border-bottom: 1px solid var(--line); }
   .nav-links a:last-child { border-bottom: none; }
+  .nav-badge-mobile {
+    display: block; margin-top: 6px; border-bottom: none !important; text-align: center;
+    background: var(--amber-pale); color: var(--amber-deep); border-radius: 10px; font-weight: 700;
+  }
   .nav-toggle { display: flex; }
+  .nav-badge { display: none; }
   .wordmark .tag { display: none; }
 }
 </style>
@@ -423,13 +436,17 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       <a href="#how">How it works</a>
       <a href="#benefits">Benefits</a>
       <a href="#included">Included</a>
+      <a href="#roi">ROI</a>
       <a href="#offer">Pricing</a>
-      <a href="#website">Website</a>
+      <a href="#website" class="nav-badge-mobile">Need a site? →</a>
     </nav>
     <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
       <span></span><span></span><span></span>
     </button>
-    <a class="nav-cta" href="#offer">See it live</a>
+    <div class="nav-ctas">
+      <a class="nav-badge" href="#website">Need a site? →</a>
+      <a class="nav-cta" href="#offer">See it live</a>
+    </div>
   </div>
 </header>
 
@@ -719,7 +736,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   </div>
 </section>
 
-<section class="section roi">
+<section class="section roi" id="roi">
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">ROI calculator</span>
