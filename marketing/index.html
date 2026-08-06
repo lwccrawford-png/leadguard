@@ -377,6 +377,27 @@ header.nav {
 .website-card .price-asterisk { color: var(--ink-faint); }
 .website-card .price-note { color: var(--ink-dim); }
 
+/* ---------- demo request form ---------- */
+.demo { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.demo-card {
+  max-width: 720px; margin: 34px auto 0; border-radius: 22px; padding: 40px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.demo-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.demo-field-wide { grid-column: 1 / -1; }
+.demo-field { display: flex; flex-direction: column; gap: 8px; }
+.demo-field label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.demo-optional { font-weight: 400; color: var(--ink-faint); }
+.demo-field input, .demo-field textarea {
+  font: inherit; font-size: 15px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); transition: border-color 0.15s ease; resize: vertical;
+}
+.demo-field input:focus, .demo-field textarea:focus { outline: none; border-color: var(--amber); }
+.demo-submit { margin-top: 4px; }
+.demo-status { font-size: 13.5px; color: #c0392b; margin: 12px 0 0; }
+.demo-schedule-intro { font-size: 15px; color: var(--ink-dim); margin: 0 0 18px; text-align: center; }
+.demo-iframe { width: 100%; height: 680px; border: 1px solid var(--line); border-radius: 14px; }
+
 /* ---------- final CTA ---------- */
 .final { padding: 110px 0 80px; text-align: center; background: var(--bg); }
 .final h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 4.2vw, 48px); text-wrap: balance; margin: 18px 0 30px; color: var(--ink); }
@@ -409,6 +430,9 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .website-price-row { flex-direction: column; gap: 16px; }
   .website-price-div { display: none; }
   .website-card { padding: 38px 26px; }
+  .demo-form { grid-template-columns: 1fr; }
+  .demo-card { padding: 30px 22px; }
+  .demo-iframe { height: 560px; }
   .nav-links {
     display: none; position: absolute; top: 100%; left: 0; right: 0;
     flex-direction: column; align-items: stretch; gap: 0;
@@ -445,7 +469,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
     </button>
     <div class="nav-ctas">
       <a class="nav-badge" href="#website">Need a site? →</a>
-      <a class="nav-cta" href="#offer">See it live</a>
+      <a class="nav-cta" href="#demo">See it live</a>
     </div>
   </div>
 </header>
@@ -847,6 +871,53 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   </div>
 </section>
 
+<section class="section demo" id="demo">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:640px;">
+      <span class="eyebrow" style="justify-content:center;">See it on your business</span>
+      <h2>Request a live demo.</h2>
+      <p style="margin:0 auto;">Tell us about your business, then grab a time that works for you.</p>
+    </div>
+    <div class="demo-card">
+      <form id="demoForm" class="demo-form" novalidate>
+        <div class="demo-field">
+          <label for="demoName">Name</label>
+          <input type="text" id="demoName" name="name" autocomplete="name" required />
+        </div>
+        <div class="demo-field">
+          <label for="demoEmail">Email</label>
+          <input type="email" id="demoEmail" name="email" autocomplete="email" required />
+        </div>
+        <div class="demo-field">
+          <label for="demoPhone">Phone <span class="demo-optional">(optional)</span></label>
+          <input type="tel" id="demoPhone" name="phone" autocomplete="tel" />
+        </div>
+        <div class="demo-field">
+          <label for="demoWebsite">Your website</label>
+          <input type="text" id="demoWebsite" name="website" placeholder="yourbusiness.com" required />
+        </div>
+        <div class="demo-field demo-field-wide">
+          <label for="demoMessage">Anything we should know? <span class="demo-optional">(optional)</span></label>
+          <textarea id="demoMessage" name="message" rows="3"></textarea>
+        </div>
+        <div class="demo-field-wide">
+          <button type="submit" class="btn-primary demo-submit">Continue to scheduling →</button>
+          <p class="demo-status" id="demoStatus" hidden></p>
+        </div>
+      </form>
+      <div class="demo-schedule" id="demoSchedule" hidden>
+        <p class="demo-schedule-intro">Thanks, <span id="demoScheduleName"></span> — pick a time that works for you:</p>
+        <iframe
+          class="demo-iframe"
+          src="https://tidycal.com/team/evolveiq/evolveiq-demonstration"
+          title="Schedule your EvolveIQ demo"
+          loading="lazy"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="final">
   <div class="wrap">
     <h2>Every business is built on knowledge.<br>We give it a <em>bigger voice.</em></h2>
@@ -876,6 +947,70 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   });
   links.querySelectorAll('a').forEach(function (a) {
     a.addEventListener('click', closeMenu);
+  });
+})();
+</script>
+
+<script>
+(function () {
+  var form = document.getElementById('demoForm');
+  if (!form) return;
+  // Points at the real, live EvolveIQ backend (ops/clients.json id "evolveiq_self") — same
+  // instance running Evie on this page. Update once EvolveIQ is on a real public URL, same
+  // caveat as the widget's data-api-base below.
+  var API_BASE = 'http://localhost:8012';
+  var statusEl = document.getElementById('demoStatus');
+  var scheduleEl = document.getElementById('demoSchedule');
+  var nameEl = document.getElementById('demoScheduleName');
+  var submitBtn = form.querySelector('.demo-submit');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    statusEl.hidden = true;
+
+    var payload = {
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      phone: form.phone.value.trim(),
+      website: form.website.value.trim(),
+      message: form.message.value.trim(),
+    };
+    if (!payload.name || !payload.email || !payload.website) {
+      statusEl.textContent = 'Name, email, and website are required.';
+      statusEl.hidden = false;
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+
+    fetch(API_BASE + '/api/demo-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.json().then(function (data) {
+            throw new Error((data && data.detail) || 'Something went wrong.');
+          });
+        }
+        return res.json();
+      })
+      .then(function () {
+        nameEl.textContent = payload.name.split(' ')[0] || payload.name;
+        form.hidden = true;
+        scheduleEl.hidden = false;
+        scheduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+      .catch(function (err) {
+        statusEl.textContent = err.message || "Couldn't reach the server — please try again in a moment.";
+        statusEl.hidden = false;
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Continue to scheduling →';
+      });
   });
 })();
 </script>

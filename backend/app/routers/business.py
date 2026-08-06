@@ -1,6 +1,7 @@
+import re
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 
 from datetime import datetime, timezone
@@ -11,6 +12,7 @@ from ..services import faq_matching, handoff, ingestion, rate_limit, seo
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 router = APIRouter(prefix="/api", tags=["business"])
 
@@ -66,6 +68,14 @@ class SupportRequestInput(BaseModel):
     urgency: str = "normal"
     contact_info: str = ""
     screenshot_data_uri: Optional[str] = None
+
+
+class DemoRequestInput(BaseModel):
+    name: str
+    email: str
+    phone: str = ""
+    website: str
+    message: str = ""
 
 
 @router.get("/business")
@@ -454,6 +464,51 @@ def submit_support_request(req: SupportRequestInput):
             ),
         )
     return {"ok": True, "notified": notified}
+
+
+@router.post("/demo-request")
+def submit_demo_request(req: DemoRequestInput, request: Request):
+    name = req.name.strip()
+    email = req.email.strip()
+    website = req.website.strip()
+    phone = req.phone.strip()
+    message = req.message.strip()
+
+    if not name or not email or not website:
+        raise HTTPException(400, "Name, email, and website are required")
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "That email address doesn't look right")
+    if len(name) > 200 or len(email) > 200 or len(website) > 300 or len(phone) > 50 or len(message) > 2000:
+        raise HTTPException(400, "One of the fields is too long")
+
+    client_key = f"demo-request:{request.client.host if request.client else 'unknown'}"
+    if not rate_limit.check_burst_limit(client_key):
+        raise HTTPException(429, "Too many requests — please try again in a minute")
+
+    with db_session() as conn:
+        business = conn.execute(
+            "SELECT name, handoff_webhook_url, handoff_email FROM business WHERE id = 1"
+        ).fetchone()
+    business_name = business["name"] if business else "your business"
+
+    notes = f"Website: {website}"
+    if message:
+        notes += f"\n\n{message}"
+
+    lead = {"intent": "call_booking", "name": name, "email": email, "phone": phone, "notes": notes}
+    notified = handoff.notify(
+        business["handoff_webhook_url"] if business else "",
+        business_name,
+        lead,
+        notify_email=business["handoff_email"] if business else "",
+    )
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO leads (name, email, phone, intent, notes, handoff_notified, created_at) "
+            "VALUES (?, ?, ?, 'call_booking', ?, ?, ?)",
+            (name, email, phone, notes, 1 if notified else 0, datetime.now(timezone.utc).isoformat()),
+        )
+    return {"ok": True}
 
 
 @router.get("/support-requests")
