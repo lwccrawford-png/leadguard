@@ -74,7 +74,8 @@ class DemoRequestInput(BaseModel):
     name: str
     email: str
     phone: str = ""
-    website: str
+    website: str = ""
+    needs_website: bool = False
     message: str = ""
 
 
@@ -473,9 +474,12 @@ def submit_demo_request(req: DemoRequestInput, request: Request):
     website = req.website.strip()
     phone = req.phone.strip()
     message = req.message.strip()
+    needs_website = req.needs_website
 
-    if not name or not email or not website:
-        raise HTTPException(400, "Name, email, and website are required")
+    if not name or not email:
+        raise HTTPException(400, "Name and email are required")
+    if not website and not needs_website:
+        raise HTTPException(400, "Add your website, or check \"I just need a website\"")
     if not EMAIL_RE.match(email):
         raise HTTPException(400, "That email address doesn't look right")
     if len(name) > 200 or len(email) > 200 or len(website) > 300 or len(phone) > 50 or len(message) > 2000:
@@ -491,7 +495,10 @@ def submit_demo_request(req: DemoRequestInput, request: Request):
         ).fetchone()
     business_name = business["name"] if business else "your business"
 
-    notes = f"Website: {website}"
+    if needs_website:
+        notes = "Interested in: the $100 website starter package (no site yet)"
+    else:
+        notes = f"Website: {website}"
     if message:
         notes += f"\n\n{message}"
 

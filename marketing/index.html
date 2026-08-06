@@ -135,28 +135,33 @@ header.nav {
 }
 .btn-ghost:hover { border-color: var(--amber-deep); color: var(--amber-deep); }
 
-/* hero visual: radiating voice glyph */
-.hero-visual { position: relative; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; }
-.glow-ring {
-  position: absolute; border-radius: 50%; border: 1px solid var(--line);
+/* hero visual: live chat transcript mockup */
+.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; }
+.hero-transcript { max-width: 380px; width: 100%; margin: 0; animation: hero-rise 0.7s ease both; }
+.hero-transcript .transcript-head .pip { animation: hero-pip 2.2s ease-in-out infinite; }
+.hero-transcript-outcome {
+  padding: 12px 18px; border-top: 1px solid var(--line); background: var(--amber-pale);
+  color: var(--amber-deep); font-size: 13px; font-weight: 700; text-align: center;
+  opacity: 0; transition: opacity 0.4s ease;
 }
-.glow-ring.r1 { width: 100%; height: 100%; }
-.glow-ring.r2 { width: 74%; height: 74%; border-color: rgba(47, 95, 224, 0.22); }
-.glow-ring.r3 { width: 48%; height: 48%; border-color: rgba(47, 95, 224, 0.35); }
-.glow-core {
-  position: relative; width: 24%; height: 24%; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--amber-soft), var(--amber) 55%, var(--amber-deep) 100%);
-  box-shadow: 0 20px 60px 6px rgba(47, 95, 224, 0.4);
-  animation: pulse 4.5s ease-in-out infinite;
+.hero-transcript-outcome.is-visible { opacity: 1; }
+.hero-transcript .bubble { animation: hero-msg-in 0.35s ease both; }
+.hero-typing { display: flex; align-items: center; padding: 14px 16px; }
+.hero-typing-dots { display: inline-flex; gap: 4px; }
+.hero-typing-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--amber-deep); opacity: 0.5;
+  animation: hero-typing-bounce 1.2s infinite ease-in-out;
 }
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 20px 50px 2px rgba(47, 95, 224, 0.32); }
-  50% { box-shadow: 0 26px 74px 12px rgba(47, 95, 224, 0.5); }
-}
-.hero-visual .label {
-  position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%);
-  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);
-  text-align: center; width: 100%;
+.hero-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.hero-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes hero-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hero-pip { 0%, 100% { box-shadow: 0 0 0 3px rgba(79,122,68,0.18); } 50% { box-shadow: 0 0 0 6px rgba(79,122,68,0.12); } }
+@keyframes hero-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hero-typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-transcript { animation: none; }
+  .hero-transcript .transcript-head .pip { animation: none; }
+  .hero-transcript .bubble { animation: none; }
 }
 
 /* ---------- rhythm section (the problem) ---------- */
@@ -393,6 +398,13 @@ header.nav {
   background: var(--bg); color: var(--ink); transition: border-color 0.15s ease; resize: vertical;
 }
 .demo-field input:focus, .demo-field textarea:focus { outline: none; border-color: var(--amber); }
+.demo-field-checkbox { margin-top: -8px; }
+.demo-checkbox {
+  display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 500;
+  color: var(--ink-dim); cursor: pointer;
+}
+.demo-checkbox input { width: 16px; height: 16px; accent-color: var(--amber); cursor: pointer; }
+.demo-field.is-disabled input { opacity: 0.5; background: var(--bg-soft); cursor: not-allowed; }
 .demo-submit { margin-top: 4px; }
 .demo-status { font-size: 13.5px; color: #c0392b; margin: 12px 0 0; }
 .demo-schedule-intro { font-size: 15px; color: var(--ink-dim); margin: 0 0 18px; text-align: center; }
@@ -411,7 +423,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 /* ---------- responsive ---------- */
 @media (max-width: 880px) {
   .hero-grid { grid-template-columns: 1fr; }
-  .hero-visual { max-width: 280px; margin: 0 auto; order: -1; }
+  .hero-visual { max-width: 420px; margin: 0 auto 8px; order: -1; }
   .evie-grid { grid-template-columns: 1fr; }
   .evie-preview { align-items: flex-start; }
   .evie-bubble { margin-right: 0; }
@@ -486,11 +498,15 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       </div>
     </div>
     <div class="hero-visual">
-      <div class="glow-ring r1"></div>
-      <div class="glow-ring r2"></div>
-      <div class="glow-ring r3"></div>
-      <div class="glow-core"></div>
-      <div class="label">Knowledge, given a voice</div>
+      <div class="transcript hero-transcript">
+        <div class="transcript-head"><span class="pip"></span> Live on evolveiq.com — this is Evie, right now</div>
+        <div class="transcript-body" id="heroTranscriptBody">
+          <div class="bubble visitor">Do you have anyone free Saturday for a water heater install?</div>
+          <div class="bubble assistant">Yes — Saturday has two openings. I can get this on the schedule now. What's the best number to text you at?</div>
+          <div class="bubble visitor">555-201-4487</div>
+        </div>
+        <div class="hero-transcript-outcome is-visible" id="heroTranscriptOutcome">✅ Lead captured — your team notified in real time</div>
+      </div>
     </div>
   </div>
 </section>
@@ -896,6 +912,12 @@ I'm going to flag this for our emergency team right now so they're aware and rea
           <label for="demoWebsite">Your website</label>
           <input type="text" id="demoWebsite" name="website" placeholder="yourbusiness.com" required />
         </div>
+        <div class="demo-field demo-field-wide demo-field-checkbox">
+          <label class="demo-checkbox">
+            <input type="checkbox" id="demoNoWebsite" name="needs_website" />
+            I just need a sweet website — thanks.
+          </label>
+        </div>
         <div class="demo-field demo-field-wide">
           <label for="demoMessage">Anything we should know? <span class="demo-optional">(optional)</span></label>
           <textarea id="demoMessage" name="message" rows="3"></textarea>
@@ -934,6 +956,101 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 
 <script>
 (function () {
+  var body = document.getElementById('heroTranscriptBody');
+  var outcome = document.getElementById('heroTranscriptOutcome');
+  if (!body || !outcome) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var SCENARIOS = [
+    {
+      outcome: '✅ Lead captured — your team notified in real time',
+      steps: [
+        { role: 'visitor', text: "Do you have anyone free Saturday for a water heater install?" },
+        { role: 'assistant', text: "Yes — Saturday has two openings. I can get this on the schedule now. What's the best number to text you at?" },
+        { role: 'visitor', text: '555-201-4487' },
+      ],
+    },
+    {
+      outcome: '💬 Answered instantly — straight from your own policies',
+      steps: [
+        { role: 'visitor', text: 'Is there an extra charge for weekend visits?' },
+        { role: 'assistant', text: 'No weekend upcharge, Monday through Saturday. Sunday is emergency-only with a $75 callout fee.' },
+      ],
+    },
+    {
+      outcome: '🌙 After-hours lead captured — nothing waits until Monday',
+      steps: [
+        { role: 'visitor', text: "It's midnight — is anyone actually going to see this?" },
+        { role: 'assistant', text: "I am, right now. I can't promise a callback time myself, but I'll flag this so your team sees it first thing. Best number to reach you?" },
+        { role: 'visitor', text: '612-330-9040' },
+      ],
+    },
+  ];
+  var scenarioIndex = 0;
+
+  function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+  function addBubble(role, text) {
+    var el = document.createElement('div');
+    el.className = 'bubble ' + role;
+    el.textContent = text;
+    body.appendChild(el);
+    return el;
+  }
+  function addTyping() {
+    var el = document.createElement('div');
+    el.className = 'bubble assistant hero-typing';
+    el.innerHTML = '<span class="hero-typing-dots"><span></span><span></span><span></span></span>';
+    body.appendChild(el);
+    return el;
+  }
+
+  function playOnce() {
+    var scenario = SCENARIOS[scenarioIndex];
+    scenarioIndex = (scenarioIndex + 1) % SCENARIOS.length;
+
+    body.innerHTML = '';
+    outcome.classList.remove('is-visible');
+    outcome.textContent = scenario.outcome;
+    var p = Promise.resolve();
+    scenario.steps.forEach(function (step) {
+      if (step.role === 'assistant') {
+        p = p
+          .then(function () { return wait(500); })
+          .then(function () {
+            var typing = addTyping();
+            return wait(1100).then(function () { typing.remove(); });
+          })
+          .then(function () {
+            addBubble('assistant', step.text);
+            return wait(700);
+          });
+      } else {
+        p = p
+          .then(function () { return wait(600); })
+          .then(function () {
+            addBubble('visitor', step.text);
+            return wait(700);
+          });
+      }
+    });
+    return p
+      .then(function () { return wait(400); })
+      .then(function () { outcome.classList.add('is-visible'); })
+      .then(function () { return wait(3200); });
+  }
+
+  function loop() {
+    playOnce().then(function () { return wait(600); }).then(loop);
+  }
+
+  loop();
+})();
+</script>
+
+<script>
+(function () {
   var toggle = document.getElementById('navToggle');
   var links = document.getElementById('navLinks');
   if (!toggle || !links) return;
@@ -963,20 +1080,43 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   var scheduleEl = document.getElementById('demoSchedule');
   var nameEl = document.getElementById('demoScheduleName');
   var submitBtn = form.querySelector('.demo-submit');
+  var websiteInput = document.getElementById('demoWebsite');
+  var websiteField = websiteInput.closest('.demo-field');
+  var noWebsiteCheckbox = document.getElementById('demoNoWebsite');
+
+  noWebsiteCheckbox.addEventListener('change', function () {
+    var checked = noWebsiteCheckbox.checked;
+    websiteInput.required = !checked;
+    websiteInput.disabled = checked;
+    websiteField.classList.toggle('is-disabled', checked);
+    if (checked) {
+      websiteInput.value = '';
+      websiteInput.placeholder = "No worries — that's what we're here for";
+    } else {
+      websiteInput.placeholder = 'yourbusiness.com';
+    }
+  });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     statusEl.hidden = true;
 
+    var needsWebsite = noWebsiteCheckbox.checked;
     var payload = {
       name: form.name.value.trim(),
       email: form.email.value.trim(),
       phone: form.phone.value.trim(),
-      website: form.website.value.trim(),
+      website: needsWebsite ? '' : form.website.value.trim(),
+      needs_website: needsWebsite,
       message: form.message.value.trim(),
     };
-    if (!payload.name || !payload.email || !payload.website) {
-      statusEl.textContent = 'Name, email, and website are required.';
+    if (!payload.name || !payload.email) {
+      statusEl.textContent = 'Name and email are required.';
+      statusEl.hidden = false;
+      return;
+    }
+    if (!needsWebsite && !payload.website) {
+      statusEl.textContent = 'Add your website, or check "I just need a website."';
       statusEl.hidden = false;
       return;
     }
@@ -1074,6 +1214,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   data-api-base="http://localhost:8012"
   data-business-name="Evie"
   data-color="#2f5fe0"
+  data-avatar-url="/assets/evie-avatar.png"
   data-greeting="Hi, I'm Evie — ask me anything about EvolveIQ, how it works, or what it costs."
   defer
 ></script>

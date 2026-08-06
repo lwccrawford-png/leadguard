@@ -87,7 +87,11 @@
     ".panel.open{display:flex;}" +
     ".header{background:" +
     ACCENT +
-    ";color:#fff;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;}" +
+    ";color:#fff;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;position:relative;}" +
+    ".header.hero{flex-direction:column;align-items:center;justify-content:center;padding:20px 16px 14px;gap:5px;}" +
+    ".header.hero .heroAvatar{width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.92);box-shadow:0 4px 14px rgba(0,0,0,.2);}" +
+    ".header.hero .heroName{font-size:14.5px;font-weight:700;}" +
+    ".header.hero .headerActions{position:absolute;top:10px;right:10px;margin:0;}" +
     ".headerActions{display:flex;align-items:center;margin:-8px -10px -8px 0;}" +
     ".close,.reset{cursor:pointer;opacity:.85;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;width:36px;height:36px;}" +
     ".reset{font-size:16px;}" +
@@ -132,15 +136,24 @@
   }
   root.appendChild(bubble);
 
-  var headerTitleHtml = AVATAR_URL
-    ? '<span class="titleRow"><img class="avatar" src="' + escHtml(AVATAR_URL) + '" alt="" onerror="this.remove()" />' + escHtml(BUSINESS_NAME) + "</span>"
+  // With an avatar configured, the header becomes a tall, centered "hero" card (avatar
+  // top and center, name below) so visitors immediately see a face, not just a color bar.
+  // Without one, it stays the compact single-line bar it always was.
+  var headerIsHero = !!AVATAR_URL;
+  var headerBodyHtml = headerIsHero
+    ? '<img class="heroAvatar" src="' +
+      escHtml(AVATAR_URL) +
+      '" alt="" onerror="this.parentElement.classList.remove(\'hero\');this.remove();" />' +
+      '<span class="heroName">' +
+      escHtml(BUSINESS_NAME) +
+      "</span>"
     : "<span>" + escHtml(BUSINESS_NAME) + "</span>";
 
   var panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML =
-    '<div class="header">' +
-    headerTitleHtml +
+    '<div class="header' + (headerIsHero ? " hero" : "") + '">' +
+    headerBodyHtml +
     '<span class="headerActions"><span class="reset" title="Start a new conversation">↺</span><span class="close">✕</span></span></div>' +
     '<div class="messages"></div>' +
     '<div class="inputRow"><input type="text" placeholder="Type a message..." /><button>Send</button></div>';
