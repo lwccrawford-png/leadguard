@@ -38,6 +38,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+section[id] { scroll-margin-top: 88px; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
@@ -74,13 +75,21 @@ header.nav {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
-.nav-row { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; }
-.wordmark { font-family: var(--serif); font-weight: 700; font-size: 20px; letter-spacing: 0.01em; display: flex; align-items: baseline; gap: 8px; color: var(--ink); }
+.nav-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 28px; }
+.wordmark { font-family: var(--serif); font-weight: 700; font-size: 20px; letter-spacing: 0.01em; display: flex; align-items: baseline; gap: 8px; color: var(--ink); flex-shrink: 0; }
 .wordmark .dot { color: var(--amber); }
 .wordmark .tag { font-family: var(--sans); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-left: 6px; }
+.nav-links { display: flex; align-items: center; justify-content: center; gap: 28px; flex: 1; }
+.nav-links a { font-size: 13.5px; font-weight: 600; color: var(--ink-dim); text-decoration: none; white-space: nowrap; transition: color 0.15s ease; }
+.nav-links a:hover { color: var(--amber-deep); }
+.nav-toggle {
+  display: none; flex-direction: column; justify-content: center; gap: 4px;
+  width: 34px; height: 34px; padding: 8px; border: none; background: none; cursor: pointer; flex-shrink: 0;
+}
+.nav-toggle span { display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--ink); }
 .nav-cta {
   font-size: 13.5px; font-weight: 700; padding: 9px 18px; border-radius: 999px;
-  background: var(--amber); color: #ffffff; text-decoration: none;
+  background: var(--amber); color: #ffffff; text-decoration: none; flex-shrink: 0;
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .nav-cta:hover { background: var(--amber-soft); transform: translateY(-1px); }
@@ -153,6 +162,7 @@ header.nav {
 .advantage-icon svg { width: 22px; height: 22px; }
 .advantage-card h3 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0 0 8px; color: var(--ink); }
 .advantage-card p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; margin: 0; }
+.included-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 34px; }
 
 /* ---------- what evie can do (scrolling columns) ---------- */
 .can-do { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -339,6 +349,26 @@ header.nav {
 .offer-card .btn-primary { background: #0e1a3d; color: #ffffff; box-shadow: 0 14px 30px -12px rgba(14,26,61,0.5); }
 .offer-card .btn-primary:hover { background: #1a2c63; }
 
+/* ---------- website starter offer ---------- */
+.website-offer { padding: 0 0 100px; background: var(--bg); }
+.website-card {
+  max-width: 620px; margin: 0 auto; border-radius: 22px; padding: 48px 44px;
+  background: var(--card); border: 1px solid var(--line); text-align: center; box-shadow: var(--shadow);
+}
+.website-card .eyebrow { justify-content: center; }
+.website-card h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3.2vw, 32px); margin: 16px 0 14px; text-wrap: balance; color: var(--ink); }
+.website-card p.desc { color: var(--ink-dim); max-width: 50ch; margin: 0 auto 28px; font-size: 15.5px; }
+.website-price-row { display: flex; align-items: baseline; justify-content: center; gap: 26px; margin-bottom: 26px; flex-wrap: wrap; }
+.website-price-block .amount { font-family: var(--serif); font-weight: 600; font-size: 32px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.website-price-block .amount .accent { color: var(--amber-deep); }
+.website-price-block .unit { font-size: 12.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+.website-price-div { width: 1px; height: 32px; background: var(--line); }
+.website-terms { list-style: none; margin: 0 0 30px; padding: 0; display: grid; gap: 9px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto; }
+.website-terms li { display: flex; gap: 10px; font-size: 14px; color: var(--ink-dim); }
+.website-terms li::before { content: '—'; color: var(--ink-faint); flex-shrink: 0; }
+.website-card .price-asterisk { color: var(--ink-faint); }
+.website-card .price-note { color: var(--ink-dim); }
+
 /* ---------- final CTA ---------- */
 .final { padding: 110px 0 80px; text-align: center; background: var(--bg); }
 .final h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 4.2vw, 48px); text-wrap: balance; margin: 18px 0 30px; color: var(--ink); }
@@ -360,6 +390,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .scroll-col { height: 280px; }
   .roi-grid { grid-template-columns: 1fr; }
   .advantage-grid { grid-template-columns: 1fr; }
+  .included-grid { grid-template-columns: 1fr; }
   .benefits-grid { grid-template-columns: 1fr; }
   .arch-layer { grid-template-columns: 1fr; text-align: left; gap: 6px; }
   .arch-layer .layer-tag { justify-self: start; }
@@ -367,6 +398,20 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .price-row { flex-direction: column; gap: 16px; }
   .price-div { display: none; }
   .offer-card { padding: 38px 26px; }
+  .website-price-row { flex-direction: column; gap: 16px; }
+  .website-price-div { display: none; }
+  .website-card { padding: 38px 26px; }
+  .nav-links {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: var(--card); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-sm);
+    padding: 4px 28px 12px;
+  }
+  .nav-links.is-open { display: flex; }
+  .nav-links a { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .nav-links a:last-child { border-bottom: none; }
+  .nav-toggle { display: flex; }
+  .wordmark .tag { display: none; }
 }
 </style>
 </head>
@@ -374,6 +419,16 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 <header class="nav">
   <div class="nav-row wrap">
     <div class="wordmark">EvolveIQ<span class="dot">.</span><span class="tag">AI Employee Platform</span></div>
+    <nav class="nav-links" id="navLinks">
+      <a href="#how">How it works</a>
+      <a href="#benefits">Benefits</a>
+      <a href="#included">Included</a>
+      <a href="#offer">Pricing</a>
+      <a href="#website">Website</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
     <a class="nav-cta" href="#offer">See it live</a>
   </div>
 </header>
@@ -531,7 +586,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   </div>
 </section>
 
-<section class="section">
+<section class="section" id="benefits">
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">What you get</span>
@@ -579,6 +634,38 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
         <div class="layer-name">Pipeline</div>
         <div class="layer-desc">Once a lead is claimed, track it through your own sales or membership process — custom stages, won/lost tracking, built to fit how you actually close.</div>
         <div class="layer-tag tag-addon">Add-on</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="included">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">What's included</span>
+      <h2>You get more than a chat widget.</h2>
+      <p>The dashboard, the lead board, the support, the updates — all part of what you're paying for every month, not extras you have to ask about.</p>
+    </div>
+    <div class="included-grid">
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></div>
+        <h3>Your own dashboard</h3>
+        <p>Update your greeting, facts, FAQs, and scheduling link anytime — no developer, no waiting on us.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="10" rx="1"/><rect x="16" y="4" width="5" height="13" rx="1"/></svg></div>
+        <h3>A real lead board</h3>
+        <p>Every captured lead lands on a board you can claim, track, and move through your own process — not just an email you might miss.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2" y="13" width="4" height="6" rx="1.5"/><rect x="18" y="13" width="4" height="6" rx="1.5"/></svg></div>
+        <h3>Support from a real person</h3>
+        <p>Questions about your setup or how something works reach someone on our team — not another bot.</p>
+      </div>
+      <div class="advantage-card">
+        <div class="advantage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></div>
+        <h3>Improvements ship monthly</h3>
+        <p>EvolveIQ keeps getting better — new capabilities roll out to your account as they ship, at no extra cost.</p>
       </div>
     </div>
   </div>
@@ -688,7 +775,6 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 <section class="offer" id="offer">
   <div class="wrap">
     <div class="offer-card">
-      <span class="eyebrow">Founding client offer</span>
       <h2>Your website, working as hard as you do.</h2>
       <p class="desc">We'll capture your business's knowledge, configure your industry's intelligence pack around it, and have it live and answering visitors within days — then tune it with you for 30 days.</p>
       <span class="plan-label">EvolveIQ Core</span>
@@ -715,6 +801,35 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   </div>
 </section>
 
+<section class="website-offer" id="website">
+  <div class="wrap">
+    <div class="website-card">
+      <span class="eyebrow">No website yet?</span>
+      <h2>We'll build you one.</h2>
+      <p class="desc">A clean, single-page site — built the same way this one was, so Evie has a real home from day one.</p>
+      <div class="website-price-row">
+        <div class="website-price-block">
+          <div class="amount"><span class="accent">$100</span><sup class="price-asterisk">*</sup></div>
+          <div class="unit">one-time build</div>
+        </div>
+        <div class="website-price-div"></div>
+        <div class="website-price-block">
+          <div class="amount">$20<sup class="price-asterisk">*</sup></div>
+          <div class="unit">per month maintenance</div>
+        </div>
+      </div>
+      <p class="price-note">*Bundled pricing for EvolveIQ Core subscribers. Without an EvolveIQ subscription: $499 one-time build, $50/month maintenance. Domain not included — you'll need your own (we recommend Bluehost).</p>
+      <ul class="website-terms">
+        <li>Single-page site, built and live in days</li>
+        <li>Hosting and SSL included</li>
+        <li>A handful of small content updates each month — new hours, photos, a policy change</li>
+        <li>Uptime monitored, so you're not the one who finds out it's down</li>
+      </ul>
+      <a class="btn-primary" href="mailto:hello@evolveiq.com?subject=Tell%20me%20about%20a%20starter%20site">Tell me about a starter site →</a>
+    </div>
+  </div>
+</section>
+
 <section class="final">
   <div class="wrap">
     <h2>Every business is built on knowledge.<br>We give it a <em>bigger voice.</em></h2>
@@ -728,6 +843,25 @@ I'm going to flag this for our emergency team right now so they're aware and rea
     <div class="footer-meta">© 2026 EvolveIQ — AI Employee Platform</div>
   </div>
 </footer>
+
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var links = document.getElementById('navLinks');
+  if (!toggle || !links) return;
+  function closeMenu() {
+    links.classList.remove('is-open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', function () {
+    var isOpen = links.classList.toggle('is-open');
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  });
+  links.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', closeMenu);
+  });
+})();
+</script>
 
 <script>
 (function () {
