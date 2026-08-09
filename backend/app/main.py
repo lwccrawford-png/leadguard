@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import BASE_DIR, PRODUCT_NAME, WIDGET_ALLOWED_ORIGINS
 from .db import init_db
-from .services import retention, retrieval
-from .routers import chat, business, pipeline
+from .services import intelligence, retention, retrieval
+from .routers import chat, business, pipeline, intelligence as intelligence_router
 
 PROJECT_ROOT = BASE_DIR.parent  # leadguard/
 WIDGET_DIR = PROJECT_ROOT / "widget"
@@ -24,6 +24,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], a
 app.include_router(chat.router)
 app.include_router(business.router)
 app.include_router(pipeline.router)
+app.include_router(intelligence_router.router)
 
 
 @app.middleware("http")
@@ -49,6 +50,7 @@ async def _retention_loop():
 @app.on_event("startup")
 async def on_startup():
     init_db()
+    intelligence.ensure_schema()
     retrieval.load_index()
     retention.purge_old_conversations()
     asyncio.create_task(_retention_loop())
