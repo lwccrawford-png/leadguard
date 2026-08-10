@@ -27,6 +27,13 @@ as originally built.
   and one Layer 5 channel (website widget) only; don't let marketing copy
   claim the rest (voice, SMS, CRM writeback, multi-role "digital workforce")
   before it's built.
+- **`docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md`** — a declared **blocking
+  milestone before DigitalOcean migration/deployment** (see
+  `ops/DEPLOYMENT_PLAN.md`): prospect-specific public demo links
+  (`/demo/<slug>`) for the outbound sales motion, isolated from production
+  client data. Not yet built. Cross-industry by design — don't let the
+  initial Texas HVAC rollout leak vertical-specific assumptions into the
+  schema, routing, or prompts.
 
 ## Operating mode
 
