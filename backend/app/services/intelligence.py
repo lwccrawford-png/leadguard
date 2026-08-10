@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import sqlite3
 from datetime import datetime, timezone
 
 from ..db import db_session
 from . import handoff
+
+logger = logging.getLogger(__name__)
 
 INTEL_RE = re.compile(r"\[EIQ_INTEL\](.*?)\[/EIQ_INTEL\]", re.DOTALL)
 
@@ -95,6 +99,7 @@ def ensure_schema() -> None:
                 routing_reason TEXT NOT NULL DEFAULT '',
                 intelligent_summary TEXT NOT NULL DEFAULT '',
                 signals_json TEXT NOT NULL DEFAULT '[]',
+                unrecognized_signals_json TEXT NOT NULL DEFAULT '[]',
                 processed_at TEXT NOT NULL
             );
 
@@ -116,6 +121,10 @@ def ensure_schema() -> None:
                 "INSERT INTO intelligence_settings (id, scoring_rules_json, priority_thresholds_json, updated_at) VALUES (1, ?, ?, ?)",
                 (json.dumps(DEFAULT_SCORING_RULES), json.dumps(DEFAULT_PRIORITY_THRESHOLDS), _now()),
             )
+        try:
+            conn.execute("ALTER TABLE lead_intelligence ADD COLUMN unrecognized_signals_json TEXT NOT NULL DEFAULT '[]'")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 def _now() -> str:
@@ -295,10 +304,29 @@ def process_lead(lead_id: int) -> dict:
         return {"processed": False, "reason": "no_intelligence_payload"}
 
     attributes = payload.get("attributes") if isinstance(payload.get("attributes"), dict) else {}
-    signals = {str(s) for s in (payload.get("signals") or [])}
+    raw_signals = {str(s) for s in (payload.get("signals") or [])}
     summary = str(payload.get("summary") or "").strip()
 
     scoring = settings.get("scoring_rules") or DEFAULT_SCORING_RULES
+    # The model only ever produces reliable scores/routing for signal names in the approved
+    # vocabulary (scoring_rules keys, which mirror each BIP's documented signal list). A
+    # near-miss synonym ("hospitalization" instead of "major_surgery_or_hospitalization")
+    # would otherwise silently score 0 and fail to match any routing rule — exactly the kind
+    # of failure that looks like a low-priority lead when it's actually the opposite. Split
+    # signals into recognized (used for scoring/routing) and unrecognized (logged and stored
+    # for review, never silently dropped) instead of trusting the model's naming outright.
+    known_signals = set(DEFAULT_SCORING_RULES.keys()) | set(scoring.keys())
+    signals = raw_signals & known_signals
+    unrecognized_signals = raw_signals - known_signals
+    if unrecognized_signals:
+        logger.warning(
+            "Lead %s: intelligence payload used %d unrecognized signal(s) not in the approved "
+            "vocabulary — they scored 0 and could not match routing rules: %s",
+            lead_id,
+            len(unrecognized_signals),
+            sorted(unrecognized_signals),
+        )
+
     score = sum(int(scoring.get(signal, 0)) for signal in signals)
     thresholds = settings.get("priority_thresholds") or DEFAULT_PRIORITY_THRESHOLDS
     priority_level = _priority_from_score(score, thresholds)
@@ -328,8 +356,8 @@ def process_lead(lead_id: int) -> dict:
         conn.execute(
             """INSERT INTO lead_intelligence
             (lead_id, priority_score, priority_level, routing_destination, routing_reason,
-             intelligent_summary, signals_json, processed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             intelligent_summary, signals_json, unrecognized_signals_json, processed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(lead_id) DO UPDATE SET
                 priority_score=excluded.priority_score,
                 priority_level=excluded.priority_level,
@@ -337,8 +365,12 @@ def process_lead(lead_id: int) -> dict:
                 routing_reason=excluded.routing_reason,
                 intelligent_summary=excluded.intelligent_summary,
                 signals_json=excluded.signals_json,
+                unrecognized_signals_json=excluded.unrecognized_signals_json,
                 processed_at=excluded.processed_at""",
-            (lead_id, score, priority_level, destination_label, routing_reason, summary, json.dumps(sorted(signals)), now),
+            (
+                lead_id, score, priority_level, destination_label, routing_reason, summary,
+                json.dumps(sorted(signals)), json.dumps(sorted(unrecognized_signals)), now,
+            ),
         )
 
     route_webhook = ""
@@ -380,6 +412,7 @@ def process_lead(lead_id: int) -> dict:
         "priority_level": priority_level,
         "routing_destination": destination_label,
         "routing_reason": routing_reason,
+        "unrecognized_signals": sorted(unrecognized_signals),
         "routed": routed,
     }
 
@@ -413,7 +446,25 @@ def get_lead_intelligence(lead_id: int) -> dict | None:
         return None
     result = dict(intel)
     result["signals"] = _loads(result.pop("signals_json"), [])
+    result["unrecognized_signals"] = _loads(result.pop("unrecognized_signals_json", "[]"), [])
     result["attributes"] = {r["key"]: _deserialize_attr(r["value"], r["value_type"]) for r in attrs}
+    return result
+
+
+def get_all_lead_intelligence() -> dict[str, dict]:
+    """Bulk read for dashboard lead-card surfacing — one query instead of N+1 per lead."""
+    ensure_schema()
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT lead_id, priority_score, priority_level, routing_destination, "
+            "intelligent_summary, signals_json, unrecognized_signals_json FROM lead_intelligence"
+        ).fetchall()
+    result = {}
+    for row in rows:
+        item = dict(row)
+        item["signals"] = _loads(item.pop("signals_json"), [])
+        item["unrecognized_signals"] = _loads(item.pop("unrecognized_signals_json", "[]"), [])
+        result[str(item["lead_id"])] = item
     return result
 
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -34,7 +34,7 @@ class IntelligenceSettingsInput(BaseModel):
 class RoutingRuleInput(BaseModel):
     label: str
     condition: dict[str, Any] = Field(default_factory=dict)
-    priority_override: str | None = None
+    priority_override: Optional[str] = None
     destination_label: str = ""
     handoff_webhook_url: str = ""
     handoff_email: str = ""
@@ -83,6 +83,11 @@ def process_lead(lead_id: int):
     if result.get("reason") == "lead_not_found":
         raise HTTPException(404, "Lead not found")
     return result
+
+
+@router.get("/leads")
+def all_lead_intelligence():
+    return intelligence.get_all_lead_intelligence()
 
 
 @router.get("/leads/{lead_id}")
