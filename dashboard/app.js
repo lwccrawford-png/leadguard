@@ -526,6 +526,11 @@ const INTENT_LABELS = {
 async function loadLeads() {
   const res = await fetch("/api/leads");
   const allRows = await res.json();
+  // Premium intelligence (priority/routing/summary) is optional — most businesses don't have
+  // it enabled, so this 404s or returns {} for them and cards just render without a badge.
+  const intelMap = await fetch("/api/intelligence/leads")
+    .then((r) => (r.ok ? r.json() : {}))
+    .catch(() => ({}));
 
   const unresolvedOpen = allRows.filter((r) => r.intent === "unresolved_question" && (r.status || "new") !== "done");
   const badge = document.getElementById("unresolvedBadge");
@@ -544,7 +549,7 @@ async function loadLeads() {
     const col = document.querySelector(`.board-col-cards[data-status="${status}"]`);
     const inCol = rows.filter((r) => (r.status || "new") === status);
     $(`#count-${status}`).textContent = inCol.length;
-    col.innerHTML = inCol.map(cardHtml).join("") || `<p class="muted board-empty">Nothing here.</p>`;
+    col.innerHTML = inCol.map((r) => cardHtml(r, intelMap[String(r.id)])).join("") || `<p class="muted board-empty">Nothing here.</p>`;
   }
 
   document.querySelectorAll(".lead-card").forEach((card) => {
@@ -637,7 +642,7 @@ function rotPhase(createdAt) {
   return { level: "fresh", label: "New" };
 }
 
-function cardHtml(r) {
+function cardHtml(r, intel) {
   const contact = [r.email, r.phone].filter(Boolean).join(" / ");
   const status = r.status || "new";
   const statusOptions = Object.entries(STATUS_LABELS)
@@ -648,9 +653,15 @@ function cardHtml(r) {
     Object.entries(OUTCOME_LABELS)
       .map(([val, label]) => `<option value="${val}" ${val === r.outcome ? "selected" : ""}>${label}</option>`)
       .join("");
+  const priorityHtml = intel
+    ? `<div class="lead-card-priority ${esc((intel.priority_level || "p4").toLowerCase())}" title="${esc((intel.signals || []).join(", "))}">${esc(intel.priority_level)} · ${esc(intel.priority_score)}${
+        intel.routing_destination ? ` <span class="priority-dest">→ ${esc(intel.routing_destination)}</span>` : ""
+      }</div>`
+    : "";
   return `
     <div class="lead-card" draggable="true" data-id="${r.id}">
       <div class="lead-card-intent">${INTENT_LABELS[r.intent] || esc(r.intent)}</div>
+      ${priorityHtml}
       ${r.discovery_phase ? `<div class="lead-card-phase">${esc(DISCOVERY_PHASE_LABELS[r.discovery_phase] || r.discovery_phase)}</div>` : ""}
       <div class="lead-card-name">${
         !r.claimed_by
@@ -661,6 +672,7 @@ function cardHtml(r) {
           : ""
       }${esc(r.name) || "<em>No name given</em>"}</div>
       ${contact ? `<div class="lead-card-contact">${esc(contact)}</div>` : ""}
+      ${intel && intel.intelligent_summary ? `<div class="lead-card-summary">${esc(intel.intelligent_summary)}</div>` : ""}
       <label class="card-field-label">Notes</label>
       <textarea class="card-notes" rows="2">${esc(r.notes)}</textarea>
       <label class="card-field-label">Good to know</label>
