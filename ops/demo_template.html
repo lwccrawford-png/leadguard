@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>__BUSINESS_NAME__ — Live Widget Demo</title>
+<title>__BUSINESS_NAME__ — Live Assistant Demo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
 <style>
   html, body { margin: 0; padding: 0; }
   .site-bg {
@@ -18,14 +19,33 @@
   .demo-banner {
     position: fixed; top: 0; left: 0; right: 0; z-index: 2147483001;
     background: #111; color: #fff; font-family: -apple-system, sans-serif;
-    font-size: 13px; text-align: center; padding: 8px 12px;
+    text-align: center; padding: 8px 12px;
   }
-  .demo-banner strong { color: #86efac; }
+  .demo-banner .headline { font-size: 13px; }
+  .demo-banner .headline strong { color: #86efac; }
+  .demo-banner .disclosure { font-size: 11px; color: #b7b7b7; margin-top: 3px; }
+  .suggested-questions {
+    position: fixed; right: 20px; bottom: 90px; z-index: 2147483000;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    max-width: 280px;
+  }
+  .suggested-questions button {
+    font-family: -apple-system, sans-serif; font-size: 13px; text-align: left;
+    background: #fff; border: 1px solid #ddd; border-radius: 14px;
+    padding: 9px 14px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    transition: transform .1s ease, border-color .1s ease;
+  }
+  .suggested-questions button:hover { border-color: __ACCENT_COLOR__; transform: translateY(-1px); }
 </style>
 </head>
 <body>
-  <div class="demo-banner">LeadGuard demo — this is <strong>__BUSINESS_NAME__'s actual homepage</strong>, with a live AI assistant already working on it. Click the bubble, bottom right.</div>
+  <div class="demo-banner">
+    <div class="headline">Demo — this is <strong>__BUSINESS_NAME__'s actual homepage</strong>, with a live AI assistant already working on it. Click the bubble, bottom right.</div>
+    <div class="disclosure">__DISCLOSURE__</div>
+  </div>
   <div class="site-bg"></div>
+
+  <div class="suggested-questions" id="suggestedQuestions"></div>
 
   <script
     src="__API_BASE__/widget/widget.js"
@@ -35,5 +55,105 @@
     data-greeting="__GREETING__"
     defer
   ></script>
+  <script>
+    (function () {
+      // Own session id for engagement tracking, independent of widget.js's internal
+      // ai_frontdesk_session_id — avoids a load-order race (this script isn't deferred,
+      // widget.js is) and keeps the tracking layer decoupled from the widget's internals.
+      var SESSION_KEY = 'eiq_demo_session_id';
+      var sessionId = localStorage.getItem(SESSION_KEY);
+      if (!sessionId) {
+        sessionId = 'demo_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        try { localStorage.setItem(SESSION_KEY, sessionId); } catch (e) {}
+      }
+
+      function trackEvent(eventType, metadata) {
+        fetch('__API_BASE__/api/demo/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_type: eventType, session_id: sessionId, metadata: metadata || {} }),
+        }).catch(function () {});
+      }
+
+      trackEvent('demo_page_opened');
+
+      var QUESTIONS = __SUGGESTED_QUESTIONS_JSON__;
+      var container = document.getElementById('suggestedQuestions');
+      if (QUESTIONS.length && container) {
+        QUESTIONS.slice(0, 3).forEach(function (q) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = q;
+          btn.addEventListener('click', function () {
+            trackEvent('suggested_question_clicked', { question: q });
+            askWidget(q);
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      function askWidget(question) {
+        var host = document.getElementById('ai-frontdesk-widget-host');
+        if (!host || !host.shadowRoot) {
+          // widget.js is deferred and may not have run yet on a very fast click
+          setTimeout(function () { askWidget(question); }, 150);
+          return;
+        }
+        var root = host.shadowRoot;
+        var panel = root.querySelector('.panel');
+        if (panel && !panel.classList.contains('open')) {
+          root.querySelector('.bubble').click();
+        }
+        var input = root.querySelector('.inputRow input');
+        var sendBtn = root.querySelector('.inputRow button');
+        if (!input || !sendBtn) return;
+        input.value = question;
+        // Setting .value directly doesn't fire a native 'input' event, but the send-tracking
+        // listener below relies on exactly that to know what's about to be sent — dispatch one
+        // explicitly so the suggested-question path is tracked the same as free-typed messages.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        sendBtn.click();
+        if (container) container.style.display = 'none';
+      }
+
+      // Fires for every send — whether from a suggested-question chip (programmatic click,
+      // still a real DOM click event) or the visitor typing their own message and hitting
+      // Send/Enter. First send in this browser session also counts as conversation_started.
+      var hasStartedConversation = false;
+      function onSend() {
+        if (!hasStartedConversation) {
+          hasStartedConversation = true;
+          trackEvent('conversation_started');
+        }
+        trackEvent('message_sent');
+      }
+
+      function attachSendTracking() {
+        var host = document.getElementById('ai-frontdesk-widget-host');
+        if (!host || !host.shadowRoot) {
+          setTimeout(attachSendTracking, 200);
+          return;
+        }
+        var root = host.shadowRoot;
+        var input = root.querySelector('.inputRow input');
+        var sendBtn = root.querySelector('.inputRow button');
+        if (!input || !sendBtn) return;
+        // widget.js's own send handler (attached at widget init, before this polling loop
+        // ever finds the shadow root) clears input.value synchronously as soon as it fires —
+        // since same-event listeners run in attachment order, reading input.value inside a
+        // click/keydown handler attached here would see the empty post-clear value, not what
+        // was actually sent. Track the live value on every keystroke instead, and read that.
+        var liveValue = '';
+        input.addEventListener('input', function () { liveValue = input.value; });
+        sendBtn.addEventListener('click', function () {
+          if (liveValue.trim()) onSend();
+        });
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && liveValue.trim()) onSend();
+        });
+      }
+      attachSendTracking();
+    })();
+  </script>
 </body>
 </html>

@@ -63,6 +63,15 @@ EXTRACT_TOOL = {
 }
 
 
+def _html_escape(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 def screenshot(url: str, width: int, height: int) -> bytes:
     with tempfile.TemporaryDirectory() as tmp:
         out_path = pathlib.Path(tmp) / "shot.png"
@@ -183,19 +192,32 @@ def populate_knowledge(api_base: str, facts: list, faqs: list) -> tuple:
     return facts_added, faqs_added
 
 
-def fetch_greeting(api_base: str) -> str:
-    """Pull the backend's actual configured assistant_name/business name so the
-    demo's opening greeting matches what's in Settings, instead of a generic
-    fallback that never reflects any configuration."""
+def fetch_demo_config(api_base: str, business_name_fallback: str) -> dict:
+    """Pull the backend's actual configured assistant_name/business name/disclosure/
+    suggested questions so the generated demo page matches what's in Settings instead
+    of generic fallbacks that never reflect any configuration. disclosure_text and
+    demo_suggested_questions are seeded by launcher_server.py's /generate-demo route
+    at provisioning time (see docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) and editable
+    afterward via that instance's own Settings tab."""
     try:
         with urllib.request.urlopen(f"{api_base}/api/business", timeout=5) as resp:
             data = json.loads(resp.read())
     except Exception:
-        return "Hi! I'm the AI assistant here — ask me anything or book an appointment."
-    business_name = data.get("name") or "this business"
+        data = {}
+
+    business_name = data.get("name") or business_name_fallback
     if data.get("assistant_name"):
-        return f"Hi! I'm {data['assistant_name']} from {business_name} — ask me anything or book an appointment."
-    return f"Hi! I'm the AI assistant for {business_name} — ask me anything or book an appointment."
+        greeting = f"Hi! I'm {data['assistant_name']} from {business_name} — ask me anything or book an appointment."
+    else:
+        greeting = f"Hi! I'm the AI assistant for {business_name} — ask me anything or book an appointment."
+
+    disclosure = data.get("disclosure_text") or (
+        f"Demonstration created for {business_name} using publicly available website "
+        f"information — not currently affiliated with or deployed by {business_name}."
+    )
+    questions = data.get("demo_suggested_questions") or []
+
+    return {"greeting": greeting, "disclosure": disclosure, "questions": questions[:3]}
 
 
 def main():
@@ -226,7 +248,7 @@ def main():
         except Exception as e:
             print(f"Knowledge extraction skipped (non-fatal): {e}", file=sys.stderr)
 
-    greeting = fetch_greeting(args.api_base)
+    demo_config = fetch_demo_config(args.api_base, args.name)
 
     template = TEMPLATE_PATH.read_text()
     html = (
@@ -234,8 +256,10 @@ def main():
         .replace("__BUSINESS_NAME__", args.name)
         .replace("__API_BASE__", args.api_base)
         .replace("__ACCENT_COLOR__", args.color)
-        .replace("__GREETING__", greeting.replace('"', "&quot;"))
+        .replace("__GREETING__", demo_config["greeting"].replace('"', "&quot;"))
         .replace("__IMAGE_DATA_URI__", data_uri)
+        .replace("__DISCLOSURE__", _html_escape(demo_config["disclosure"]))
+        .replace("__SUGGESTED_QUESTIONS_JSON__", json.dumps(demo_config["questions"]))
     )
 
     out_path = pathlib.Path(args.out)

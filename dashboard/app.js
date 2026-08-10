@@ -508,6 +508,31 @@ async function loadDashboard() {
   } else {
     pipelineCard.hidden = true;
   }
+
+  // Prospect demo engagement (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md, Phase 2). Only
+  // real client instances never accumulate any demo_events, so the card stays hidden for
+  // them automatically — no separate "is this a demo" flag needed on the business record.
+  const demoCard = $("#dashDemoEngagementCard");
+  try {
+    const demoRes = await fetch("/api/demo/events/summary");
+    const demo = await demoRes.json();
+    if (demo.has_any_events) {
+      demoCard.hidden = false;
+      const lastActivity = demo.last_activity_at ? timeAgo(demo.last_activity_at) : "—";
+      $("#dashDemoStats").innerHTML = [
+        ["Page opens", demo.total_opens],
+        ["Unique sessions", demo.unique_sessions],
+        ["Conversations started", demo.conversations_started],
+        ["Messages sent", demo.messages_sent],
+        ["Suggested-question clicks", demo.suggested_question_clicks],
+        ["Last activity", lastActivity],
+      ].map(([label, value]) => `<li><span>${label}</span><strong>${value}</strong></li>`).join("");
+    } else {
+      demoCard.hidden = true;
+    }
+  } catch (e) {
+    demoCard.hidden = true;
+  }
 }
 
 const INTENT_LABELS = {

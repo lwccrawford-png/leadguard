@@ -19,6 +19,7 @@ risk corrupting) a real, actively-used client instance like LMTLSS.
 """
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 import time
@@ -42,6 +43,31 @@ PROJECT_ROOT = OPS_DIR.parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 WIDGET_DIR = PROJECT_ROOT / "widget"
 CLIENTS_PATH = OPS_DIR / "clients.json"
+
+# Required non-affiliation disclosure (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) and Phase 1's
+# hardcoded HVAC-vertical suggested questions — matches the spec's own example set. Both are
+# editable per-prospect afterward via that instance's own Settings tab.
+DEFAULT_DEMO_DISCLOSURE = (
+    "Demonstration created for {name} using publicly available website information — "
+    "not currently affiliated with or deployed by {name}."
+)
+DEFAULT_DEMO_SUGGESTED_QUESTIONS = [
+    "My AC is running but not cooling. What should I check first?",
+    "How do I know whether I need a repair or replacement?",
+    "Do you offer emergency service or financing options?",
+]
+
+
+def make_slug(name: str, existing_ids: set) -> str:
+    """URL-safe slug from a company name — lowercase, hyphen-separated, collision-checked
+    against a numeric suffix. See docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md's slug rules."""
+    base = re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.strip().lower())).strip("-")[:40] or "demo"
+    slug = base
+    n = 2
+    while f"prospect_{slug}" in existing_ids:
+        slug = f"{base}-{n}"
+        n += 1
+    return slug
 BIPS_DIR = PROJECT_ROOT / "onboarding" / "bips"
 
 app = FastAPI(title="LeadGuard Demo Launcher")
@@ -455,7 +481,11 @@ def open_visitor(client_id: str):
     target = client.get("sales_demo") or client.get("widget_demo")
     if not target:
         return JSONResponse({"ok": False, "message": "no demo generated for this client yet"}, status_code=404)
-    return RedirectResponse(f"/file?path={target}")
+    # The demo now lives on the prospect's own instance (GET /demo), not the launcher's
+    # /file route — this redirect exists only for Larry's own convenience from the
+    # launcher UI; the real public link a prospect gets is http://localhost:{port}/demo
+    # directly (or its future public domain once behind Caddy).
+    return RedirectResponse(f"http://localhost:{client['port']}/demo")
 
 
 @app.post("/generate-demo")
@@ -467,8 +497,18 @@ async def generate_demo(req: GenerateDemoRequest):
     if not is_running(template["port"]):
         return {"ok": False, "message": f"{template['name']}'s backend isn't running — start it first, it's only used as a config template"}
 
-    safe_name = "".join(ch if ch.isalnum() else "_" for ch in req.name.lower())[:40]
-    prospect_id = f"prospect_{safe_name}"
+    # Reuse the existing prospect if this is the same company by name (case-insensitive) —
+    # that's a regeneration, not a collision. Only mint a fresh, collision-checked slug for
+    # a genuinely new company name.
+    existing_same_name = next(
+        (c for c in clients if c.get("type") == "demo" and c["name"].strip().lower() == req.name.strip().lower()),
+        None,
+    )
+    if existing_same_name:
+        prospect_id = existing_same_name["id"]
+    else:
+        slug = make_slug(req.name, {c["id"] for c in clients})
+        prospect_id = f"prospect_{slug}"
 
     prospect = next((c for c in clients if c["id"] == prospect_id), None)
     if prospect is None:
@@ -498,6 +538,8 @@ async def generate_demo(req: GenerateDemoRequest):
                 "assistant_name": template_business.get("assistant_name", ""),
                 "flow_script": template_business.get("flow_script", ""),
                 "accent_color": prospect["accent_color"],
+                "disclosure_text": DEFAULT_DEMO_DISCLOSURE.format(name=req.name),
+                "demo_suggested_questions": DEFAULT_DEMO_SUGGESTED_QUESTIONS,
             })
         except Exception as e:
             return {"ok": False, "message": f"provisioned but could not seed config: {e}"}
@@ -508,7 +550,10 @@ async def generate_demo(req: GenerateDemoRequest):
         if not started["ok"]:
             return started
 
-    out_path = WIDGET_DIR / f"{prospect_id}.html"
+    # Written into the prospect's own isolated data dir (served by that instance's own
+    # GET /demo route) rather than the shared widget/ directory every instance mounts —
+    # see docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md on why demos stay instance-isolated.
+    out_path = (BACKEND_DIR / prospect["data_dir"]).resolve() / "demo.html"
     result = subprocess.run(
         [
             str(BACKEND_DIR / "venv" / "bin" / "python3"), str(OPS_DIR / "generate_site_demo.py"),
@@ -538,7 +583,7 @@ async def generate_demo(req: GenerateDemoRequest):
 
     return {
         "ok": True,
-        "open_url": f"/file?path={rel_path}",
+        "open_url": f"http://localhost:{prospect['port']}/demo",
         "message": f"Created its own instance on :{prospect['port']}, seeded from {template['name']}'s config — "
                     f"edit it independently anytime via its own Admin view on the launcher.",
     }

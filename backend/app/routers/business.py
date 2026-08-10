@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Optional
 
@@ -33,6 +34,8 @@ class BusinessSettings(BaseModel):
     pipeline_enabled: bool = False
     knowledge_source: str = ""
     greeting: str = ""
+    disclosure_text: str = ""
+    demo_suggested_questions: list[str] = []
 
 
 class LeadUpdate(BaseModel):
@@ -84,6 +87,10 @@ def get_business():
     with db_session() as conn:
         row = conn.execute("SELECT * FROM business WHERE id = 1").fetchone()
     data = dict(row)
+    try:
+        data["demo_suggested_questions"] = json.loads(data.get("demo_suggested_questions") or "[]")
+    except json.JSONDecodeError:
+        data["demo_suggested_questions"] = []
     data["messages_used_this_month"] = rate_limit.messages_used_this_month()
     data["product_name"] = PRODUCT_NAME
     return data
@@ -98,7 +105,7 @@ def update_business(settings: BusinessSettings):
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
-               knowledge_source=?, greeting=? WHERE id=1""",
+               knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -115,6 +122,8 @@ def update_business(settings: BusinessSettings):
                 int(settings.pipeline_enabled),
                 settings.knowledge_source,
                 settings.greeting,
+                settings.disclosure_text,
+                json.dumps(settings.demo_suggested_questions[:3]),
             ),
         )
     return {"ok": True}

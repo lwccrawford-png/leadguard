@@ -26,7 +26,13 @@ CREATE TABLE IF NOT EXISTS business (
     knowledge_source TEXT NOT NULL DEFAULT '',
     -- Custom initial greeting shown when the widget opens. Empty means "use the
     -- auto-generated preset" (built from assistant_name/name) — set here to override it.
-    greeting TEXT NOT NULL DEFAULT ''
+    greeting TEXT NOT NULL DEFAULT '',
+    -- Prospect demo fields (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md). Only meaningful for
+    -- instances of type "demo" in ops/clients.json; unused/blank for real client instances.
+    -- disclosure_text is required non-affiliation copy shown on the public /demo page.
+    -- demo_suggested_questions is a JSON array of exactly 3 question strings.
+    disclosure_text TEXT NOT NULL DEFAULT '',
+    demo_suggested_questions TEXT NOT NULL DEFAULT '[]'
 );
 
 -- A "source" is either a crawled site page (source_type='site', url set) or a manually
@@ -130,6 +136,18 @@ CREATE TABLE IF NOT EXISTS support_requests (
     created_at TEXT NOT NULL
 );
 
+-- Prospect demo engagement tracking (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md). No
+-- prospect_demo_id column — each demo is its own isolated instance (see CLAUDE.md,
+-- single-tenant-per-instance), so every row in this table already belongs to exactly
+-- one prospect by construction. Only meaningful for instances of type "demo".
+CREATE TABLE IF NOT EXISTS demo_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    session_id TEXT,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL
+);
+
 -- Pipeline add-on (paid feature, gated by business.pipeline_enabled): a business-configurable
 -- second board for tracking claimed leads through an ongoing sales/membership process, distinct
 -- from the fixed New/Claimed/Done Leads funnel. Up to 8 stages, business-defined labels/order.
@@ -213,6 +231,8 @@ def init_db():
             "ALTER TABLE business ADD COLUMN greeting TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business_facts ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
             "ALTER TABLE faqs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
+            "ALTER TABLE business ADD COLUMN disclosure_text TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN demo_suggested_questions TEXT NOT NULL DEFAULT '[]'",
         ]:
             try:
                 conn.execute(migration)

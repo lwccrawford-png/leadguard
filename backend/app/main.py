@@ -1,13 +1,14 @@
 import asyncio
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .config import BASE_DIR, PRODUCT_NAME, WIDGET_ALLOWED_ORIGINS
+from .config import BASE_DIR, DATA_DIR, PRODUCT_NAME, WIDGET_ALLOWED_ORIGINS
 from .db import init_db
 from .services import retention, retrieval
-from .routers import chat, business, pipeline
+from .routers import chat, business, demo, pipeline
 
 PROJECT_ROOT = BASE_DIR.parent  # leadguard/
 WIDGET_DIR = PROJECT_ROOT / "widget"
@@ -23,6 +24,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], a
 
 app.include_router(chat.router)
 app.include_router(business.router)
+app.include_router(demo.router)
 app.include_router(pipeline.router)
 
 
@@ -57,6 +59,27 @@ async def on_startup():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/demo")
+def serve_demo():
+    """Public prospect-demo page for this instance (see
+    docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md). Each prospect demo is its own
+    isolated backend instance, so "the demo" for this instance is just its
+    own generated page — no slug lookup table or shared multi-tenant state
+    needed. Served directly by the instance itself (not the internal
+    launcher's /file route) so it's safe to expose publicly once deployed;
+    the launcher stays admin-only. Written into this instance's own
+    LEADGUARD_DATA_DIR by ops/generate_site_demo.py, not the shared /widget
+    directory every instance mounts."""
+    demo_path = DATA_DIR / "demo.html"
+    if not demo_path.exists():
+        raise HTTPException(404, "No demo available for this business yet")
+    return FileResponse(
+        demo_path,
+        media_type="text/html",
+        headers={"X-Robots-Tag": "noindex, nofollow"},
+    )
 
 
 app.mount("/widget", StaticFiles(directory=str(WIDGET_DIR)), name="widget")

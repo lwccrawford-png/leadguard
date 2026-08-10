@@ -214,6 +214,11 @@ table button.cancel { background: none; border: none; color: #888; cursor: point
 .coverage-empty { color: #92400e; }
 .coverage-ok { color: #222; }
 
+.dash-demo-stats { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.dash-demo-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border); color: #555; }
+.dash-demo-stats li:last-child { border-bottom: none; }
+.dash-demo-stats li strong { color: var(--accent); font-size: 14px; }
+
 .stage-row { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
 .stage-row .stage-label { flex: 1; font-weight: 600; font-size: 14px; }
 .stage-flag { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; white-space: nowrap; }
