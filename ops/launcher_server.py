@@ -25,6 +25,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -56,6 +57,10 @@ DEFAULT_DEMO_SUGGESTED_QUESTIONS = [
     "How do I know whether I need a repair or replacement?",
     "Do you offer emergency service or financing options?",
 ]
+# How long a prospect demo link stays live before GET /demo starts showing the
+# "no longer available" page. Generating (or regenerating) a demo resets this
+# clock — see generate_demo(). Adjust here if 30 days doesn't fit the sales cycle.
+DEMO_LINK_LIFETIME_DAYS = 30
 
 
 def make_slug(name: str, existing_ids: set) -> str:
@@ -457,6 +462,18 @@ def promote(client_id: str):
         return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
     client["type"] = "client"
     save_clients(clients)
+    # Also retire its public /demo page — a promoted client is a real customer now,
+    # not a prospect, and the demo's "not affiliated with X" banner would be actively
+    # wrong to keep showing. Fetch-then-put (not a partial payload) so every other
+    # setting on this instance survives untouched — see PUT /api/business's full-replace
+    # semantics.
+    if is_running(client["port"]):
+        try:
+            current = fetch_business(client["port"])
+            current["demo_enabled"] = False
+            put_business(client["port"], current)
+        except Exception as e:
+            return {"ok": True, "message": f"{client['name']} promoted to client status, but could not retire its demo page: {e}"}
     return {"ok": True, "message": f"{client['name']} promoted to client status"}
 
 
@@ -540,15 +557,28 @@ async def generate_demo(req: GenerateDemoRequest):
                 "accent_color": prospect["accent_color"],
                 "disclosure_text": DEFAULT_DEMO_DISCLOSURE.format(name=req.name),
                 "demo_suggested_questions": DEFAULT_DEMO_SUGGESTED_QUESTIONS,
+                "demo_expires_at": (datetime.now(timezone.utc) + timedelta(days=DEMO_LINK_LIFETIME_DAYS)).isoformat(),
             })
         except Exception as e:
             return {"ok": False, "message": f"provisioned but could not seed config: {e}"}
         clients.append(prospect)
         save_clients(clients)
-    elif not is_running(prospect["port"]):
-        started = start_client(prospect)
-        if not started["ok"]:
-            return started
+    else:
+        if not is_running(prospect["port"]):
+            started = start_client(prospect)
+            if not started["ok"]:
+                return started
+        # Regenerating an existing prospect's demo means renewed sales engagement —
+        # push its expiration clock back out rather than leaving the original one to
+        # lapse underneath a demo the prospect just received a fresh link to.
+        try:
+            current = fetch_business(prospect["port"])
+            current["demo_expires_at"] = (
+                datetime.now(timezone.utc) + timedelta(days=DEMO_LINK_LIFETIME_DAYS)
+            ).isoformat()
+            put_business(prospect["port"], current)
+        except Exception:
+            pass  # non-fatal — the demo itself still regenerates below
 
     # Written into the prospect's own isolated data dir (served by that instance's own
     # GET /demo route) rather than the shared widget/ directory every instance mounts —

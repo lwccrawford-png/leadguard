@@ -31,8 +31,14 @@ CREATE TABLE IF NOT EXISTS business (
     -- instances of type "demo" in ops/clients.json; unused/blank for real client instances.
     -- disclosure_text is required non-affiliation copy shown on the public /demo page.
     -- demo_suggested_questions is a JSON array of exactly 3 question strings.
+    -- demo_expires_at (ISO-8601, nullable) and demo_enabled gate GET /demo directly —
+    -- null demo_expires_at means "no expiration set" (never expires). demo_enabled is
+    -- flipped to 0 by the launcher's Promote-to-client action, since a promoted client's
+    -- public demo page (with its "not affiliated" banner) no longer describes them.
     disclosure_text TEXT NOT NULL DEFAULT '',
-    demo_suggested_questions TEXT NOT NULL DEFAULT '[]'
+    demo_suggested_questions TEXT NOT NULL DEFAULT '[]',
+    demo_expires_at TEXT,
+    demo_enabled INTEGER NOT NULL DEFAULT 1
 );
 
 -- A "source" is either a crawled site page (source_type='site', url set) or a manually
@@ -233,6 +239,8 @@ def init_db():
             "ALTER TABLE faqs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
             "ALTER TABLE business ADD COLUMN disclosure_text TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN demo_suggested_questions TEXT NOT NULL DEFAULT '[]'",
+            "ALTER TABLE business ADD COLUMN demo_expires_at TEXT",
+            "ALTER TABLE business ADD COLUMN demo_enabled INTEGER NOT NULL DEFAULT 1",
         ]:
             try:
                 conn.execute(migration)

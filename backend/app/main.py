@@ -1,12 +1,13 @@
 import asyncio
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import BASE_DIR, DATA_DIR, PRODUCT_NAME, WIDGET_ALLOWED_ORIGINS
-from .db import init_db
+from .db import db_session, init_db
 from .services import retention, retrieval
 from .routers import chat, business, demo, pipeline
 
@@ -61,6 +62,21 @@ def health():
     return {"status": "ok"}
 
 
+DEMO_UNAVAILABLE_HTML = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>Demo not available</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<style>
+  body {{ margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f7f9; color: #222; }}
+  .box {{ text-align: center; max-width: 380px; padding: 32px; }}
+  h1 {{ font-size: 18px; margin: 0 0 8px; }}
+  p {{ font-size: 14px; color: #666; margin: 0; }}
+</style></head>
+<body><div class="box"><h1>This demo link is no longer available</h1><p>{message}</p></div></body></html>"""
+
+
 @app.get("/demo")
 def serve_demo():
     """Public prospect-demo page for this instance (see
@@ -71,10 +87,41 @@ def serve_demo():
     launcher's /file route) so it's safe to expose publicly once deployed;
     the launcher stays admin-only. Written into this instance's own
     LEADGUARD_DATA_DIR by ops/generate_site_demo.py, not the shared /widget
-    directory every instance mounts."""
+    directory every instance mounts.
+
+    demo_enabled/demo_expires_at gate this the same way regardless of cause
+    (never generated, expired, or disabled via Promote-to-client) — a
+    visitor always sees the same clean page, never a raw 404 or a stale
+    sales pitch for a business that's since become a real client."""
     demo_path = DATA_DIR / "demo.html"
     if not demo_path.exists():
         raise HTTPException(404, "No demo available for this business yet")
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT demo_enabled, demo_expires_at FROM business WHERE id = 1"
+        ).fetchone()
+
+    if row and not row["demo_enabled"]:
+        return HTMLResponse(
+            DEMO_UNAVAILABLE_HTML.format(message="This link has been retired."),
+            status_code=410,
+            headers={"X-Robots-Tag": "noindex, nofollow"},
+        )
+    if row and row["demo_expires_at"]:
+        try:
+            expires_at = datetime.fromisoformat(row["demo_expires_at"])
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            expires_at = None
+        if expires_at and datetime.now(timezone.utc) > expires_at:
+            return HTMLResponse(
+                DEMO_UNAVAILABLE_HTML.format(message="This demo link has expired — reach out and we'll send a new one."),
+                status_code=410,
+                headers={"X-Robots-Tag": "noindex, nofollow"},
+            )
+
     return FileResponse(
         demo_path,
         media_type="text/html",

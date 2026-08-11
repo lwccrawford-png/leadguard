@@ -36,6 +36,8 @@ class BusinessSettings(BaseModel):
     greeting: str = ""
     disclosure_text: str = ""
     demo_suggested_questions: list[str] = []
+    demo_expires_at: Optional[str] = None
+    demo_enabled: bool = True
 
 
 class LeadUpdate(BaseModel):
@@ -91,6 +93,7 @@ def get_business():
         data["demo_suggested_questions"] = json.loads(data.get("demo_suggested_questions") or "[]")
     except json.JSONDecodeError:
         data["demo_suggested_questions"] = []
+    data["demo_enabled"] = bool(data.get("demo_enabled", 1))
     data["messages_used_this_month"] = rate_limit.messages_used_this_month()
     data["product_name"] = PRODUCT_NAME
     return data
@@ -105,7 +108,8 @@ def update_business(settings: BusinessSettings):
             """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
-               knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=? WHERE id=1""",
+               knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=?,
+               demo_expires_at=?, demo_enabled=? WHERE id=1""",
             (
                 settings.name,
                 settings.assistant_name,
@@ -124,6 +128,8 @@ def update_business(settings: BusinessSettings):
                 settings.greeting,
                 settings.disclosure_text,
                 json.dumps(settings.demo_suggested_questions[:3]),
+                settings.demo_expires_at,
+                int(settings.demo_enabled),
             ),
         )
     return {"ok": True}
