@@ -172,10 +172,14 @@ header.nav {
 @keyframes hero-pip { 0%, 100% { box-shadow: 0 0 0 3px rgba(79,122,68,0.18); } 50% { box-shadow: 0 0 0 6px rgba(79,122,68,0.12); } }
 @keyframes hero-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes hero-typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+.proof-transcript .transcript-head .pip { animation: hero-pip 2.2s ease-in-out infinite; }
+.proof-transcript .bubble { animation: hero-msg-in 0.35s ease both; }
 @media (prefers-reduced-motion: reduce) {
   .hero-transcript { animation: none; }
   .hero-transcript .transcript-head .pip { animation: none; }
   .hero-transcript .bubble { animation: none; }
+  .proof-transcript .transcript-head .pip { animation: none; }
+  .proof-transcript .bubble { animation: none; }
 }
 
 /* ---------- feature grid (base — must precede section-variant overrides below,
@@ -281,7 +285,6 @@ header.nav {
 .tag-live { background: var(--amber); color: #ffffff; }
 .tag-addon { background: var(--moss-soft); color: var(--moss); border: 1px solid var(--moss); }
 .tag-pilot { background: var(--line-soft); color: var(--ink-dim); border: 1px solid var(--line); }
-.tag-roadmap { background: transparent; color: var(--ink-faint); border: 1px dashed var(--line); }
 
 .ideal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 34px; }
 .ideal-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 8px; }
@@ -297,7 +300,6 @@ header.nav {
 .capstrip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .capstrip-list li { position: relative; padding-left: 20px; font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
 .capstrip-list li::before { content: '—'; position: absolute; left: 0; color: var(--ink-faint); }
-.capstrip-note { font-size: 12.5px; color: var(--ink-faint); margin: 16px 0 0; }
 
 .roi-formula { font-family: var(--serif); font-size: 16px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: inline-block; }
 .demo-disclaimer { font-size: 12.5px; color: var(--ink-faint); margin: 12px auto 0; max-width: 52ch; }
@@ -333,19 +335,19 @@ header.nav {
 .bip-pill {
   font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink-dim); cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 .bip-pill:hover { border-color: var(--amber-deep); color: var(--ink); }
 .bip-pill:focus-visible { outline: 2px solid var(--amber-deep); outline-offset: 2px; }
-.bip-pill.filled { color: var(--moss); border-color: var(--moss); background: var(--moss-soft); }
-.bip-pill.pilot { color: var(--ink-dim); border-color: var(--line); background: var(--line-soft); font-style: italic; }
-.bip-pill.is-active { box-shadow: 0 0 0 2px var(--amber-deep); transform: translateY(-1px); }
+.bip-pill.is-active {
+  background: var(--amber-pale); border-color: var(--amber-deep); color: var(--amber-deep);
+  box-shadow: 0 0 0 2px var(--amber-deep); transform: translateY(-1px);
+}
 
 .bip-contents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 30px; }
 .bip-item { padding: 16px 14px; border: 1px solid var(--line); border-radius: 10px; text-align: left; background: var(--card); box-shadow: var(--shadow-sm); }
 .bip-item-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
 .bip-item-example { font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; min-height: 60px; transition: opacity 0.15s ease; }
-.bip-status-note { font-size: 12.5px; color: var(--ink-faint); margin: 16px 0 0; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .bip-pill, .bip-item-example { transition: none; } }
 
 /* ---------- proof / transcript ---------- */
@@ -406,22 +408,8 @@ header.nav {
 }
 .roi-fine { font-size: 12px; color: var(--ink-faint); margin: 16px 0 0; text-align: center; }
 
-/* ---------- offer (solid-color banner, echoing the reference site's stat block) ---------- */
+/* ---------- offer (pricing grid) ---------- */
 .offer { padding: 100px 0; position: relative; background: var(--bg); }
-.offer-card {
-  max-width: 760px; margin: 0 auto; border-radius: 22px;
-  padding: 52px 48px; background: linear-gradient(155deg, var(--amber) 0%, var(--amber-deep) 100%);
-  text-align: center; box-shadow: 0 30px 60px -20px rgba(176, 111, 15, 0.5);
-}
-.offer-card .eyebrow { justify-content: center; color: rgba(255,255,255,0.78); }
-.offer-card .eyebrow::before { background: rgba(255,255,255,0.5); }
-.offer-card h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 3.6vw, 36px); margin: 18px 0 14px; text-wrap: balance; color: #ffffff; }
-.offer-card p.desc { color: rgba(255,255,255,0.82); max-width: 52ch; margin: 0 auto 30px; font-size: 16px; }
-.price-row { display: flex; align-items: baseline; justify-content: center; gap: 26px; margin-bottom: 30px; flex-wrap: wrap; }
-.price-block .amount { font-family: var(--serif); font-weight: 600; font-size: 44px; color: #ffffff; font-variant-numeric: tabular-nums; }
-.price-block .amount .accent { color: var(--amber-pale); }
-.price-block .unit { font-size: 13px; color: rgba(255,255,255,0.68); text-transform: uppercase; letter-spacing: 0.08em; }
-.price-div { width: 1px; height: 40px; background: rgba(255,255,255,0.28); }
 .plan-label {
   display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.15); padding: 5px 14px; border-radius: 999px;
@@ -429,11 +417,6 @@ header.nav {
 }
 .price-asterisk { font-size: 0.5em; color: rgba(255,255,255,0.75); margin-left: 2px; }
 .price-note { font-size: 12.5px; color: rgba(255,255,255,0.72); max-width: 440px; margin: 0 auto 26px; }
-.offer-terms { list-style: none; margin: 0 0 32px; padding: 0; display: grid; gap: 10px; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto; }
-.offer-terms li { display: flex; gap: 10px; font-size: 14.5px; color: rgba(255,255,255,0.88); }
-.offer-terms li::before { content: '—'; color: rgba(255,255,255,0.6); flex-shrink: 0; }
-.offer-card .btn-primary { background: #0e1a3d; color: #ffffff; box-shadow: 0 14px 30px -12px rgba(14,26,61,0.5); }
-.offer-card .btn-primary:hover { background: #1a2c63; }
 
 /* ---------- website starter offer ---------- */
 .website-offer { padding: 0 0 100px; background: var(--bg); }
@@ -521,9 +504,6 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .arch-layer { grid-template-columns: 1fr; text-align: left; gap: 6px; }
   .arch-layer .layer-tag { justify-self: start; }
   .bip-contents { grid-template-columns: repeat(2, 1fr); }
-  .price-row { flex-direction: column; gap: 16px; }
-  .price-div { display: none; }
-  .offer-card { padding: 38px 26px; }
   .website-price-row { flex-direction: column; gap: 16px; }
   .website-price-div { display: none; }
   .website-card { padding: 38px 26px; }
@@ -680,7 +660,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
     </div>
     <div class="capstrip-grid">
       <div class="capstrip-col">
-        <div class="capstrip-label"><span class="layer-tag tag-live">Live today</span></div>
+        <div class="capstrip-label"><span class="layer-tag tag-live">Included in every plan</span></div>
         <ul class="capstrip-list">
           <li>Website assistant embedded on your site</li>
           <li>Site crawl and hand-entered facts &amp; FAQs</li>
@@ -696,7 +676,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
         </ul>
       </div>
       <div class="capstrip-col">
-        <div class="capstrip-label"><span class="layer-tag tag-pilot">Available in pilot</span></div>
+        <div class="capstrip-label"><span class="layer-tag tag-pilot">Business-tier intelligence</span></div>
         <ul class="capstrip-list">
           <li>Personal Injury Legal intelligence</li>
           <li>HVAC Premium intelligence</li>
@@ -705,7 +685,6 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
           <li>Intelligent handoff summaries</li>
           <li>Intelligence dashboard</li>
         </ul>
-        <p class="capstrip-note">Pilot capabilities are validated with real clients before they're claimed as live. Ask us for current status on your vertical.</p>
       </div>
     </div>
   </div>
@@ -872,19 +851,19 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       <div class="arch-layer is-live">
         <div class="layer-name">Structured Knowledge</div>
         <div class="layer-desc">Facts, approved FAQs, pricing philosophy, and site content — structured and matched directly, not guessed at from a generic script.</div>
-        <div class="layer-tag tag-live">Live today</div>
+        <div class="layer-tag tag-live">Included</div>
       </div>
       <div class="arch-connector"></div>
       <div class="arch-layer is-live">
         <div class="layer-name">Lead Capture &amp; Handoff</div>
         <div class="layer-desc">Qualifies every visitor, captures contact info, and notifies your team by webhook or email the moment a real opportunity shows up.</div>
-        <div class="layer-tag tag-live">Live today</div>
+        <div class="layer-tag tag-live">Included</div>
       </div>
       <div class="arch-connector"></div>
       <div class="arch-layer is-live">
         <div class="layer-name">AI Search Discoverability</div>
         <div class="layer-desc">Your approved FAQs are marked up as structured data (FAQPage schema) so AI crawlers and search engines can actually read them — not just human visitors on your site.</div>
-        <div class="layer-tag tag-live">Live today</div>
+        <div class="layer-tag tag-live">Included</div>
       </div>
       <div class="arch-connector"></div>
       <div class="arch-layer">
@@ -932,12 +911,12 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">Business Intelligence Packs</span>
-      <h2>Your industry's expertise, from day one — end the hunt for answers &amp; become the solution.</h2>
+      <h2>Your industry's expertise, from day one — end their hunt for answers by becoming the solution.</h2>
       <p>Most AI tools ask you to write your own FAQ, script, and policies before they can go live. EvolveIQ brings the industry knowledge — safety rules, common questions, the way your kind of business actually talks to customers. You fill in what only you know; we bring the rest.</p>
     </div>
     <div class="bip-pills" id="bipPills" role="tablist" aria-label="Business Intelligence Pack by industry">
-      <button type="button" class="bip-pill filled" data-vertical="hvac" role="tab">HVAC / Home Comfort — built</button>
-      <button type="button" class="bip-pill pilot" data-vertical="pi" role="tab">Personal Injury Legal — pilot</button>
+      <button type="button" class="bip-pill" data-vertical="hvac" role="tab">HVAC / Home Comfort</button>
+      <button type="button" class="bip-pill" data-vertical="pi" role="tab">Personal Injury Legal</button>
       <button type="button" class="bip-pill" data-vertical="roofing" role="tab">Roofing &amp; Exterior</button>
       <button type="button" class="bip-pill" data-vertical="medspa" role="tab">Med Spa &amp; Aesthetics</button>
       <button type="button" class="bip-pill" data-vertical="auto" role="tab">Auto Repair</button>
@@ -961,7 +940,6 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
         <div class="bip-item-example" data-field="vocab"></div>
       </div>
     </div>
-    <p class="bip-status-note" id="bipStatusNote"></p>
   </div>
 </section>
 
@@ -972,9 +950,9 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       <h2>See it handle what matters most.</h2>
       <p style="margin:0 auto;">This is a real, unedited response — from the HVAC intelligence pack, tested against the highest-stakes case in that industry: a visitor who smells gas.</p>
     </div>
-    <div class="transcript">
+    <div class="transcript proof-transcript">
       <div class="transcript-head"><span class="pip"></span> Live conversation — HVAC Business Intelligence Pack</div>
-      <div class="transcript-body">
+      <div class="transcript-body" id="proofTranscriptBody">
         <div class="bubble visitor">I think I smell gas near my furnace, what should I do?</div>
         <div class="bubble assistant">Please stop what you're doing and get to a safe location right away. Do not turn on or off any lights, appliances, or equipment, and do not use your phone from inside the building.
 
@@ -1287,6 +1265,68 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 
 <script>
 (function () {
+  var body = document.getElementById('proofTranscriptBody');
+  if (!body) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var STEPS = [
+    { role: 'visitor', text: "I think I smell gas near my furnace, what should I do?" },
+    { role: 'assistant', text: "Please stop what you're doing and get to a safe location right away. Do not turn on or off any lights, appliances, or equipment, and do not use your phone from inside the building.\n\nIf you're outside now and safe:\n— Call 911 or your local emergency services\n— Contact your gas utility company's emergency line\n— Once you're clear of the building, call us so we can help once the emergency responders have made sure it's safe\n\nI'm going to flag this for our emergency team right now so they're aware and ready to help. Can I get your name and phone number so they can reach you directly?" },
+  ];
+
+  function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+  function addBubble(role, text) {
+    var el = document.createElement('div');
+    el.className = 'bubble ' + role;
+    el.textContent = text;
+    body.appendChild(el);
+    return el;
+  }
+  function addTyping() {
+    var el = document.createElement('div');
+    el.className = 'bubble assistant hero-typing';
+    el.innerHTML = '<span class="hero-typing-dots"><span></span><span></span><span></span></span>';
+    body.appendChild(el);
+    return el;
+  }
+
+  function playOnce() {
+    body.innerHTML = '';
+    var p = Promise.resolve();
+    STEPS.forEach(function (step) {
+      if (step.role === 'assistant') {
+        p = p
+          .then(function () { return wait(600); })
+          .then(function () {
+            var typing = addTyping();
+            return wait(1300).then(function () { typing.remove(); });
+          })
+          .then(function () {
+            addBubble('assistant', step.text);
+          });
+      } else {
+        p = p
+          .then(function () { return wait(600); })
+          .then(function () {
+            addBubble('visitor', step.text);
+          });
+      }
+    });
+    return p.then(function () { return wait(5000); });
+  }
+
+  function loop() {
+    playOnce().then(function () { return wait(600); }).then(loop);
+  }
+
+  loop();
+})();
+</script>
+
+<script>
+(function () {
   var toggle = document.getElementById('navToggle');
   var links = document.getElementById('navLinks');
   if (!toggle || !links) return;
@@ -1458,48 +1498,36 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 (function () {
   var BIP_EXAMPLES = {
     hvac: {
-      status: 'live',
-      note: 'Live example — from the HVAC Business Intelligence Pack.',
       safety: 'Visitor mentions a gas smell — stop, don’t touch a switch or use a phone inside, evacuate, call 911 and the gas utility. No diagnosis attempted.',
       questions: '“Is this worth repairing, or should I replace it?” — “Do you have anyone free this weekend?”',
       pricing: 'Gives ranges only — a real quote needs a diagnostic visit, never invents a number.',
       vocab: 'no-cool call, replacement consult, service window, tonnage'
     },
     pi: {
-      status: 'pilot',
-      note: 'Pilot example — validated with real clients before broader claims.',
       safety: 'Visitor describes a serious injury — flags it for priority human review. Never gives legal advice or discusses case value.',
       questions: '“Do I have a case?” — “What do I tell the insurance company?”',
       pricing: 'Never quotes a fee or settlement figure — contingency terms are the attorney’s to explain.',
       vocab: 'intake, statute of limitations, liability, demand letter'
     },
     roofing: {
-      status: 'roadmap',
-      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
       safety: 'Active storm damage or a leak — flags as urgent, never tells a visitor to get on the roof themselves.',
       questions: '“Will insurance cover this?” — “Shingle or metal — what’s the difference?”',
       pricing: 'Ranges only until an inspection — no number promised sight-unseen.',
       vocab: 'tear-off, decking, wind uplift, ice dam'
     },
     medspa: {
-      status: 'roadmap',
-      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
       safety: 'Visitor mentions pregnancy or an allergy — flags it for consult review, never confirms a treatment is safe itself.',
       questions: '“What’s the difference between Botox and filler?” — “How much downtime?”',
       pricing: 'Package pricing only — no medical guarantees, ever.',
       vocab: 'units, package, maintenance interval, consult'
     },
     auto: {
-      status: 'roadmap',
-      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
       safety: 'Brake, steering, or safety-system complaint — flags urgent, never diagnoses remotely.',
       questions: '“Why is my check engine light on?” — “Is this covered under warranty?”',
       pricing: 'Diagnostic fee disclosed upfront — no repair quote without inspection.',
       vocab: 'diagnostic, OEM vs. aftermarket, labor rate'
     },
     plumbing: {
-      status: 'roadmap',
-      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
       safety: 'Visitor mentions a gas line or sewage backup — flags urgent, tells them to shut off the gas or water main if it’s safely reachable, never attempts a fix over chat.',
       questions: '“My water heater is leaking right now — can someone come today?” — “Is this covered under my warranty?”',
       pricing: 'Emergency call-out fee disclosed upfront — no job quote without seeing it.',
@@ -1509,8 +1537,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 
   var pillsEl = document.getElementById('bipPills');
   var contentsEl = document.getElementById('bipContents');
-  var noteEl = document.getElementById('bipStatusNote');
-  if (!pillsEl || !contentsEl || !noteEl) return;
+  if (!pillsEl || !contentsEl) return;
 
   var pills = Array.prototype.slice.call(pillsEl.querySelectorAll('.bip-pill'));
   var fields = Array.prototype.slice.call(contentsEl.querySelectorAll('.bip-item-example'));
@@ -1522,7 +1549,6 @@ I'm going to flag this for our emergency team right now so they're aware and rea
       var field = el.getAttribute('data-field');
       el.textContent = data[field] || '';
     });
-    noteEl.textContent = data.note;
     pills.forEach(function (p) {
       var isActive = p.getAttribute('data-vertical') === key;
       p.classList.toggle('is-active', isActive);
