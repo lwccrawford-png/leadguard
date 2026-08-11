@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>EvolveIQ — We Make Your Website Your Best Employee</title>
+<title>EvolveIQ — Business Intelligence Platform for Revenue-Driven Businesses</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="EvolveIQ is the AI that makes your website work like your best employee — booking clients, answering questions, and growing your bottom line, without an expensive redesign every time your business changes." />
+<meta name="description" content="EvolveIQ is a Business Intelligence Platform that turns your business's own knowledge into an always-on presence on your website — capturing high-intent leads, answering approved questions, and protecting the revenue you're already paying to attract." />
 <style>
 @font-face {
   font-family: 'Fraunces';
@@ -118,7 +118,13 @@ header.nav {
   line-height: 1.06; letter-spacing: -0.01em; margin: 22px 0 26px; text-wrap: balance; color: var(--ink);
 }
 .hero h1 em { font-style: italic; font-weight: 600; color: var(--amber-deep); }
-.hero p.lede { font-size: 19px; color: var(--ink-dim); max-width: 46ch; margin: 0 0 34px; }
+.hero p.lede { font-size: 19px; color: var(--ink-dim); max-width: 46ch; margin: 0 0 22px; }
+.hero-roi {
+  font-size: 14.5px; line-height: 1.5; color: var(--ink-dim); max-width: 46ch;
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 18px; margin: 0 0 28px;
+}
+.hero-roi strong { color: var(--amber-deep); }
 .cta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .btn-primary {
   display: inline-flex; align-items: center; gap: 9px;
@@ -274,15 +280,73 @@ header.nav {
 }
 .tag-live { background: var(--amber); color: #ffffff; }
 .tag-addon { background: var(--moss-soft); color: var(--moss); border: 1px solid var(--moss); }
+.tag-pilot { background: var(--line-soft); color: var(--ink-dim); border: 1px solid var(--line); }
+.tag-roadmap { background: transparent; color: var(--ink-faint); border: 1px dashed var(--line); }
+
+.ideal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 34px; }
+.ideal-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 8px; }
+.ideal-card h3 { font-family: var(--serif); font-weight: 600; font-size: 15.5px; margin: 0; color: var(--ink); }
+.ideal-leak { font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; margin: 0; }
+.ideal-value { font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; margin: 0; }
+.ideal-value strong { color: var(--amber-deep); }
+.ideal-q { font-size: 12px; font-style: italic; color: var(--ink-faint); line-height: 1.45; margin: 4px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); }
+
+.capstrip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 34px; }
+.capstrip-col { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px; box-shadow: var(--shadow-sm); }
+.capstrip-label { margin-bottom: 16px; }
+.capstrip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.capstrip-list li { position: relative; padding-left: 20px; font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
+.capstrip-list li::before { content: '—'; position: absolute; left: 0; color: var(--ink-faint); }
+.capstrip-note { font-size: 12.5px; color: var(--ink-faint); margin: 16px 0 0; }
+
+.roi-formula { font-family: var(--serif); font-size: 16px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: inline-block; }
+.demo-disclaimer { font-size: 12.5px; color: var(--ink-faint); margin: 12px auto 0; max-width: 52ch; }
+
+.pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 40px; align-items: stretch; }
+.price-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 30px 24px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+.price-card-featured { background: linear-gradient(155deg, var(--amber) 0%, var(--amber-deep) 100%); border-color: var(--amber-deep); box-shadow: 0 24px 50px -18px rgba(176, 111, 15, 0.45); transform: translateY(-6px); }
+.price-card-recommended { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--moss); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border-radius: 999px; }
+.price-card .plan-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 999px; display: inline-block; margin-bottom: 14px; align-self: flex-start; }
+.plan-label.plan-label-light { color: var(--ink-dim); background: var(--bg-soft); border: 1px solid var(--line); }
+.price-card-fit { font-size: 13px; color: var(--ink-dim); line-height: 1.5; margin: 0 0 18px; min-height: 40px; }
+.price-card-featured .price-card-fit { color: rgba(255,255,255,0.85); }
+.price-card-amount { font-family: var(--serif); font-weight: 600; font-size: 30px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.price-card-featured .price-card-amount { color: #fff; }
+.price-card-amount .accent { color: var(--amber-deep); }
+.price-card-featured .price-card-amount .accent { color: var(--amber-pale); }
+.price-card-unit { font-size: 13px; color: var(--ink-faint); margin-left: 4px; }
+.price-card-featured .price-card-unit { color: rgba(255,255,255,0.68); }
+.price-card-setup { font-size: 12.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 0 18px; }
+.price-card-featured .price-card-setup { color: rgba(255,255,255,0.68); }
+.price-card-desc { font-size: 13.5px; color: var(--ink-dim); line-height: 1.55; margin: 0 0 12px; flex-grow: 1; }
+.price-card-featured .price-card-desc { color: rgba(255,255,255,0.88); }
+.price-card-boundary { font-size: 12px; color: var(--ink-faint); line-height: 1.5; margin: 0 0 20px; }
+.price-card-featured .price-card-boundary { color: rgba(255,255,255,0.7); }
+.price-card-cta { width: 100%; justify-content: center; }
+.price-card-featured .price-card-cta.btn-primary { background: #0e1a3d; color: #ffffff; box-shadow: 0 14px 30px -12px rgba(14,26,61,0.5); }
+.price-card-featured .price-card-cta.btn-primary:hover { background: #1a2c63; }
+.pricing-fine { font-size: 12.5px; color: var(--ink-faint); text-align: center; max-width: 520px; margin: 32px auto 0; }
 .arch-connector { width: 1px; height: 14px; background: var(--line); margin: 0 auto; }
 
 /* ---------- BIP section ---------- */
 .bip-pills { display: flex; flex-wrap: wrap; gap: 10px; margin: 26px 0 0; }
-.bip-pill { font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-dim); }
+.bip-pill {
+  font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-dim); cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.bip-pill:hover { border-color: var(--amber-deep); color: var(--ink); }
+.bip-pill:focus-visible { outline: 2px solid var(--amber-deep); outline-offset: 2px; }
 .bip-pill.filled { color: var(--moss); border-color: var(--moss); background: var(--moss-soft); }
+.bip-pill.pilot { color: var(--ink-dim); border-color: var(--line); background: var(--line-soft); font-style: italic; }
+.bip-pill.is-active { box-shadow: 0 0 0 2px var(--amber-deep); transform: translateY(-1px); }
 
 .bip-contents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 30px; }
-.bip-item { padding: 16px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; color: var(--ink-dim); text-align: center; background: var(--card); box-shadow: var(--shadow-sm); }
+.bip-item { padding: 16px 14px; border: 1px solid var(--line); border-radius: 10px; text-align: left; background: var(--card); box-shadow: var(--shadow-sm); }
+.bip-item-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+.bip-item-example { font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; min-height: 60px; transition: opacity 0.15s ease; }
+.bip-status-note { font-size: 12.5px; color: var(--ink-faint); margin: 16px 0 0; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .bip-pill, .bip-item-example { transition: none; } }
 
 /* ---------- proof / transcript ---------- */
 .proof { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -430,6 +494,14 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 .footer-meta { font-size: 12.5px; color: var(--ink-faint); }
 
 /* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .ideal-grid { grid-template-columns: repeat(3, 1fr); }
+  .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  .price-card-featured { transform: none; }
+}
+@media (max-width: 1180px) {
+  .wordmark .tag { display: none; }
+}
 @media (max-width: 880px) {
   .hero-grid { grid-template-columns: 1fr; }
   .hero-visual { max-width: 420px; margin: 0 auto 8px; order: -1; }
@@ -442,6 +514,10 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   .advantage-grid { grid-template-columns: 1fr; }
   .included-grid { grid-template-columns: 1fr; }
   .benefits-grid { grid-template-columns: 1fr; }
+  .ideal-grid { grid-template-columns: 1fr 1fr; }
+  .capstrip-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .price-card-featured { transform: none; }
   .arch-layer { grid-template-columns: 1fr; text-align: left; gap: 6px; }
   .arch-layer .layer-tag { justify-self: start; }
   .bip-contents { grid-template-columns: repeat(2, 1fr); }
@@ -476,7 +552,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 <body>
 <header class="nav">
   <div class="nav-row wrap">
-    <div class="wordmark">EvolveIQ<span class="dot">.</span><span class="tag">AI Employee Platform</span></div>
+    <div class="wordmark">EvolveIQ<span class="dot">.</span><span class="tag">Business Intelligence Platform</span></div>
     <nav class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
       <a href="#benefits">Benefits</a>
@@ -490,7 +566,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
     </button>
     <div class="nav-ctas">
       <a class="nav-badge" href="#website">Need a site? →</a>
-      <a class="nav-cta" href="#demo">See it live</a>
+      <a class="nav-cta" href="#demo">Get demo</a>
     </div>
   </div>
 </header>
@@ -498,12 +574,13 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow">Built for the modern business</span>
-      <h1>Conversations that <em>convert.</em></h1>
-      <p class="lede">EvolveIQ provides a customized customer experience through smart conversations that educate customers and convert that interest into revenue and saved time for your business.</p>
+      <span class="eyebrow">Built for revenue-driven service businesses</span>
+      <h1>Built for businesses where <em>one missed lead</em> can cost thousands.</h1>
+      <p class="lede">EvolveIQ turns your website into an always-on lead-intelligence layer. It answers approved questions, captures high-intent opportunities, protects paid traffic, and helps your team follow up with the right context.</p>
+      <p class="hero-roi">For ideal-fit clients, EvolveIQ is designed to produce or protect <strong>$3,000–$15,000/month</strong> in economic value — by capturing more high-intent opportunities, preserving paid traffic, and catching what falls through after hours.</p>
       <div class="cta-row">
-        <a class="btn-primary" href="#offer">See your business's knowledge in action →</a>
-        <a class="btn-ghost" href="#how">How it works</a>
+        <a class="btn-primary" href="#demo">Build a demo from my website →</a>
+        <a class="btn-ghost" href="#offer">See pricing</a>
       </div>
     </div>
     <div class="hero-visual">
@@ -517,6 +594,118 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
           <div class="bubble visitor">555-201-4487</div>
         </div>
         <div class="hero-transcript-outcome is-visible" id="heroTranscriptOutcome">✅ Lead captured — your team notified in real time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section ideal">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:720px;">
+      <span class="eyebrow" style="justify-content:center;">Who this is built for</span>
+      <h2>Created for revenue-driven businesses.</h2>
+      <p style="margin:0 auto;">EvolveIQ is built for local service and professional businesses where a single missed opportunity can be worth hundreds, thousands, or more.</p>
+    </div>
+    <div class="ideal-grid">
+      <div class="ideal-card">
+        <h3>Personal injury law</h3>
+        <p class="ideal-leak">A serious intake question comes in after hours and goes unanswered.</p>
+        <p class="ideal-value">One signed case can be worth <strong>$5,000+</strong> in fee contribution.</p>
+        <p class="ideal-q">"My wife was hit by an 18-wheeler yesterday — can someone talk to me tonight?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>HVAC</h3>
+        <p class="ideal-leak">An after-hours no-cooling visitor abandons a contact form.</p>
+        <p class="ideal-value">One captured replacement consult ≈ <strong>$1,600–$4,500</strong> gross profit.</p>
+        <p class="ideal-q">"My AC stopped cooling and the system is 16 years old — repair or replace?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Plumbing</h3>
+        <p class="ideal-leak">An emergency visitor hits a form or a slow callback and moves on.</p>
+        <p class="ideal-value">One saved emergency job ≈ <strong>$1,000–$2,500</strong> gross profit.</p>
+        <p class="ideal-q">"My water heater is leaking right now — can someone come today?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Roofing</h3>
+        <p class="ideal-leak">An estimate visitor wants guidance before requesting a quote.</p>
+        <p class="ideal-value">One qualified estimate ≈ <strong>$2,400–$6,000</strong> gross profit.</p>
+        <p class="ideal-q">"A storm just hit my roof — what's the process for a claim estimate?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Water &amp; fire restoration</h3>
+        <p class="ideal-leak">An emergency visitor compares companies while damage is still active.</p>
+        <p class="ideal-value">One mitigation job ≈ <strong>$1,500–$4,000</strong> gross profit.</p>
+        <p class="ideal-q">"We have active water damage right now — how fast can you respond?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Med spa &amp; aesthetics</h3>
+        <p class="ideal-leak">A visitor asks about pricing or financing, then doesn't book.</p>
+        <p class="ideal-value">One booked consult ≈ <strong>$600–$1,500</strong> gross profit.</p>
+        <p class="ideal-q">"What's the difference between your Botox and filler packages?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Dental &amp; orthodontic</h3>
+        <p class="ideal-leak">A patient asks about implants or Invisalign, then drops off.</p>
+        <p class="ideal-value">One booked consultation ≈ <strong>$1,500–$5,000</strong> gross profit.</p>
+        <p class="ideal-q">"Do you take new patients, and what's your process for Invisalign?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Kitchen &amp; bath remodelers</h3>
+        <p class="ideal-leak">A high-ticket visitor asks about cost and timeline before calling.</p>
+        <p class="ideal-value">One design consult ≈ <strong>$3,000–$8,000</strong> gross profit.</p>
+        <p class="ideal-q">"What's a realistic budget range for a full kitchen remodel?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Foundation repair</h3>
+        <p class="ideal-leak">A homeowner delays contact over cracks or settling.</p>
+        <p class="ideal-value">One inspection ≈ <strong>$1,250–$5,250</strong> gross profit.</p>
+        <p class="ideal-q">"I'm seeing cracks near my foundation — is this urgent?"</p>
+      </div>
+      <div class="ideal-card">
+        <h3>Specialty auto repair</h3>
+        <p class="ideal-leak">A visitor price-shops silently instead of booking a job.</p>
+        <p class="ideal-value">One qualified repair ≈ <strong>$400–$2,000</strong> gross profit.</p>
+        <p class="ideal-q">"My check engine light is on — what would you check first?"</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section capstrip">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:680px;">
+      <span class="eyebrow" style="justify-content:center;">What do you get for your money?</span>
+      <h2>Not a chatbot bolted onto a static site.</h2>
+      <p style="margin:0 auto;">EvolveIQ turns everything a business already knows — its services, pricing, policies, FAQs, and the way it actually talks to customers — into a living, always-on presence on its website.</p>
+    </div>
+    <div class="capstrip-grid">
+      <div class="capstrip-col">
+        <div class="capstrip-label"><span class="layer-tag tag-live">Live today</span></div>
+        <ul class="capstrip-list">
+          <li>Website assistant embedded on your site</li>
+          <li>Site crawl and hand-entered facts &amp; FAQs</li>
+          <li>Custom conversation script and branding</li>
+          <li>Scheduling-link handoff</li>
+          <li>Lead capture, webhook &amp; email handoff</li>
+          <li>Lead board: New / Claimed / Done</li>
+          <li>Full conversation history</li>
+          <li>Usage &amp; knowledge-coverage dashboard</li>
+          <li>Client support portal</li>
+          <li>Pipeline board (add-on)</li>
+          <li>HVAC starter Business Intelligence Pack</li>
+        </ul>
+      </div>
+      <div class="capstrip-col">
+        <div class="capstrip-label"><span class="layer-tag tag-pilot">Available in pilot</span></div>
+        <ul class="capstrip-list">
+          <li>Personal Injury Legal intelligence</li>
+          <li>HVAC Premium intelligence</li>
+          <li>Priority scoring &amp; lead attributes</li>
+          <li>Conditional routing rules</li>
+          <li>Intelligent handoff summaries</li>
+          <li>Intelligence dashboard</li>
+        </ul>
+        <p class="capstrip-note">Pilot capabilities are validated with real clients before they're claimed as live. Ask us for current status on your vertical.</p>
       </div>
     </div>
   </div>
@@ -743,22 +932,36 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">Business Intelligence Packs</span>
-      <h2>Your industry's expertise, from day one — not a blank page.</h2>
+      <h2>Your industry's expertise, from day one — end the hunt for answers &amp; become the solution.</h2>
       <p>Most AI tools ask you to write your own FAQ, script, and policies before they can go live. EvolveIQ brings the industry knowledge — safety rules, common questions, the way your kind of business actually talks to customers. You fill in what only you know; we bring the rest.</p>
     </div>
-    <div class="bip-pills">
-      <span class="bip-pill filled">HVAC / Home Comfort — built</span>
-      <span class="bip-pill">Roofing &amp; Exterior</span>
-      <span class="bip-pill">Med Spa &amp; Aesthetics</span>
-      <span class="bip-pill">Auto Repair</span>
-      <span class="bip-pill">Credit Repair &amp; Financial Services</span>
+    <div class="bip-pills" id="bipPills" role="tablist" aria-label="Business Intelligence Pack by industry">
+      <button type="button" class="bip-pill filled" data-vertical="hvac" role="tab">HVAC / Home Comfort — built</button>
+      <button type="button" class="bip-pill pilot" data-vertical="pi" role="tab">Personal Injury Legal — pilot</button>
+      <button type="button" class="bip-pill" data-vertical="roofing" role="tab">Roofing &amp; Exterior</button>
+      <button type="button" class="bip-pill" data-vertical="medspa" role="tab">Med Spa &amp; Aesthetics</button>
+      <button type="button" class="bip-pill" data-vertical="auto" role="tab">Auto Repair</button>
+      <button type="button" class="bip-pill" data-vertical="plumbing" role="tab">Plumbing</button>
     </div>
-    <div class="bip-contents">
-      <div class="bip-item">Safety &amp; escalation rules</div>
-      <div class="bip-item">Common customer questions</div>
-      <div class="bip-item">Pricing guardrails</div>
-      <div class="bip-item">Industry vocabulary</div>
+    <div class="bip-contents" id="bipContents">
+      <div class="bip-item">
+        <div class="bip-item-label">Safety &amp; escalation rules</div>
+        <div class="bip-item-example" data-field="safety"></div>
+      </div>
+      <div class="bip-item">
+        <div class="bip-item-label">Common customer questions</div>
+        <div class="bip-item-example" data-field="questions"></div>
+      </div>
+      <div class="bip-item">
+        <div class="bip-item-label">Pricing guardrails</div>
+        <div class="bip-item-example" data-field="pricing"></div>
+      </div>
+      <div class="bip-item">
+        <div class="bip-item-label">Industry vocabulary</div>
+        <div class="bip-item-example" data-field="vocab"></div>
+      </div>
     </div>
+    <p class="bip-status-note" id="bipStatusNote"></p>
   </div>
 </section>
 
@@ -790,9 +993,11 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 <section class="section roi" id="roi">
   <div class="wrap">
     <div class="section-head">
-      <span class="eyebrow">ROI calculator</span>
-      <h2>ROI: what would this actually be worth to you?</h2>
-      <p>Move the sliders to match your business — this isn't a guess, it's your own math.</p>
+      <span class="eyebrow">The math is simple</span>
+      <h2>One saved opportunity can pay for the month.</h2>
+      <p>EvolveIQ isn't priced around novelty — it's priced around recoverable revenue. If your website already gets visitors, every unanswered buying question, abandoned form, slow callback, or after-hours inquiry has a cost.</p>
+      <p class="roi-formula">Monthly ROI = (extra gross profit captured + wasted ad spend prevented + staff time saved) − EvolveIQ's monthly cost.</p>
+      <p>Move the sliders below to match your own business — this is planning math using your own numbers, not a guarantee. Actual results depend on your traffic, offer, follow-up, and close rate.</p>
     </div>
     <div class="roi-grid">
       <div class="roi-sliders">
@@ -805,13 +1010,13 @@ I'm going to flag this for our emergency team right now so they're aware and rea
           <input type="range" id="roiBookings" min="0" max="20" step="1" value="5" />
         </div>
         <div class="roi-field">
-          <label for="roiHours">Hours per day a front-desk hire would need to cover this <span class="roi-value" id="roiHoursVal">4</span></label>
+          <label for="roiHours">Hours per day an additional hire would need to cover this <span class="roi-value" id="roiHoursVal">4</span></label>
           <input type="range" id="roiHours" min="1" max="8" step="0.5" value="4" />
         </div>
         <div class="roi-field">
           <label for="roiWage">Fully burdened hourly cost of that role <span class="roi-value" id="roiWageVal">$21</span></label>
           <input type="range" id="roiWage" min="15" max="35" step="0.5" value="21" />
-          <p class="roi-hint">Defaults to $16/hr minimum wage plus a 30% burden — payroll taxes, unemployment insurance, and the other per-employee costs that come with a real hire. Adjust for your market.</p>
+          <p class="roi-hint">Defaults to $16/hr minimum wage plus a 30% burden — payroll taxes, unemployment insurance, and the other per-employee costs that come with a new hire. Adjust for your market.</p>
         </div>
       </div>
       <div class="roi-output">
@@ -821,7 +1026,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
           <span class="roi-amount" id="roiCaptured">$1,500<span class="roi-unit">/mo</span></span>
         </div>
         <div class="roi-line">
-          <span>Front-desk hire equivalent, fully burdened</span>
+          <span>Additional hire equivalent, fully burdened</span>
           <span class="roi-amount" id="roiFrontDesk">$1,819<span class="roi-unit">/mo</span></span>
         </div>
         <div class="roi-divider"></div>
@@ -842,30 +1047,49 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 
 <section class="offer" id="offer">
   <div class="wrap">
-    <div class="offer-card">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:640px;">
+      <span class="eyebrow" style="justify-content:center;">Pricing</span>
       <h2>Your website, working as hard as you do.</h2>
-      <p class="desc">We'll capture your business's knowledge, configure your industry's intelligence pack around it, and have it live and answering visitors within days — then tune it with you for 30 days.</p>
-      <span class="plan-label">EvolveIQ Core</span>
-      <div class="price-row">
-        <div class="price-block">
-          <div class="amount"><span class="accent">$99</span><sup class="price-asterisk">*</sup></div>
-          <div class="unit">per month</div>
-        </div>
-        <div class="price-div"></div>
-        <div class="price-block">
-          <div class="amount">$399<sup class="price-asterisk">*</sup></div>
-          <div class="unit">one-time setup</div>
-        </div>
-      </div>
-      <p class="price-note">*EvolveIQ Core, our standard package — includes up to 500 visitor messages a month. Doesn't include add-ons like Pipeline. Need more volume? Ask us.</p>
-      <ul class="offer-terms">
-        <li>Your industry's Business Intelligence Pack, configured around your business</li>
-        <li>Live on your website within days, not weeks</li>
-        <li>30 days of hands-on tuning included</li>
-        <li>Not producing real conversations? Cancel before month two.</li>
-      </ul>
-      <a class="btn-primary" href="mailto:hello@evolveiq.com?subject=Show%20me%20EvolveIQ%20on%20my%20site">Show me EvolveIQ on my own site →</a>
+      <p style="margin:0 auto;">Core is a real, useful starting point. Business is where the ROI story gets serious — best fit for companies where one captured job, case, consultation, or estimate can justify the month.</p>
     </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <span class="plan-label plan-label-light">Core Starter</span>
+        <p class="price-card-fit">Small businesses that need a simple assistant or starter site path.</p>
+        <div class="price-card-amount"><span class="accent">$99–$149</span><span class="price-card-unit">/mo</span></div>
+        <div class="price-card-setup">+ $399–$799 setup</div>
+        <p class="price-card-desc">One website assistant, one starter Business Intelligence Pack, site crawl / manual FAQs, lead capture, scheduling link, and a basic dashboard.</p>
+        <p class="price-card-boundary">No custom intelligence, custom routing, or hands-on monthly strategy — that belongs in Business and above.</p>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=Start%20with%20EvolveIQ%20Core">Start with Core →</a>
+      </div>
+      <div class="price-card price-card-featured">
+        <span class="price-card-recommended">Recommended</span>
+        <span class="plan-label">Business</span>
+        <p class="price-card-fit">Businesses where each lead, case, job, or consultation has meaningful value.</p>
+        <div class="price-card-amount"><span class="accent">$797–$997</span><span class="price-card-unit">/mo</span></div>
+        <div class="price-card-setup">+ $1,500–$2,500 setup</div>
+        <p class="price-card-desc">Managed setup, your vertical's Business Intelligence Pack, 30-day tuning, lead board, monthly insights, and webhook/email handoff.</p>
+        <p class="price-card-boundary">Best fit when one captured job, consultation, case, or estimate can justify the monthly subscription.</p>
+        <a class="btn-primary price-card-cta" href="#demo">Build my demo →</a>
+      </div>
+      <div class="price-card">
+        <span class="plan-label plan-label-light">Enterprise</span>
+        <p class="price-card-fit">Multi-location, multi-team, high-volume, or custom-workflow organizations.</p>
+        <div class="price-card-amount"><span class="accent">Custom</span></div>
+        <div class="price-card-setup">from $2,500/mo</div>
+        <p class="price-card-desc">Custom routing across departments and locations, integration planning, higher usage, and a dedicated success cadence.</p>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=EvolveIQ%20Enterprise">Talk through rollout →</a>
+      </div>
+      <div class="price-card">
+        <span class="plan-label plan-label-light">Public Sector</span>
+        <p class="price-card-fit">Government, legal aid, civic programs, and public-facing access services.</p>
+        <div class="price-card-amount"><span class="accent">Contract</span></div>
+        <div class="price-card-setup">pricing</div>
+        <p class="price-card-desc">Approved public knowledge access, accessibility, governance, and contract-based support.</p>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=EvolveIQ%20Public%20Sector">Discuss program fit →</a>
+      </div>
+    </div>
+    <p class="pricing-fine">Pricing shown is a planning range, not a guarantee — actual quotes depend on volume, vertical, and scope. Not producing real conversations on Core? Cancel before month two.</p>
   </div>
 </section>
 
@@ -902,8 +1126,9 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   <div class="wrap">
     <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto; max-width:640px;">
       <span class="eyebrow" style="justify-content:center;">See it on your business</span>
-      <h2>Request a live demo.</h2>
-      <p style="margin:0 auto;">Tell us about your business, then grab a time that works for you.</p>
+      <h2>Get a demo built from your website.</h2>
+      <p style="margin:0 auto;">We'll build a powerful private preview from your site — no input needed from you. Imagine how good it gets once you add your own touches.</p>
+      <p class="demo-disclaimer">Demo previews are created using public website information and are not live on your site unless you approve installation.</p>
     </div>
     <div class="demo-card">
       <form id="demoForm" class="demo-form" novalidate>
@@ -961,7 +1186,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 <footer>
   <div class="wrap footer-row">
     <div class="footer-tag">"The website is only the beginning."</div>
-    <div class="footer-meta">© 2026 EvolveIQ — AI Employee Platform</div>
+    <div class="footer-meta">© 2026 EvolveIQ — Business Intelligence Platform</div>
   </div>
 </footer>
 
@@ -1229,5 +1454,90 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   data-greeting="Hi, I'm Evie — ask me anything about EvolveIQ, how it works, or what it costs."
   defer
 ></script>
+<script>
+(function () {
+  var BIP_EXAMPLES = {
+    hvac: {
+      status: 'live',
+      note: 'Live example — from the HVAC Business Intelligence Pack.',
+      safety: 'Visitor mentions a gas smell — stop, don’t touch a switch or use a phone inside, evacuate, call 911 and the gas utility. No diagnosis attempted.',
+      questions: '“Is this worth repairing, or should I replace it?” — “Do you have anyone free this weekend?”',
+      pricing: 'Gives ranges only — a real quote needs a diagnostic visit, never invents a number.',
+      vocab: 'no-cool call, replacement consult, service window, tonnage'
+    },
+    pi: {
+      status: 'pilot',
+      note: 'Pilot example — validated with real clients before broader claims.',
+      safety: 'Visitor describes a serious injury — flags it for priority human review. Never gives legal advice or discusses case value.',
+      questions: '“Do I have a case?” — “What do I tell the insurance company?”',
+      pricing: 'Never quotes a fee or settlement figure — contingency terms are the attorney’s to explain.',
+      vocab: 'intake, statute of limitations, liability, demand letter'
+    },
+    roofing: {
+      status: 'roadmap',
+      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
+      safety: 'Active storm damage or a leak — flags as urgent, never tells a visitor to get on the roof themselves.',
+      questions: '“Will insurance cover this?” — “Shingle or metal — what’s the difference?”',
+      pricing: 'Ranges only until an inspection — no number promised sight-unseen.',
+      vocab: 'tear-off, decking, wind uplift, ice dam'
+    },
+    medspa: {
+      status: 'roadmap',
+      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
+      safety: 'Visitor mentions pregnancy or an allergy — flags it for consult review, never confirms a treatment is safe itself.',
+      questions: '“What’s the difference between Botox and filler?” — “How much downtime?”',
+      pricing: 'Package pricing only — no medical guarantees, ever.',
+      vocab: 'units, package, maintenance interval, consult'
+    },
+    auto: {
+      status: 'roadmap',
+      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
+      safety: 'Brake, steering, or safety-system complaint — flags urgent, never diagnoses remotely.',
+      questions: '“Why is my check engine light on?” — “Is this covered under warranty?”',
+      pricing: 'Diagnostic fee disclosed upfront — no repair quote without inspection.',
+      vocab: 'diagnostic, OEM vs. aftermarket, labor rate'
+    },
+    plumbing: {
+      status: 'roadmap',
+      note: 'Illustrative example — this Business Intelligence Pack is on the roadmap, not yet built.',
+      safety: 'Visitor mentions a gas line or sewage backup — flags urgent, tells them to shut off the gas or water main if it’s safely reachable, never attempts a fix over chat.',
+      questions: '“My water heater is leaking right now — can someone come today?” — “Is this covered under my warranty?”',
+      pricing: 'Emergency call-out fee disclosed upfront — no job quote without seeing it.',
+      vocab: 'call-out fee, rough-in, shut-off valve, backflow'
+    }
+  };
+
+  var pillsEl = document.getElementById('bipPills');
+  var contentsEl = document.getElementById('bipContents');
+  var noteEl = document.getElementById('bipStatusNote');
+  if (!pillsEl || !contentsEl || !noteEl) return;
+
+  var pills = Array.prototype.slice.call(pillsEl.querySelectorAll('.bip-pill'));
+  var fields = Array.prototype.slice.call(contentsEl.querySelectorAll('.bip-item-example'));
+
+  function showVertical(key) {
+    var data = BIP_EXAMPLES[key];
+    if (!data) return;
+    fields.forEach(function (el) {
+      var field = el.getAttribute('data-field');
+      el.textContent = data[field] || '';
+    });
+    noteEl.textContent = data.note;
+    pills.forEach(function (p) {
+      var isActive = p.getAttribute('data-vertical') === key;
+      p.classList.toggle('is-active', isActive);
+      p.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+  }
+
+  pills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      showVertical(pill.getAttribute('data-vertical'));
+    });
+  });
+
+  showVertical('hvac');
+})();
+</script>
 </body>
 </html>

@@ -498,10 +498,14 @@ def open_visitor(client_id: str):
     target = client.get("sales_demo") or client.get("widget_demo")
     if not target:
         return JSONResponse({"ok": False, "message": "no demo generated for this client yet"}, status_code=404)
-    # The demo now lives on the prospect's own instance (GET /demo), not the launcher's
-    # /file route — this redirect exists only for Larry's own convenience from the
-    # launcher UI; the real public link a prospect gets is http://localhost:{port}/demo
-    # directly (or its future public domain once behind Caddy).
+    # New-style prospect demos (Phase 1, docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) are
+    # written into the prospect's own data_dir and served by that instance's own GET
+    # /demo route — recognizable by the "backend/data_..." path generate-demo writes.
+    # Clients that predate that architecture (LMTLSS, Evolve) still carry a path under
+    # the shared widget/ directory instead; those never get a GET /demo on their own
+    # instance, so redirecting there 404s — serve them via the old /file route instead.
+    if target.startswith("widget/"):
+        return RedirectResponse(f"/file?path={target}")
     return RedirectResponse(f"http://localhost:{client['port']}/demo")
 
 
