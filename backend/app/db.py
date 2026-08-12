@@ -241,6 +241,7 @@ def init_db():
             "ALTER TABLE business ADD COLUMN demo_suggested_questions TEXT NOT NULL DEFAULT '[]'",
             "ALTER TABLE business ADD COLUMN demo_expires_at TEXT",
             "ALTER TABLE business ADD COLUMN demo_enabled INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE business ADD COLUMN industry TEXT NOT NULL DEFAULT ''",
         ]:
             try:
                 conn.execute(migration)

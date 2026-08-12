@@ -67,8 +67,19 @@ async function loadBusiness() {
     if (brand) brand.textContent = data.product_name;
   }
   const form = $("#settingsForm");
-  for (const key of ["name", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting"]) {
+  for (const key of ["name", "industry", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
+  }
+  const nameHeader = document.getElementById("businessNameHeader");
+  if (nameHeader) nameHeader.textContent = data.name || "(unnamed business)";
+  const industryBadge = document.getElementById("industryBadge");
+  if (industryBadge) {
+    if (data.industry) {
+      industryBadge.textContent = data.industry;
+      industryBadge.hidden = false;
+    } else {
+      industryBadge.hidden = true;
+    }
   }
   const kbBadge = document.getElementById("knowledgeSourceBadge");
   if (kbBadge) {

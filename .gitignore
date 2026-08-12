@@ -10,3 +10,5 @@ __pycache__/
 # local-only even in a private repo.
 ops/CLIENT_DIRECTORY.md
 ops/clients.json
+ops/outreach.db
+ops/outreach_prospects_export.json

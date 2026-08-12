@@ -20,6 +20,21 @@ header {
   gap: 16px;
 }
 header h1 { margin: 0; font-size: 20px; }
+.header-identity { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.header-identity h1 { font-size: 22px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-identity-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.industry-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.product-badge { font-size: 12px; font-weight: 500; opacity: .75; }
 .header-support-link {
   flex-shrink: 0;
   color: #fff;
@@ -32,7 +47,6 @@ header h1 { margin: 0; font-size: 20px; }
   white-space: nowrap;
 }
 .header-support-link:hover { background: rgba(255,255,255,.25); }
-.badge { font-weight: 400; opacity: .85; font-size: 14px; }
 .knowledge-source-badge {
   display: inline-block;
   margin-top: 6px;

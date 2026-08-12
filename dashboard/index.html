@@ -8,8 +8,14 @@
 </head>
 <body>
   <header>
-    <h1><span id="productName">LeadGuard</span> <span class="badge">Dashboard</span></h1>
-    <span id="knowledgeSourceBadge" class="knowledge-source-badge" hidden></span>
+    <div class="header-identity">
+      <h1 id="businessNameHeader">Loading…</h1>
+      <div class="header-identity-meta">
+        <span id="industryBadge" class="industry-badge" hidden></span>
+        <span class="product-badge"><span id="productName">LeadGuard</span> Dashboard</span>
+        <span id="knowledgeSourceBadge" class="knowledge-source-badge" hidden></span>
+      </div>
+    </div>
     <a href="/support/" target="_blank" class="header-support-link">🛠 Support</a>
   </header>
 
@@ -83,6 +89,9 @@
       <form id="settingsForm">
         <label>Business name
           <input name="name" required />
+        </label>
+        <label>Industry <span class="hint">(shown next to the business name at the top of this dashboard — helps tell instances apart, e.g. "HVAC" or "Personal Injury Law")</span>
+          <input name="industry" placeholder="e.g. HVAC" />
         </label>
         <label>Assistant name <span class="hint">(optional — give it a persona name like "Aiden" or "Aisha", or leave blank to just represent the business name)</span>
           <input name="assistant_name" placeholder="e.g. Aiden" />

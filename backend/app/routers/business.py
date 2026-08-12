@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api", tags=["business"])
 
 class BusinessSettings(BaseModel):
     name: str
+    industry: str = ""
     assistant_name: str = ""
     assistant_image_url: str = ""
     website_url: str = ""
@@ -105,13 +106,14 @@ def update_business(settings: BusinessSettings):
         raise HTTPException(400, "Rotting threshold must be equal to or later than the aging threshold")
     with db_session() as conn:
         conn.execute(
-            """UPDATE business SET name=?, assistant_name=?, assistant_image_url=?, website_url=?,
+            """UPDATE business SET name=?, industry=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
                knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=?,
                demo_expires_at=?, demo_enabled=? WHERE id=1""",
             (
                 settings.name,
+                settings.industry,
                 settings.assistant_name,
                 settings.assistant_image_url,
                 settings.website_url,
