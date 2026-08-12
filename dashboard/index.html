@@ -87,6 +87,7 @@
     <section id="tab-settings" class="tab">
       <h2>Business Settings</h2>
       <form id="settingsForm">
+        <input type="hidden" name="disclosure_text" />
         <label>Business name
           <input name="name" required />
         </label>
@@ -121,6 +122,17 @@
         <label>Conversational script <span class="hint">(write how the agent should behave, in your own words)</span>
           <textarea name="flow_script" rows="8" placeholder="e.g. Greet visitors warmly as 'Jane's Salon'. Always ask what service they're interested in before mentioning price ranges. Never quote exact prices, only ranges. If someone asks about cancellations, point them to the scheduling link. Capture contact info before ending the chat if they haven't booked."></textarea>
         </label>
+        <label>Suggested demo questions <span class="hint">(up to 3 clickable starter questions shown on this business's public demo page and widget — pick from a bank below or type your own)</span>
+          <select id="suggestedQuestionBankSelect">
+            <option value="">— insert from a question bank —</option>
+          </select>
+          <div id="suggestedQuestionBankList" class="suggested-q-bank-list"></div>
+        </label>
+        <div class="suggested-q-slots">
+          <input name="demo_suggested_questions_1" placeholder="Starter question 1" maxlength="140" />
+          <input name="demo_suggested_questions_2" placeholder="Starter question 2" maxlength="140" />
+          <input name="demo_suggested_questions_3" placeholder="Starter question 3" maxlength="140" />
+        </div>
         <label>Accent color
           <input name="accent_color" type="color" />
         </label>

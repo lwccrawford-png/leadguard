@@ -137,6 +137,15 @@ button[type="submit"], button#crawlBtn, .card button {
   font-size: 12.5px;
 }
 .btn-secondary:hover { background: var(--bg); }
+.suggested-q-bank-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.suggested-q-chip {
+  font-family: inherit; font-size: 12.5px; font-weight: 500; color: #444; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; text-align: left;
+}
+.suggested-q-chip:hover { border-color: var(--accent); color: var(--accent); }
+.suggested-q-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+.suggested-q-slots { display: flex; flex-direction: column; gap: 8px; }
+.suggested-q-slots input { font-size: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
 #crawlStatus, #docStatus { margin-left: 10px; font-size: 13px; color: #666; }
 #saveStatus { margin-left: 10px; font-size: 13px; font-weight: 700; }
 

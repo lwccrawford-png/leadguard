@@ -58,6 +58,78 @@ document.getElementById("useGreetingPreset")?.addEventListener("click", () => {
   form.elements["greeting"].value = greetingPreset(form.elements["assistant_name"].value, form.elements["name"].value);
 });
 
+// Curated starter-question pools an admin can pick 3 from instead of writing from
+// scratch — each written to flow naturally with that vertical's BIP. Add a new key
+// here whenever a new BIP goes live; "Platform / General" covers EvolveIQ's own
+// demo (and anything without a vertical-specific bank yet).
+const SUGGESTED_QUESTION_BANKS = {
+  "HVAC": [
+    "My AC is running but not cooling. What should I check first?",
+    "How do I know whether I need a repair or replacement?",
+    "Do you offer emergency service or financing options?",
+    "What's included in a routine maintenance visit?",
+    "My furnace is making a strange noise — is that urgent?",
+    "Do you service my area, and how fast can someone come out?",
+    "What's a fair price range for a new AC installation?",
+    "I smell gas near my furnace — what should I do?",
+    "Is there an extra charge for weekend or after-hours visits?",
+  ],
+  "Personal Injury Legal": [
+    "I was in a car accident yesterday — what should I do first?",
+    "Do I have a case?",
+    "What do I say to the insurance company that called me?",
+    "How much does it cost to talk to a lawyer?",
+    "My spouse was hospitalized after an accident — can someone talk to me tonight?",
+    "How long do I have to file a claim?",
+    "What's the process after I hire a personal injury attorney?",
+    "Will I have to go to court?",
+    "What kind of compensation could I be entitled to?",
+  ],
+  "Platform / General": [
+    "What exactly does EvolveIQ do?",
+    "How is this different from a regular chatbot?",
+    "How much does EvolveIQ cost?",
+    "Can I try this on my own business's website?",
+    "How long does setup take?",
+    "What happens if the assistant doesn't know an answer?",
+    "Can I see a demo built from my own website?",
+    "Does this work for my industry?",
+    "What's included in the monthly subscription?",
+  ],
+};
+
+(function setUpSuggestedQuestionBank() {
+  const select = document.getElementById("suggestedQuestionBankSelect");
+  const list = document.getElementById("suggestedQuestionBankList");
+  if (!select || !list) return;
+  Object.keys(SUGGESTED_QUESTION_BANKS).forEach((bankName) => {
+    const opt = document.createElement("option");
+    opt.value = bankName;
+    opt.textContent = bankName;
+    select.appendChild(opt);
+  });
+  function renderBank(bankName) {
+    list.innerHTML = "";
+    const questions = SUGGESTED_QUESTION_BANKS[bankName];
+    if (!questions) return;
+    const form = $("#settingsForm");
+    const slots = [form.elements["demo_suggested_questions_1"], form.elements["demo_suggested_questions_2"], form.elements["demo_suggested_questions_3"]];
+    questions.forEach((q) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "suggested-q-chip";
+      chip.textContent = q;
+      chip.addEventListener("click", () => {
+        const emptySlot = slots.find((s) => !s.value.trim());
+        if (!emptySlot) return;
+        emptySlot.value = q;
+      });
+      list.appendChild(chip);
+    });
+  }
+  select.addEventListener("change", () => renderBank(select.value));
+})();
+
 async function loadBusiness() {
   const res = await fetch("/api/business");
   const data = await res.json();
@@ -67,7 +139,7 @@ async function loadBusiness() {
     if (brand) brand.textContent = data.product_name;
   }
   const form = $("#settingsForm");
-  for (const key of ["name", "industry", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting"]) {
+  for (const key of ["name", "industry", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting", "disclosure_text"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
   }
   const nameHeader = document.getElementById("businessNameHeader");
@@ -81,6 +153,12 @@ async function loadBusiness() {
       industryBadge.hidden = true;
     }
   }
+  const suggestedQuestions = Array.isArray(data.demo_suggested_questions) ? data.demo_suggested_questions : [];
+  [1, 2, 3].forEach((n) => {
+    if (form.elements[`demo_suggested_questions_${n}`]) {
+      form.elements[`demo_suggested_questions_${n}`].value = suggestedQuestions[n - 1] || "";
+    }
+  });
   const kbBadge = document.getElementById("knowledgeSourceBadge");
   if (kbBadge) {
     if (data.knowledge_source) {
@@ -126,6 +204,14 @@ $("#settingsForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const payload = Object.fromEntries(new FormData(e.target).entries());
   payload.pipeline_enabled = e.target.elements["pipeline_enabled"].checked;
+  payload.demo_suggested_questions = [
+    payload.demo_suggested_questions_1,
+    payload.demo_suggested_questions_2,
+    payload.demo_suggested_questions_3,
+  ].map((q) => (q || "").trim()).filter(Boolean);
+  delete payload.demo_suggested_questions_1;
+  delete payload.demo_suggested_questions_2;
+  delete payload.demo_suggested_questions_3;
   const status = $("#saveStatus");
   if (Number(payload.rot_rotting_minutes) < Number(payload.rot_aging_minutes)) {
     status.textContent = "Rotting threshold must be equal to or later than the aging threshold";
