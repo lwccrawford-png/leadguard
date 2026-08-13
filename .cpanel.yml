@@ -1,0 +1,7 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/enterqh3/public_html/justaskevolveiq.com/
+    - /bin/mkdir -p $DEPLOYPATH/assets
+    - /bin/cp -f marketing/index.html $DEPLOYPATH/index.html
+    - /bin/cp -f marketing/assets/evie-avatar.png $DEPLOYPATH/assets/evie-avatar.png
