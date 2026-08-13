@@ -12,3 +12,8 @@ ops/CLIENT_DIRECTORY.md
 ops/clients.json
 ops/outreach.db
 ops/outreach_prospects_export.json
+
+# Login credentials and session-signing secret for launcher_server.py's auth —
+# never commit real passwords or the signing key, even in a private repo.
+ops/auth_users.json
+ops/.auth_secret

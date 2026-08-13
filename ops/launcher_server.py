@@ -28,10 +28,11 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
+import auth
 import bip_parser
 import outreach_db
 
@@ -81,6 +82,104 @@ def make_slug(name: str, existing_ids: set) -> str:
 BIPS_DIR = PROJECT_ROOT / "onboarding" / "bips"
 
 app = FastAPI(title="LeadGuard Demo Launcher")
+
+# This entire tool is internal-only — every route requires a valid signed session
+# cookie except /login itself. Prospect-facing demo pages are self-contained static
+# files sent directly (see generate_site_demo.py's docstring); the live widget/chat a
+# demo page calls back to is served by a completely separate backend process per
+# client (different port, different codebase from this file) and is intentionally
+# NOT covered by this middleware — it must stay open for real visitors to chat.
+PUBLIC_PATH_PREFIXES = ("/login",)
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if request.url.path.startswith(PUBLIC_PATH_PREFIXES):
+        return await call_next(request)
+    username = auth.verify_session_cookie(request.cookies.get(auth.SESSION_COOKIE, ""))
+    if not username:
+        return RedirectResponse(url=f"/login?next={request.url.path}", status_code=303)
+    request.state.username = username
+    return await call_next(request)
+
+
+LOGIN_PAGE_CSS = """
+  :root {
+    --bg: #ffffff; --surface: #f5f5f7; --border: rgba(28,22,12,0.12);
+    --text: #1c160c; --text-dim: #5b5342; --accent: #2f5fe0; --accent-strong: #1b3fae;
+    --danger: #c23b3b;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    min-height: 100vh; margin: 0; display: grid; place-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .login-card {
+    width: min(360px, 90vw); padding: 36px 32px; border: 1px solid var(--border);
+    border-radius: 14px; background: var(--surface);
+  }
+  .login-card h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .login-card p.sub { color: var(--text-dim); font-size: 13px; margin: 0 0 22px; }
+  .login-card label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin: 14px 0 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .login-card input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 15px; background: #fff; color: var(--text); font-family: var(--font);
+  }
+  .login-card button {
+    width: 100%; margin-top: 22px; padding: 11px; border: none; border-radius: 8px;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+  .login-card button:hover { background: var(--accent-strong); }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 14px; }
+"""
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(next: str = "/", error: str = ""):
+    error_html = f'<div class="login-error">{error}</div>' if error else ""
+    return f"""<!doctype html>
+<html><head><title>Sign in — EvolveIQ</title><style>{LOGIN_PAGE_CSS}</style></head>
+<body>
+  <form class="login-card" method="post" action="/login">
+    <h1>EvolveIQ Ops</h1>
+    <p class="sub">Sign in to continue.</p>
+    <input type="hidden" name="next" value="{next}" />
+    <label>Username</label>
+    <input name="username" autocomplete="username" autofocus required />
+    <label>Password</label>
+    <input name="password" type="password" autocomplete="current-password" required />
+    <button type="submit">Sign in</button>
+    {error_html}
+  </form>
+</body></html>"""
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    password = str(form.get("password", ""))
+    next_path = str(form.get("next", "/")) or "/"
+    if not auth.check_login(username, password):
+        return RedirectResponse(url=f"/login?next={next_path}&error=Wrong+username+or+password", status_code=303)
+    response = RedirectResponse(url=next_path, status_code=303)
+    response.set_cookie(
+        auth.SESSION_COOKIE,
+        auth.make_session_cookie(username.lower()),
+        max_age=auth.SESSION_LIFETIME_SECONDS,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
+
+
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(auth.SESSION_COOKIE)
+    return response
 
 
 def load_clients():
@@ -257,47 +356,43 @@ def client_card_html(c: dict) -> str:
 
 
 PAGE_CSS = """
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
   :root {
-    --bg: #f4ecda;
-    --surface: #eee1c5;
-    --surface-2: #e3d1a8;
-    --border: rgba(58, 41, 20, 0.28);
-    --border-strong: rgba(58, 41, 20, 0.5);
-    --text: #241a0e;
-    --text-dim: #5b432a;
-    --text-faint: #6f5738;
-    --accent: #a8461f;
-    --accent-soft: rgba(168, 70, 31, 0.14);
-    --accent-strong: #c2551f;
-    --teal: #2f7d6c;
-    --teal-soft: rgba(47, 125, 108, 0.14);
-    --gold: #93701f;
-    --danger: #a8461f;
-    --ok: #2f7d6c;
-    --on-accent: #faf3e2;
-    --font-display: 'Fraunces', serif;
-    --font-body: 'Schibsted Grotesk', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
+    --bg: #ffffff;
+    --surface: #f5f5f7;
+    --surface-2: #ebebee;
+    --border: rgba(28, 22, 12, 0.12);
+    --border-strong: rgba(28, 22, 12, 0.22);
+    --text: #1c160c;
+    --text-dim: #5b5342;
+    --text-faint: #8c8471;
+    --accent: #2f5fe0;
+    --accent-soft: rgba(47, 95, 224, 0.10);
+    --accent-strong: #1b3fae;
+    --teal: #4f7a44;
+    --teal-soft: rgba(79, 122, 68, 0.12);
+    --gold: #a6790a;
+    --danger: #c23b3b;
+    --ok: #4f7a44;
+    --on-accent: #ffffff;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
     --radius: 12px;
   }
 
   * { box-sizing: border-box; }
   body {
     font-family: var(--font-body);
-    background:
-      radial-gradient(ellipse 900px 500px at 12% -8%, rgba(168,70,31,0.09), transparent 60%),
-      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(47,125,108,0.08), transparent 55%),
-      repeating-linear-gradient(135deg, rgba(36,26,14,0.02) 0px, rgba(36,26,14,0.02) 1px, transparent 1px, transparent 3px),
-      var(--bg);
+    background: var(--bg);
     margin: 0; padding: 32px; color: var(--text); min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-family: var(--font-display); font-weight: 600; font-optical-sizing: auto; margin: 0 0 4px; font-size: 30px; letter-spacing: -0.01em; color: var(--text); animation: rise .5s ease both; }
+  h1 { font-family: var(--font-display); font-weight: 700; margin: 0 0 4px; font-size: 28px; letter-spacing: -0.015em; color: var(--text); animation: rise .5s ease both; }
   .sub { color: var(--text-dim); font-size: 13.5px; margin-bottom: 28px; animation: rise .5s ease both; animation-delay: .05s; }
   .topnav { display: flex; gap: 22px; margin-bottom: 30px; animation: rise .4s ease both; }
   .topnav a { color: var(--text-dim); font-weight: 600; font-size: 12.5px; text-decoration: none; text-transform: uppercase; letter-spacing: .08em; padding-bottom: 4px; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
   .topnav a:hover { color: var(--accent-strong); border-color: var(--accent); }
+  .topnav-signout { margin-left: auto; color: var(--text-faint) !important; }
   .filters { display: flex; gap: 12px; margin-bottom: 18px; }
   .filters select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: var(--font-body); }
   table.requests { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -419,6 +514,7 @@ NAV_HTML = """
   <a href="/outreach">Outreach</a>
   <a href="/support-requests">Support requests</a>
   <a href="/bip-import">BIP import</a>
+  <a href="/logout" class="topnav-signout">Sign out</a>
 </div>
 """
 
