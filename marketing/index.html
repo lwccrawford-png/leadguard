@@ -1349,9 +1349,8 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   var form = document.getElementById('demoForm');
   if (!form) return;
   // Points at the real, live EvolveIQ backend (ops/clients.json id "evolveiq_self") — same
-  // instance running Evie on this page. Update once EvolveIQ is on a real public URL, same
-  // caveat as the widget's data-api-base below.
-  var API_BASE = 'http://localhost:8012';
+  // instance running Evie on this page, now deployed at app.justaskevolveiq.com.
+  var API_BASE = 'https://app.justaskevolveiq.com';
   var statusEl = document.getElementById('demoStatus');
   var scheduleEl = document.getElementById('demoSchedule');
   var nameEl = document.getElementById('demoScheduleName');
@@ -1480,14 +1479,11 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 <!--
   The real, live Evie — not a mockup. Runs on the actual EvolveIQ backend
   instance (ops/clients.json id "evolveiq_self"), configured via the
-  onboarding/bips/evolveiq_sales.md BIP. NOTE: data-api-base currently
-  points at localhost:8012 for local development/testing only — this must
-  be updated to a real public URL once EvolveIQ is deployed, or the widget
-  will silently do nothing for real site visitors.
+  onboarding/bips/evolveiq_sales.md BIP, deployed at app.justaskevolveiq.com.
 -->
 <script
-  src="http://localhost:8012/widget/widget.js"
-  data-api-base="http://localhost:8012"
+  src="https://app.justaskevolveiq.com/widget/widget.js"
+  data-api-base="https://app.justaskevolveiq.com"
   data-business-name="Evie"
   data-color="#2f5fe0"
   data-avatar-url="/assets/evie-avatar.png"
