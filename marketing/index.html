@@ -567,7 +567,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       <img class="hero-evie-avatar" src="assets/evie-avatar.png" alt="Evie" />
       <p class="hero-evie-greeting">Hi, I'm Evie — I'm here to help!</p>
       <div class="transcript hero-transcript">
-        <div class="transcript-head"><span class="pip"></span> Live on evolveiq.com — this is Evie, right now</div>
+        <div class="transcript-head"><span class="pip"></span> Live on justaskevolveiq.com — this is Evie, right now</div>
         <div class="transcript-body" id="heroTranscriptBody">
           <div class="bubble visitor">Do you have anyone free Saturday for a water heater install?</div>
           <div class="bubble assistant">Yes — Saturday has two openings. I can get this on the schedule now. What's the best number to text you at?</div>
@@ -1038,7 +1038,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         <div class="price-card-setup">+ $399–$799 setup</div>
         <p class="price-card-desc">One website assistant, one starter Business Intelligence Pack, site crawl / manual FAQs, lead capture, scheduling link, and a basic dashboard.</p>
         <p class="price-card-boundary">No custom intelligence, custom routing, or hands-on monthly strategy — that belongs in Business and above.</p>
-        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=Start%20with%20EvolveIQ%20Core">Start with Core →</a>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=Start%20with%20EvolveIQ%20Core">Start with Core →</a>
       </div>
       <div class="price-card price-card-featured">
         <span class="price-card-recommended">Recommended</span>
@@ -1056,7 +1056,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         <div class="price-card-amount"><span class="accent">Custom</span></div>
         <div class="price-card-setup">from $2,500/mo</div>
         <p class="price-card-desc">Custom routing across departments and locations, integration planning, higher usage, and a dedicated success cadence.</p>
-        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=EvolveIQ%20Enterprise">Talk through rollout →</a>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=EvolveIQ%20Enterprise">Talk through rollout →</a>
       </div>
       <div class="price-card">
         <span class="plan-label plan-label-light">Public Sector</span>
@@ -1064,7 +1064,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         <div class="price-card-amount"><span class="accent">Contract</span></div>
         <div class="price-card-setup">pricing</div>
         <p class="price-card-desc">Approved public knowledge access, accessibility, governance, and contract-based support.</p>
-        <a class="btn-ghost price-card-cta" href="mailto:hello@evolveiq.com?subject=EvolveIQ%20Public%20Sector">Discuss program fit →</a>
+        <a class="btn-ghost price-card-cta" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=EvolveIQ%20Public%20Sector">Discuss program fit →</a>
       </div>
     </div>
     <p class="pricing-fine">Pricing shown is a planning range, not a guarantee — actual quotes depend on volume, vertical, and scope. Not producing real conversations on Core? Cancel before month two.</p>
@@ -1095,7 +1095,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
         <li>A handful of small content updates each month — new hours, photos, a policy change</li>
         <li>Uptime monitored, so you're not the one who finds out it's down</li>
       </ul>
-      <a class="btn-primary" href="mailto:hello@evolveiq.com?subject=Tell%20me%20about%20a%20starter%20site">Tell me about a starter site →</a>
+      <a class="btn-primary" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=Tell%20me%20about%20a%20starter%20site">Tell me about a starter site →</a>
     </div>
   </div>
 </section>
@@ -1157,7 +1157,7 @@ I'm going to flag this for our emergency team right now so they're aware and rea
 <section class="final">
   <div class="wrap">
     <h2>Every business is built on knowledge.<br>We give it a <em>bigger voice.</em></h2>
-    <a class="btn-primary" href="mailto:hello@evolveiq.com?subject=Show%20me%20EvolveIQ%20on%20my%20site">Get started →</a>
+    <a class="btn-primary" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=Show%20me%20EvolveIQ%20on%20my%20site">Get started →</a>
   </div>
 </section>
 
@@ -1224,6 +1224,11 @@ I'm going to flag this for our emergency team right now so they're aware and rea
     var scenario = SCENARIOS[scenarioIndex];
     scenarioIndex = (scenarioIndex + 1) % SCENARIOS.length;
 
+    // Lock in a floor before clearing — without this, the container collapses
+    // to ~0 height and regrows every cycle, which on mobile triggers the
+    // browser's scroll-anchoring and makes the page appear to scroll on its
+    // own as it tries to keep your reading position stable against the shift.
+    body.style.minHeight = body.offsetHeight + 'px';
     body.innerHTML = '';
     outcome.classList.remove('is-visible');
     outcome.textContent = scenario.outcome;
@@ -1293,6 +1298,10 @@ I'm going to flag this for our emergency team right now so they're aware and rea
   }
 
   function playOnce() {
+    // Same fix as the hero transcript — lock the container's height before
+    // clearing so it can't collapse and regrow every cycle, which is what
+    // was causing the page to appear to scroll on its own on mobile.
+    body.style.minHeight = body.offsetHeight + 'px';
     body.innerHTML = '';
     var p = Promise.resolve();
     STEPS.forEach(function (step) {
