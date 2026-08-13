@@ -866,6 +866,20 @@ function renderPreview() {
     `<tr><td>${f.label}</td><td>${substitute(f.value, values)}</td></tr>`).join('');
   document.getElementById('previewFaqs').innerHTML = currentBip.faqs.map(f =>
     `<tr><td>${substitute(f.question, values)}</td><td>${substitute(f.answer, values)}</td></tr>`).join('');
+
+  const emptyNote = document.getElementById('previewEmptyNote');
+  const noFacts = currentBip.facts.length === 0;
+  const noFaqs = currentBip.faqs.length === 0;
+  emptyNote.hidden = !(noFacts && noFaqs);
+  if (!emptyNote.hidden) {
+    emptyNote.textContent = 'This BIP has no Facts/FAQ table by design — its knowledge lives entirely in the flow script above. Nothing is broken; review the Required Configuration checklist below before applying.';
+  }
+
+  const configWrap = document.getElementById('previewConfigWrap');
+  const config = currentBip.required_config || [];
+  configWrap.hidden = config.length === 0;
+  document.getElementById('previewConfig').innerHTML = config.map(item => `<li>${item}</li>`).join('');
+
   document.getElementById('applyBtn').disabled = !document.getElementById('clientSelect').value;
 }
 
@@ -906,6 +920,8 @@ def bip_import_page():
   #previewScript {{ white-space: pre-wrap; font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); padding: 10px; border-radius: 6px; margin: 0 0 16px; color: var(--text); }}
   #preview table {{ width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 16px; }}
   #preview td {{ padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }}
+  #previewEmptyNote {{ font-size: 12.5px; color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }}
+  #previewConfig {{ font-size: 12.5px; color: var(--text); margin: 0 0 16px; padding-left: 20px; line-height: 1.6; }}
   #applyBtn {{ padding: 10px 20px; background: var(--accent); color: var(--on-accent); border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }}
   #applyBtn:disabled {{ background: var(--surface-2); color: var(--text-faint); cursor: not-allowed; }}
   #applyStatus {{ margin-left: 12px; font-size: 13px; font-weight: 600; color: var(--text-dim); }}
@@ -926,10 +942,15 @@ def bip_import_page():
   <div id="preview" hidden>
     <h4>Flow Script Preview</h4>
     <pre id="previewScript"></pre>
+    <div id="previewEmptyNote" hidden></div>
     <h4>Facts Preview</h4>
     <table><tbody id="previewFacts"></tbody></table>
     <h4>FAQs Preview</h4>
     <table><tbody id="previewFaqs"></tbody></table>
+    <div id="previewConfigWrap" hidden>
+      <h4>Required Configuration (not applied automatically — set these up yourself before treating this BIP as ready)</h4>
+      <ul id="previewConfig"></ul>
+    </div>
     <button id="applyBtn" onclick="applyBip()" disabled>Apply to selected client</button>
     <span id="applyStatus"></span>
   </div>

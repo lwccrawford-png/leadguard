@@ -1,9 +1,15 @@
 """Parse a v1-compatible BIP markdown file (onboarding/bips/*.md) into structured
 data the Fast BIP Import tool can render as a fill-in form and write to a client.
 
-Deliberately only understands the sections a BIP actually needs for LeadGuard v1 —
-Flow Script, Facts, FAQs — per docs/CLAUDE_CODE_HANDOFF_HVAC_BIP.md's guardrail that
-the richer hvac_json/ reference packs are NOT meant to be ingested by this tool.
+Core sections a BIP actually needs for LeadGuard v1 — Flow Script, Facts, FAQs — per
+docs/CLAUDE_CODE_HANDOFF_HVAC_BIP.md's guardrail that the richer hvac_json/ reference
+packs are NOT meant to be ingested by this tool.
+
+Also understands one optional section, "## Required Configuration", for BIPs whose
+knowledge lives entirely in the flow script rather than a Facts/FAQ table (e.g. an
+intake/routing-style BIP like Personal Injury Premium) — these legitimately have zero
+facts and zero FAQs by design, not a parsing failure, and the operator applying them
+needs a visible checklist of what to configure before treating the BIP as "done."
 """
 import re
 
@@ -24,6 +30,7 @@ def parse_bip(path) -> dict:
             f["priority"] = int(f["priority"])
         except (ValueError, TypeError):
             f["priority"] = 0
+    required_config = _extract_bullet_list(text, "## Required Configuration")
 
     placeholder_text = flow_script + " ".join(
         v for row in facts for v in row.values()
@@ -36,6 +43,7 @@ def parse_bip(path) -> dict:
         "flow_script": flow_script,
         "facts": facts,
         "faqs": faqs,
+        "required_config": required_config,
         "placeholders": placeholders,
     }
 
@@ -71,6 +79,19 @@ def _extract_table(text: str, heading: str, columns: list) -> list:
         row = {columns[i]: cells[i] if i < len(cells) else "" for i in range(len(columns))}
         rows.append(row)
     return rows
+
+
+def _extract_bullet_list(text: str, heading: str) -> list:
+    """Return top-level '- item' lines under `heading`, in order, as plain strings.
+    Nested/indented bullets and blank lines are skipped — this is for a flat operator
+    checklist (e.g. Required Configuration), not arbitrary nested markdown."""
+    section = _section(text, heading)
+    items = []
+    for line in section.splitlines():
+        line = line.strip()
+        if line.startswith("- "):
+            items.append(line[2:].strip())
+    return items
 
 
 def substitute(text: str, values: dict) -> str:
