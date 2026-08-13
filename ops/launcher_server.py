@@ -18,6 +18,7 @@ That's deliberate: editing a prospect's demo must never mean editing (or
 risk corrupting) a real, actively-used client instance like LMTLSS.
 """
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -92,10 +93,17 @@ app = FastAPI(title="LeadGuard Demo Launcher")
 # It must stay public: a real prospect's browser hits it, not a logged-in teammate.
 PUBLIC_PATH_PREFIXES = ("/login", "/proxy/")
 
+# Login is required by default (the cloud deployment, on a public IP, needs it) — this
+# is an explicit opt-out, not an opt-in, so a fresh deploy anywhere else stays secure
+# by default. Local dev only listens on 127.0.0.1 (see uvicorn.run below) — nobody but
+# this Mac can ever reach it, so requiring a password here is friction with no real
+# security benefit. Set via the local LaunchAgent plist (ops/README.md), not here.
+LOGIN_DISABLED = os.environ.get("EVOLVEIQ_DISABLE_LOGIN") == "1"
+
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    if request.url.path.startswith(PUBLIC_PATH_PREFIXES):
+    if LOGIN_DISABLED or request.url.path.startswith(PUBLIC_PATH_PREFIXES):
         return await call_next(request)
     username = auth.verify_session_cookie(request.cookies.get(auth.SESSION_COOKIE, ""))
     if not username:
