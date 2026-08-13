@@ -513,7 +513,7 @@ def submit_demo_request(req: DemoRequestInput, request: Request):
     business_name = business["name"] if business else "your business"
 
     if needs_website:
-        notes = "Interested in: the $100 website starter package (no site yet)"
+        notes = "Interested in: Lead Launch by EvolveIQ (no site yet)"
     else:
         notes = f"Website: {website}"
     if message:
