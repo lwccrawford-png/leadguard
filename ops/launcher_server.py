@@ -47,13 +47,16 @@ BACKEND_DIR = PROJECT_ROOT / "backend"
 WIDGET_DIR = PROJECT_ROOT / "widget"
 CLIENTS_PATH = OPS_DIR / "clients.json"
 
-# Required non-affiliation disclosure (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) and Phase 1's
-# hardcoded HVAC-vertical suggested questions — matches the spec's own example set. Both are
-# editable per-prospect afterward via that instance's own Settings tab.
+# Required non-affiliation disclosure (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md).
 DEFAULT_DEMO_DISCLOSURE = (
     "Demonstration created for {name} using publicly available website information — "
     "not currently affiliated with or deployed by {name}."
 )
+# New prospect demos start with zero suggested questions regardless of vertical (see
+# generate_demo() below) — a wrong-industry default caused a live demo to show HVAC
+# questions to a personal injury law firm. This HVAC set is kept only as raw content for
+# the HVAC category once the question-bank picker (dashboard) is wired up — it must never
+# be seeded automatically again.
 DEFAULT_DEMO_SUGGESTED_QUESTIONS = [
     "My AC is running but not cooling. What should I check first?",
     "How do I know whether I need a repair or replacement?",
@@ -608,7 +611,7 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
                 "flow_script": template_business.get("flow_script", ""),
                 "accent_color": prospect["accent_color"],
                 "disclosure_text": DEFAULT_DEMO_DISCLOSURE.format(name=name),
-                "demo_suggested_questions": DEFAULT_DEMO_SUGGESTED_QUESTIONS,
+                "demo_suggested_questions": [],
                 "demo_expires_at": (datetime.now(timezone.utc) + timedelta(days=DEMO_LINK_LIFETIME_DAYS)).isoformat(),
             })
         except Exception as e:
