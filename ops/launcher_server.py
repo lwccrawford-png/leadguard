@@ -83,13 +83,14 @@ BIPS_DIR = PROJECT_ROOT / "onboarding" / "bips"
 
 app = FastAPI(title="LeadGuard Demo Launcher")
 
-# This entire tool is internal-only — every route requires a valid signed session
-# cookie except /login itself. Prospect-facing demo pages are self-contained static
-# files sent directly (see generate_site_demo.py's docstring); the live widget/chat a
-# demo page calls back to is served by a completely separate backend process per
-# client (different port, different codebase from this file) and is intentionally
-# NOT covered by this middleware — it must stay open for real visitors to chat.
-PUBLIC_PATH_PREFIXES = ("/login",)
+# This tool is internal-only — every route requires a valid signed session cookie
+# except /login and /proxy/. Prospect-facing demo pages are self-contained static
+# files sent directly (see generate_site_demo.py's docstring), but their live
+# widget/chat still needs to reach that instance's own backend (a separate process,
+# only listening on 127.0.0.1) — /proxy/{port}/... (below) is the scoped relay for
+# that, restricted to ports this launcher actually knows about, not an open proxy.
+# It must stay public: a real prospect's browser hits it, not a logged-in teammate.
+PUBLIC_PATH_PREFIXES = ("/login", "/proxy/")
 
 
 @app.middleware("http")
@@ -182,6 +183,112 @@ def logout():
     return response
 
 
+ADMIN_USERS_CSS = """
+  .users-table { width: 100%; max-width: 560px; border-collapse: collapse; margin-bottom: 28px; }
+  .users-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .users-table .remove-btn { background: none; border: 1px solid var(--border); color: var(--danger); border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+  .users-table .remove-btn:hover { background: var(--accent-soft); }
+  .add-user-form { display: flex; gap: 10px; align-items: flex-end; max-width: 560px; }
+  .add-user-form > div { flex: 1; }
+  .add-user-form label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 4px; }
+  .add-user-form input { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--surface); color: var(--text); font-family: var(--font-body); }
+  .add-user-form button { padding: 10px 18px; background: var(--accent); color: var(--on-accent); border: none; border-radius: 8px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  #userFormStatus { margin-top: 10px; font-size: 13px; color: var(--text-dim); }
+"""
+
+ADMIN_USERS_JS = """
+async function removeUser(username) {
+  if (!confirm(`Remove "${username}"? They will not be able to sign in anymore.`)) return;
+  const res = await fetch(`/admin/users/${username}`, { method: "DELETE" });
+  const data = await res.json();
+  if (data.ok) window.location.reload();
+  else alert(data.message || "Could not remove user");
+}
+
+document.getElementById("addUserForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const status = document.getElementById("userFormStatus");
+  const payload = Object.fromEntries(new FormData(e.target).entries());
+  status.textContent = "Saving...";
+  const res = await fetch("/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    window.location.reload();
+  } else {
+    status.textContent = data.message || "Could not add user";
+  }
+});
+"""
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+def admin_users_page(request: Request):
+    users = auth.list_usernames()
+    current = getattr(request.state, "username", "")
+    rows = "\n".join(
+        f"""<tr>
+          <td>{u}{' <span style="color:var(--text-faint);font-size:11.5px;">(you)</span>' if u == current else ''}</td>
+          <td style="text-align:right;"><button class="remove-btn" onclick="removeUser('{u}')">Remove</button></td>
+        </tr>"""
+        for u in users
+    )
+    return f"""<!doctype html>
+<html><head><title>Team Accounts — EvolveIQ Ops</title><style>{PAGE_CSS}{ADMIN_USERS_CSS}</style></head>
+<body>
+  {NAV_HTML}
+  <h1>Team Accounts</h1>
+  <div class="sub">Everyone who can sign in to this tool. Each account is separate from client-facing logins.</div>
+
+  <table class="users-table">
+    <tbody>{rows or '<tr><td colspan="2" class="no-rows">No accounts yet — add one below.</td></tr>'}</tbody>
+  </table>
+
+  <h3 style="font-family:var(--font-display); font-size:16px; margin-bottom:14px;">Add someone</h3>
+  <form id="addUserForm" class="add-user-form">
+    <div>
+      <label>Username</label>
+      <input name="username" required autocomplete="off" />
+    </div>
+    <div>
+      <label>Password</label>
+      <input name="password" type="password" required autocomplete="new-password" />
+    </div>
+    <button type="submit">Add</button>
+  </form>
+  <div id="userFormStatus"></div>
+
+  <script>{ADMIN_USERS_JS}</script>
+</body></html>"""
+
+
+@app.post("/admin/users")
+async def admin_add_user(request: Request):
+    body = await request.json()
+    username = str(body.get("username", "")).strip()
+    password = str(body.get("password", ""))
+    if not username or not password:
+        return JSONResponse({"ok": False, "message": "Username and password are both required"}, status_code=400)
+    if len(password) < 8:
+        return JSONResponse({"ok": False, "message": "Password must be at least 8 characters"}, status_code=400)
+    auth.add_user(username, password)
+    return {"ok": True}
+
+
+@app.delete("/admin/users/{username}")
+def admin_remove_user(username: str, request: Request):
+    current = getattr(request.state, "username", "")
+    if username.strip().lower() == current:
+        return JSONResponse({"ok": False, "message": "You can't remove your own account while signed in as it"}, status_code=400)
+    if len(auth.list_usernames()) <= 1:
+        return JSONResponse({"ok": False, "message": "Can't remove the last remaining account — you'd lock everyone out"}, status_code=400)
+    auth.remove_user(username)
+    return {"ok": True}
+
+
 def load_clients():
     clients = json.loads(CLIENTS_PATH.read_text())
     migrated = False
@@ -259,6 +366,14 @@ def delete_client_data(client: dict):
 def fetch_support_requests(port: int) -> list:
     try:
         with urllib.request.urlopen(f"http://localhost:{port}/api/support-requests", timeout=3) as resp:
+            return json.loads(resp.read())
+    except Exception:
+        return []
+
+
+def fetch_leads(port: int) -> list:
+    try:
+        with urllib.request.urlopen(f"http://localhost:{port}/api/leads", timeout=3) as resp:
             return json.loads(resp.read())
     except Exception:
         return []
@@ -511,9 +626,11 @@ document.getElementById("genForm")?.addEventListener("submit", async (e) => {
 NAV_HTML = """
 <div class="topnav">
   <a href="/">Launcher</a>
+  <a href="/leads">Leads</a>
   <a href="/outreach">Outreach</a>
   <a href="/support-requests">Support requests</a>
   <a href="/bip-import">BIP import</a>
+  <a href="/admin/users">Team accounts</a>
   <a href="/logout" class="topnav-signout">Sign out</a>
 </div>
 """
@@ -617,6 +734,51 @@ def promote(client_id: str):
         except Exception as e:
             return {"ok": True, "message": f"{client['name']} promoted to client status, but could not retire its demo page: {e}"}
     return {"ok": True, "message": f"{client['name']} promoted to client status"}
+
+
+@app.api_route("/proxy/{port}/{path:path}", methods=["GET", "POST", "OPTIONS"])
+async def proxy_to_client(port: int, path: str, request: Request):
+    """Forward a request to a client/demo instance's own backend, so a demo page's
+    live widget (loaded from a public demo link, opened by anyone, not just this
+    machine) can actually reach it — the instance itself only listens on
+    127.0.0.1 and was never meant to be reached directly. Deliberately public (see
+    PUBLIC_PATH_PREFIXES) since real prospects hit this when they chat with a demo.
+
+    Restricted to ports this launcher actually knows about via clients.json, not an
+    arbitrary port number — this is a scoped relay to registered instances only,
+    not an open proxy to anything on localhost."""
+    known_ports = {c["port"] for c in load_clients()}
+    if port not in known_ports:
+        return JSONResponse({"ok": False, "message": "unknown instance"}, status_code=404)
+
+    target = f"http://127.0.0.1:{port}/{path}"
+    query = request.url.query
+    if query:
+        target += f"?{query}"
+    body = await request.body()
+
+    req = urllib.request.Request(
+        target,
+        data=body if body else None,
+        method=request.method,
+        headers={
+            "Content-Type": request.headers.get("content-type", "application/octet-stream"),
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            content = resp.read()
+            content_type = resp.headers.get("Content-Type", "application/octet-stream")
+            status = resp.status
+    except urllib.error.HTTPError as e:
+        content = e.read()
+        content_type = e.headers.get("Content-Type", "application/octet-stream") if e.headers else "text/plain"
+        status = e.code
+    except urllib.error.URLError:
+        return JSONResponse({"ok": False, "message": "instance not reachable — is it running?"}, status_code=502)
+
+    from fastapi import Response
+    return Response(content=content, status_code=status, media_type=content_type)
 
 
 @app.get("/file")
@@ -900,6 +1062,159 @@ async def proxy_update_status(client_id: str, request_id: int, body: dict):
         )
         urllib.request.urlopen(req, timeout=5)
         return {"ok": True}
+    except Exception as e:
+        return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
+
+
+LEAD_STATUS_OPTIONS = ["new", "claimed", "done"]
+LEAD_OUTCOME_OPTIONS = ["", "booked", "not_interested", "no_response", "duplicate", "spam", "other"]
+
+LEADS_PAGE_JS = """
+async function updateLead(clientId, leadId, field, value) {
+  const statusEl = document.querySelector(`tr[data-lead-id="${leadId}"] .lead-save-status`);
+  if (statusEl) statusEl.textContent = "Saving...";
+  const res = await fetch(`/leads/${clientId}/${leadId}/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ [field]: value }),
+  });
+  const data = await res.json();
+  if (statusEl) statusEl.textContent = data.ok ? "Saved" : "Failed";
+  setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 1500);
+  if (field === "status") {
+    document.querySelector(`tr[data-lead-id="${leadId}"]`).dataset.status = value;
+    applyLeadFilters();
+  }
+}
+
+function applyLeadFilters() {
+  const clientVal = document.getElementById("filterClient").value;
+  const statusVal = document.getElementById("filterStatus").value;
+  const claimedVal = document.getElementById("filterClaimed").value.trim().toLowerCase();
+  document.querySelectorAll("tr[data-client][data-status]").forEach((row) => {
+    const clientMatch = !clientVal || row.dataset.client === clientVal;
+    const statusMatch = !statusVal || row.dataset.status === statusVal;
+    const claimedMatch = !claimedVal || (row.dataset.claimedBy || "").toLowerCase().includes(claimedVal);
+    row.style.display = (clientMatch && statusMatch && claimedMatch) ? "" : "none";
+  });
+}
+document.getElementById("filterClient")?.addEventListener("change", applyLeadFilters);
+document.getElementById("filterStatus")?.addEventListener("change", applyLeadFilters);
+document.getElementById("filterClaimed")?.addEventListener("input", applyLeadFilters);
+
+document.querySelectorAll(".lead-status-select").forEach((sel) => {
+  sel.addEventListener("change", (e) => {
+    const row = e.target.closest("tr");
+    updateLead(row.dataset.client, row.dataset.leadId, "status", e.target.value);
+  });
+});
+document.querySelectorAll(".lead-outcome-select").forEach((sel) => {
+  sel.addEventListener("change", (e) => {
+    const row = e.target.closest("tr");
+    updateLead(row.dataset.client, row.dataset.leadId, "outcome", e.target.value);
+  });
+});
+document.querySelectorAll(".lead-claimed-input").forEach((inp) => {
+  inp.addEventListener("change", (e) => {
+    const row = e.target.closest("tr");
+    row.dataset.claimedBy = e.target.value;
+    updateLead(row.dataset.client, row.dataset.leadId, "claimed_by", e.target.value);
+  });
+});
+"""
+
+
+@app.get("/leads", response_class=HTMLResponse)
+def leads_page():
+    clients = load_clients()
+    all_rows = []
+    for c in clients:
+        if not is_running(c["port"]):
+            continue
+        for lead in fetch_leads(c["port"]):
+            lead["_client_id"] = c["id"]
+            lead["_client_name"] = c["name"]
+            all_rows.append(lead)
+    all_rows.sort(key=lambda r: r["created_at"], reverse=True)
+
+    client_options = "\n".join(f'<option value="{c["id"]}">{c["name"]}</option>' for c in clients)
+    status_options = "".join(f'<option value="{s}">{s.title()}</option>' for s in LEAD_STATUS_OPTIONS)
+
+    def row_html(r):
+        status = r.get("status") or "new"
+        claimed_by = r.get("claimed_by") or ""
+        status_opts = "".join(
+            f'<option value="{s}" {"selected" if status == s else ""}>{s.title()}</option>'
+            for s in LEAD_STATUS_OPTIONS
+        )
+        outcome = r.get("outcome") or ""
+        outcome_opts = "".join(
+            f'<option value="{o}" {"selected" if outcome == o else ""}>{(o or "—").replace("_", " ").title()}</option>'
+            for o in LEAD_OUTCOME_OPTIONS
+        )
+        contact = " / ".join(x for x in [r.get("name"), r.get("email"), r.get("phone")] if x) or "—"
+        return f"""
+        <tr data-client="{r['_client_id']}" data-status="{status}" data-lead-id="{r['id']}" data-claimed-by="{claimed_by}">
+          <td><strong>{r['_client_name']}</strong></td>
+          <td>{contact}</td>
+          <td>{r.get('intent', '') or '—'}</td>
+          <td style="max-width:240px;">{r.get('notes') or '—'}</td>
+          <td><select class="lead-status-select">{status_opts}</select></td>
+          <td><input class="lead-claimed-input" value="{claimed_by}" placeholder="Unclaimed" /></td>
+          <td><select class="lead-outcome-select">{outcome_opts}</select></td>
+          <td>{r['created_at'][:16].replace('T', ' ')}</td>
+          <td><span class="lead-save-status"></span></td>
+        </tr>"""
+
+    rows_html = "\n".join(row_html(r) for r in all_rows) or ""
+    no_rows_html = '<div class="no-rows">No leads yet.</div>' if not all_rows else ""
+
+    return f"""<!doctype html>
+<html><head><title>Leads — EvolveIQ Ops</title><style>{PAGE_CSS}</style></head>
+<body>
+  {NAV_HTML}
+  <h1>Leads</h1>
+  <div class="sub">Every lead, across every running client, in one place — {len(all_rows)} total.</div>
+
+  <div class="filters">
+    <select id="filterClient"><option value="">All clients</option>{client_options}</select>
+    <select id="filterStatus"><option value="">All statuses</option>{status_options}</select>
+    <input id="filterClaimed" placeholder="Filter by who's working it..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);" />
+  </div>
+
+  {no_rows_html}
+  <table class="requests" style="{'display:none;' if not all_rows else ''}">
+    <thead><tr>
+      <th>Client</th><th>Contact</th><th>Intent</th><th>Notes</th><th>Status</th><th>Working it</th><th>Outcome</th><th>Captured</th><th></th>
+    </tr></thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+
+  <script>{LEADS_PAGE_JS}</script>
+</body></html>"""
+
+
+@app.post("/leads/{client_id}/{lead_id}/update")
+async def update_lead_proxy(client_id: str, lead_id: int, body: dict):
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    allowed = {"status", "claimed_by", "notes", "good_to_know", "outcome"}
+    payload = {k: v for k, v in body.items() if k in allowed}
+    if not payload:
+        return JSONResponse({"ok": False, "message": "nothing to update"}, status_code=400)
+    try:
+        req = urllib.request.Request(
+            f"http://localhost:{client['port']}/api/leads/{lead_id}",
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="PATCH",
+        )
+        urllib.request.urlopen(req, timeout=5)
+        return {"ok": True}
+    except urllib.error.HTTPError as e:
+        return JSONResponse({"ok": False, "message": e.read().decode()[:300]}, status_code=e.code)
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
 
