@@ -40,23 +40,64 @@ product itself.
 
 ---
 
-## 2. Sales Goal Right Now: 3–5 Paying Customers, Not Volume
+## 2. The Actual Goal: Revenue Speed, via Two Parallel Tracks
 
-Per `GTM_AND_BIP_PRIORITY.md`, Phase 1's explicit goal is converting **3-5
-paying customers** — not maximizing outreach volume. Nobody has ever paid
-for this product yet. That is the actual current state, and it should shape
-how a new teammate is deployed: prove the sales motion and the pricing
-before scaling either.
+**Corrected 2026-08-13** — this section previously said "3-5 paying
+customers, not volume" and told a new teammate to hold off on outreach
+scope. That was too narrow. The real mission, stated plainly: this is a
+young company and the first job is getting to revenue as fast as possible.
+That means running two tracks at once, not choosing between them.
 
-Do not have a new teammate run the full 100-business / 10-industry list
-from `LEAD_LAUNCH_STRATEGY.md` on day one. Scope their initial work to the
-two verticals with real product behind them (§3), chasing a small number of
-real conversations, not maximum coverage.
+### Track A — High-ticket vertical intelligence (brand + core offering)
+
+HVAC, Legal, and the rest of the top-ten industry list. Higher ticket,
+stronger per-client MRR, but slower and relationship-driven — and gated by
+whether a real BIP exists for that vertical (§3). This is the brand the
+company is building around long-term, and where the deepest product value
+lives.
+
+### Track B — Low-hanging fruit: sole proprietors and 2-3-person operations
+
+Businesses that make real money but leak opportunity because the owner
+can't do the work *and* manage leads at the same time — classic Lead Launch
+territory (`LEAD_LAUNCH_STRATEGY.md` §6's "Hidden Operators": no site, a
+weak site, or a passive site). Lower ticket per client, but the retention
+story is strong: get them **one additional client a month** through better
+lead capture, and they never leave — especially bundled with the free/cheap
+website (Lead Launch's $375 build, 60 days of Evie and hosting free). This
+track is **not BIP-gated** the same way Track A is — Lead Launch's assistant
+runs off that business's own site content plus basic FAQs, not deep
+vertical intelligence, so it can scale across many small-business
+categories immediately, without waiting on more BIPs to be built.
+
+### Who works which track
+
+- **Larry and Natalia** work **all three target types personally** —
+  high-ticket Track A prospects and Track B low-hanging fruit alike. This
+  isn't a segregated org chart; it's where the founders' direct
+  relationship-driven selling applies regardless of ticket size.
+- **VA teammates get deployed specifically against Track B** to hammer
+  volume and push MRR up — Track B's lighter BIP requirements and faster
+  sales cycle make it the right fit for scripted, high-volume outreach by
+  someone who isn't doing founder-level relationship selling. It is
+  completely fine if Track B, run by VAs, is what actually gets this
+  company to revenue first while Larry and Natalia are still closing the
+  bigger Track A deals.
+- **The gate on VA headcount is unit economics, not a calendar date**: as
+  long as the profit from the clients a VA closes covers that VA's cost,
+  keep deploying them against Track B. If a VA's list stops converting
+  profitably, that's the signal to stop or redirect them — not a fixed
+  timeline.
+- **Open decision, not yet set**: a specific MRR target that defines "we've
+  hammered the list enough." Pick a number — this doc will track it in §7
+  once set.
 
 ---
 
-## 3. Target Verticals (reconciled — this supersedes conflicting priority
+## 3. Target Segments (reconciled — this supersedes conflicting priority
 lists elsewhere in `docs/`)
+
+### Track A — vertical priority (BIP-gated; Larry/Natalia-led)
 
 | Priority | Vertical | Why | Status |
 |---|---|---|---|
@@ -66,9 +107,21 @@ lists elsewhere in `docs/`)
 Everything else in `LEAD_LAUNCH_STRATEGY.md`'s 10-industry list (electricians,
 plumbers, roofing, concrete, tree service, mobile mechanics, restoration,
 etc.) and `GTM_AND_BIP_PRIORITY.md`'s next-3 (roofing, med spa, auto repair)
-is real future work, not a lie — just not yet, and not what a first
-teammate should be sent after. Expand only after HVAC + Legal produce real
-paying conversations.
+is real future work — expand Track A only after HVAC + Legal produce real
+paying conversations, and only build/announce a vertical's intelligence
+once its BIP is actually real (the pre-send checklist in §5 exists
+specifically to stop this line from being crossed by accident).
+
+### Track B — low-hanging fruit (not BIP-gated; VA-suitable)
+
+Any sole-proprietor or 2-3-person operation with real revenue and a
+genuine No Website / Weak Website / Passive Website gap, per
+`LEAD_LAUNCH_STRATEGY.md` §6. Industry-agnostic — a VA can pull from the
+full prospect list here without waiting on a vertical BIP, because the
+pitch is "we'll get you an additional client a month and give you a better
+website while we're at it," not "we have deep [industry] intelligence."
+The three prospect segments and scoring model in `LEAD_LAUNCH_STRATEGY.md`
+§6–8 apply directly.
 
 ---
 
@@ -104,6 +157,14 @@ $375 one-time build, Evie and hosting free for 60 days, then standard Core
 pricing if they keep it or $50/month hosting-only if they don't. This is an
 acquisition pathway into Core, not a separate business — see
 `LEAD_LAUNCH_STRATEGY.md` §1–2 for the full reasoning.
+
+**The Track B retention pitch specifically**: for a sole proprietor or
+2-3-person operation, the ticket size is smaller, but the story is
+stickier — get them **one additional client a month** they wouldn't have
+caught otherwise, bundled with a website they needed anyway, and they have
+no real reason to ever cancel. Say this plainly in the pitch: "this pays
+for itself the first time it catches a lead you'd have otherwise missed
+while you were on a job."
 
 ---
 
@@ -157,25 +218,45 @@ Before sending any demo link to a real prospect:
 
 ---
 
-## 6. Roles (once a teammate is in place)
+## 6. Roles
 
-Per `LEAD_LAUNCH_STRATEGY.md` §11, scoped to a 2-person version for now
-(Larry + one teammate) rather than the full 3-role model until volume
-justifies a third person:
+**Corrected 2026-08-13** to match the two-track model in §2, replacing the
+earlier single-teammate/single-track version.
 
-- **Research + Demo**: find and qualify prospects, generate demos, run the
-  pre-send checklist. This is the natural first role for a new teammate.
-- **Sales/Closer**: outreach, calls, follow-up, closing. Larry, at least
-  until the motion is proven — the founder-led sales GTM doc explicitly
-  frames the first 3-5 conversions as hands-on, not delegated.
+- **Larry & Natalia**: relationship-driven selling across *all* target
+  types — Track A (HVAC, Legal, top-ten) and Track B (low-hanging fruit)
+  alike. Research, demo, and close personally for now on the higher-touch
+  Track A deals especially, since those require the most judgment (BIP
+  completeness, vertical credibility) and the biggest trust-building.
+- **VA teammates (a couple, deployed against Track B)**: research and
+  qualify prospects from the low-hanging-fruit segment, generate demos,
+  run the pre-send checklist (§5 — applies regardless of track), send
+  outreach, and hand off warm responses for Larry/Natalia to close if the
+  motion isn't fully delegatable yet. This is volume work by design — the
+  point is to hammer the list, not hand-pick a few.
+- **Scaling rule for VA headcount**: keep a running tally of (a) what a VA
+  costs per month and (b) the profit from clients that VA's list actually
+  converts. As long as (b) covers (a), keep going or add another VA. The
+  moment a VA's list stops converting profitably, redirect or pause them —
+  this is the real gate, not a fixed timeline or a fixed number of VAs.
 
 ---
 
 ## 7. What "Done" Looks Like for This Phase
 
-Per `GTM_AND_BIP_PRIORITY.md` Phase 1, success is **3–5 paying customers**,
-tracked manually (conversations, leads captured, bookings clicked,
-unresolved questions, owner feedback) — not a dashboard metric yet. Once
-that's real, the next phase is verticalizing further (§3's "everything
-else" list) and formalizing pricing at whatever tier proved to be an easy
-yes in real conversations, not the current provisional numbers.
+Two separate bars, since the two tracks run on different logic:
+
+- **Track A**: per `GTM_AND_BIP_PRIORITY.md` Phase 1, the validation goal
+  is **3–5 paying customers** — proving the higher-ticket sales motion and
+  pricing works, tracked manually (conversations, leads captured, bookings
+  clicked, unresolved questions, owner feedback), not a dashboard metric
+  yet.
+- **Track B**: a **specific MRR target** — not yet set (see §2). Once
+  Larry picks a number, it belongs here, along with the running VA
+  cost-vs-profit tally from §6. Track B is "done" (for this phase) when
+  that MRR number is hit *and* it was hit profitably, not just hit.
+
+Once both bars are cleared, the next phase is expanding Track A into more
+verticals (§3's "everything else" list) and formalizing pricing at
+whatever tier proved to be an easy yes in real conversations, not the
+current provisional numbers.
