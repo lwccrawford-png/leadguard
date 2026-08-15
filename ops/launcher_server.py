@@ -578,6 +578,21 @@ def post_json(port: int, path: str, payload: dict):
     urllib.request.urlopen(req, timeout=5)
 
 
+def get_json(port: int, path: str):
+    with urllib.request.urlopen(f"http://localhost:{port}{path}", timeout=5) as resp:
+        return json.loads(resp.read())
+
+
+def put_json(port: int, path: str, payload: dict):
+    req = urllib.request.Request(
+        f"http://localhost:{port}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="PUT",
+    )
+    urllib.request.urlopen(req, timeout=5)
+
+
 def fetch_composition(port: int) -> dict:
     with urllib.request.urlopen(f"http://localhost:{port}/api/knowledge/composition", timeout=5) as resp:
         return json.loads(resp.read())
@@ -1445,8 +1460,11 @@ async function applyBip() {
     body: JSON.stringify({ client_id: clientId, values: currentValues() }),
   });
   const data = await res.json();
+  const intelNote = data.intelligence_applied
+    ? ` Intelligence config prefilled from this BIP (${data.routing_rules_added} routing rule${data.routing_rules_added === 1 ? '' : 's'} added) — review under Settings → Configure intelligence & routing.`
+    : '';
   statusEl.textContent = data.ok
-    ? `Applied — ${data.facts_added} facts, ${data.faqs_added} FAQs written, knowledge_source set to "${data.knowledge_source}".`
+    ? `Applied — ${data.facts_added} facts, ${data.faqs_added} FAQs written, knowledge_source set to "${data.knowledge_source}".${intelNote}`
     : `Failed: ${data.message}`;
 }
 """
@@ -1571,6 +1589,40 @@ def bip_import_apply(bip_id: str, req: BipApplyRequest):
         except Exception:
             pass
 
+    intel_defaults = parsed.get("intelligence_defaults")
+    intelligence_applied = False
+    routing_rules_added = 0
+    if intel_defaults:
+        try:
+            settings = get_json(client["port"], "/api/intelligence/settings")
+            # Fill-blanks-only merge: never overwrite a value the operator already set,
+            # so re-running BIP import (or importing after someone's already customized
+            # this client's settings) can't silently clobber real edits. `vertical` is
+            # the one field that's always set to match whichever BIP is applied — it's
+            # not a per-client customization, it's "which template is this."
+            settings["vertical"] = bip_id.removesuffix("_premium")
+            settings["enabled"] = True
+            for key in ("scoring_rules", "priority_thresholds", "never_say_text", "approved_boundary_text",
+                        "existing_representation_policy", "out_of_area_policy", "property_damage_only_policy"):
+                if key in intel_defaults and not settings.get(key):
+                    settings[key] = intel_defaults[key]
+            if not settings.get("accepted_types") and intel_defaults.get("accepted_types_suggested"):
+                settings["accepted_types"] = intel_defaults["accepted_types_suggested"]
+            if not settings.get("excluded_types") and intel_defaults.get("excluded_types_suggested"):
+                settings["excluded_types"] = intel_defaults["excluded_types_suggested"]
+            put_json(client["port"], "/api/intelligence/settings", settings)
+            intelligence_applied = True
+
+            existing_rules = get_json(client["port"], "/api/intelligence/routing-rules")
+            existing_labels = {r["label"] for r in existing_rules}
+            for rule in intel_defaults.get("routing_rules", []):
+                if rule["label"] in existing_labels:
+                    continue  # already applied in a previous import — don't duplicate
+                post_json(client["port"], "/api/intelligence/routing-rules", rule)
+                routing_rules_added += 1
+        except Exception:
+            pass  # BIP import's knowledge/facts/FAQs already succeeded — don't fail the whole apply over this
+
     return {
         "ok": True,
         "facts_added": facts_added,
@@ -1578,6 +1630,8 @@ def bip_import_apply(bip_id: str, req: BipApplyRequest):
         "facts_total": len(parsed["facts"]),
         "faqs_total": len(parsed["faqs"]),
         "knowledge_source": knowledge_source,
+        "intelligence_applied": intelligence_applied,
+        "routing_rules_added": routing_rules_added,
     }
 
 

@@ -10,7 +10,17 @@ knowledge lives entirely in the flow script rather than a Facts/FAQ table (e.g. 
 intake/routing-style BIP like Personal Injury Premium) — these legitimately have zero
 facts and zero FAQs by design, not a parsing failure, and the operator applying them
 needs a visible checklist of what to configure before treating the BIP as "done."
+
+And one more optional section, "## Intelligence Defaults", for premium BIPs that use
+the priority-scoring/routing engine (backend/app/services/intelligence.py) — a single
+fenced JSON block holding the vertical's scoring rules, priority thresholds, suggested
+accepted/excluded case types, starter routing rules, and boilerplate policy/guardrail
+text. This is what lets BIP import prefill a client's Intelligence Configuration page
+instead of someone hand-typing an entire vertical's scoring model per client.
 """
+from __future__ import annotations
+
+import json
 import re
 
 
@@ -31,6 +41,7 @@ def parse_bip(path) -> dict:
         except (ValueError, TypeError):
             f["priority"] = 0
     required_config = _extract_bullet_list(text, "## Required Configuration")
+    intelligence_defaults = _extract_json_block(text, "## Intelligence Defaults")
 
     placeholder_text = flow_script + " ".join(
         v for row in facts for v in row.values()
@@ -45,6 +56,7 @@ def parse_bip(path) -> dict:
         "faqs": faqs,
         "required_config": required_config,
         "placeholders": placeholders,
+        "intelligence_defaults": intelligence_defaults,
     }
 
 
@@ -92,6 +104,21 @@ def _extract_bullet_list(text: str, heading: str) -> list:
         if line.startswith("- "):
             items.append(line[2:].strip())
     return items
+
+
+def _extract_json_block(text: str, heading: str) -> dict | None:
+    """A BIP's optional structured-config section: one fenced ```json block under
+    `heading`. Missing section or invalid JSON both just mean "this BIP has no
+    intelligence defaults" (None) — never a parse failure that blocks the rest of
+    the BIP from loading."""
+    section = _section(text, heading)
+    match = re.search(r"```json\n(.*?)```", section, re.DOTALL)
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
 
 
 def substitute(text: str, values: dict) -> str:

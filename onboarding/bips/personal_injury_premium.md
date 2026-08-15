@@ -197,6 +197,72 @@ These are examples for operator configuration, not legal judgments.
 }
 ```
 
+## Intelligence Defaults
+
+Machine-readable form of everything above — what BIP Import writes to a client's
+Intelligence Configuration page automatically, so setup starts from a working
+personal-injury scoring model instead of a blank form. `accepted_types`/
+`excluded_types` are a common starting selection, not a fixed list — adjust per
+firm. `approved_boundary_text` is a starting draft only; every firm's attorney
+should review and approve it before it's used with real visitors.
+
+```json
+{
+  "scoring_rules": {
+    "fatality": 25,
+    "major_surgery_or_hospitalization": 20,
+    "significant_injury": 15,
+    "active_treatment": 8,
+    "commercial_truck": 15,
+    "commercial_vehicle": 10,
+    "pedestrian_or_motorcycle": 8,
+    "child_involved": 10,
+    "police_or_incident_report": 5,
+    "photos_or_video": 3,
+    "witnesses": 3,
+    "within_72_hours": 10,
+    "within_30_days": 7,
+    "requests_attorney_conversation": 10,
+    "provides_contact_info": 5,
+    "requests_consultation": 8,
+    "inside_jurisdiction": 10,
+    "accepted_case_type": 10
+  },
+  "priority_thresholds": {"p1": 70, "p2": 45, "p3": 20},
+  "accepted_types_suggested": ["auto_accident", "truck_accident", "motorcycle_accident", "pedestrian_accident", "slip_and_fall", "dog_bite", "wrongful_death"],
+  "excluded_types_suggested": ["medical_malpractice", "workers_comp", "product_liability"],
+  "never_say_text": "Never tell a visitor whether they have a case, who is legally at fault, what a claim is worth, whether to accept or reject a settlement, whether to give a recorded statement, or what legal action to take. Never promise representation or an outcome. Never imply that chatting creates an attorney-client relationship. Never state a specific statute-of-limitations deadline — deadlines vary by state and case type.",
+  "approved_boundary_text": "I'm not an attorney and can't give legal advice — I can't tell you whether you have a case, who's at fault, or what it might be worth. I can gather information and get you connected with our team quickly. [Firm: review and customize this disclaimer with your attorney before use.]",
+  "existing_representation_policy": "If the visitor states they are already represented by another attorney for this matter, do not discuss case specifics or offer opinions on their existing representation. Politely note that we're glad they have counsel, and let them know we're here if that ever changes.",
+  "out_of_area_policy": "If the incident occurred outside the firm's configured jurisdiction(s), say so plainly, avoid detailed intake, and offer to pass their information along in case a referral makes sense.",
+  "property_damage_only_policy": "If the visitor describes property damage only, with no reported injury, capture their information but do not encourage additional intake questions beyond what's needed for a callback — this firm's expertise is personal injury representation, not property-damage-only claims.",
+  "routing_rules": [
+    {
+      "label": "Catastrophic or fatality — immediate review",
+      "condition": {"any_signal": ["fatality", "major_surgery_or_hospitalization"]},
+      "priority_override": "P1",
+      "destination_label": "Urgent intake"
+    },
+    {
+      "label": "Commercial truck priority",
+      "condition": {"any_signal": ["commercial_truck"]},
+      "priority_override": "P1",
+      "destination_label": "Senior intake"
+    },
+    {
+      "label": "Existing representation review",
+      "condition": {"any_signal": ["already_represented"]},
+      "destination_label": "Representation policy review"
+    },
+    {
+      "label": "Outside jurisdiction",
+      "condition": {"any_signal": ["outside_jurisdiction"]},
+      "destination_label": "Referral / jurisdiction review"
+    }
+  ]
+}
+```
+
 ## Demo Scenarios
 
 ### Texas auto accident
