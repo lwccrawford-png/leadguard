@@ -190,6 +190,13 @@ table button.cancel { background: none; border: none; color: #888; cursor: point
 .lead-card.dragging { opacity: 0.4; }
 .lead-card-intent { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
 .lead-card-phase { display: inline-block; font-size: 10px; font-weight: 600; color: #555; background: #eef0f4; border-radius: 10px; padding: 2px 8px; margin-bottom: 6px; }
+.lead-card-priority { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #fff; border-radius: 10px; padding: 2px 8px; margin-bottom: 6px; }
+.lead-card-priority.p1 { background: #dc2626; }
+.lead-card-priority.p2 { background: #ea580c; }
+.lead-card-priority.p3 { background: #ca8a04; }
+.lead-card-priority.p4 { background: #6b7280; }
+.lead-card-priority .priority-dest { font-weight: 500; opacity: 0.9; }
+.lead-card-summary { font-size: 12px; color: #444; background: #f7f7fb; border-radius: 6px; padding: 6px 8px; margin: 4px 0; line-height: 1.4; }
 .lead-card-name { font-weight: 600; }
 .rot-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 .rot-dot.fresh { background: #22c55e; }
