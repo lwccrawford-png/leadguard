@@ -33,6 +33,7 @@ class BusinessSettings(BaseModel):
     rot_aging_minutes: int = 1440
     rot_rotting_minutes: int = 4320
     pipeline_enabled: bool = False
+    priority_routing_enabled: bool = False
     knowledge_source: str = ""
     greeting: str = ""
     disclosure_text: str = ""
@@ -110,8 +111,8 @@ def update_business(settings: BusinessSettings):
             """UPDATE business SET name=?, industry=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
-               knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=?,
-               demo_expires_at=?, demo_enabled=?, booking_link=? WHERE id=1""",
+               priority_routing_enabled=?, knowledge_source=?, greeting=?, disclosure_text=?,
+               demo_suggested_questions=?, demo_expires_at=?, demo_enabled=?, booking_link=? WHERE id=1""",
             (
                 settings.name,
                 settings.industry,
@@ -127,6 +128,7 @@ def update_business(settings: BusinessSettings):
                 settings.rot_aging_minutes,
                 settings.rot_rotting_minutes,
                 int(settings.pipeline_enabled),
+                int(settings.priority_routing_enabled),
                 settings.knowledge_source,
                 settings.greeting,
                 settings.disclosure_text,

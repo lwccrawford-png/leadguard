@@ -177,6 +177,7 @@ async function loadBusiness() {
   form.elements["pipeline_enabled"].checked = !!data.pipeline_enabled;
   PIPELINE_ENABLED = !!data.pipeline_enabled;
   $("#pipelineTab").hidden = !PIPELINE_ENABLED;
+  $("#intelligenceCard").hidden = !data.priority_routing_enabled;
   const apiBase = window.location.origin;
   const displayName = data.assistant_name || data.name || "Chat with us";
   const greeting = data.greeting || greetingPreset(data.assistant_name, data.name);

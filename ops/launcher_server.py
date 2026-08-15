@@ -116,13 +116,13 @@ def public_base_for(port: int) -> str:
 
 
 # Tier-linked feature defaults, mirroring the feature matrix on the marketing site.
-# pipeline_enabled is the only flag with a real, live-wired effect today — it's the
-# same field the client's own dashboard Settings tab writes to, and it directly gates
-# that dashboard's Pipeline tab/board. The other three record what a client is
-# entitled to under their tier for when the routing engine ships (currently sitting
-# unmerged and stale on feature/hvac-premium-bip-v2) — toggling them today does not
-# change any live behavior. multi_location_enabled is Enterprise-only bookkeeping;
-# there's no multi-instance shared view built yet either.
+# pipeline_enabled and priority_routing_enabled are live-wired (see LIVE_WIRED_FEATURES
+# below) — each is a real column on the client's own business record, gating that
+# dashboard's Pipeline tab and "Configure intelligence & routing" card respectively.
+# compliance_escalation_enabled and handoff_summaries_enabled record what a client is
+# entitled to under their tier for when those get their own dedicated config surfaces —
+# toggling them today does not change any live behavior. multi_location_enabled is
+# Enterprise-only bookkeeping; there's no multi-instance shared view built yet either.
 TIER_FEATURES = {
     "core": {
         "pipeline_enabled": False,
@@ -161,18 +161,20 @@ FEATURE_LABELS = {
     "handoff_summaries_enabled": "Handoff summaries",
     "multi_location_enabled": "Multi-location view",
 }
-LIVE_WIRED_FEATURES = {"pipeline_enabled"}
+LIVE_WIRED_FEATURES = {"pipeline_enabled", "priority_routing_enabled"}
 
 
-def push_pipeline_flag(client: dict) -> bool:
-    """Push this client's stored pipeline_enabled flag to its own running backend
+def push_feature_flags(client: dict) -> bool:
+    """Push this client's stored live-wired feature flags to its own running backend
     (fetch-then-put — see promote()'s comment on why PUT /api/business needs the
     full object, not a partial one). Returns True if the push actually happened."""
     if not is_running(client["port"]):
         return False
     try:
         current = fetch_business(client["port"])
-        current["pipeline_enabled"] = bool((client.get("features") or {}).get("pipeline_enabled"))
+        features = client.get("features") or {}
+        for key in LIVE_WIRED_FEATURES:
+            current[key] = bool(features.get(key))
         put_business(client["port"], current)
         return True
     except Exception:
@@ -432,7 +434,7 @@ def start_client(client: dict):
         if is_running(client["port"]):
             if client.get("type") == "demo":
                 _touch_last_started(client["id"])
-            push_pipeline_flag(client)
+            push_feature_flags(client)
             return {"ok": True, "message": f"{client['name']} started on :{client['port']}"}
     return {"ok": False, "message": f"{client['name']} did not start — check {log_path}"}
 
@@ -665,7 +667,7 @@ def client_card_html(c: dict) -> str:
         wired = key in LIVE_WIRED_FEATURES
         state_class = "feature-pill-on" if on else "feature-pill-off"
         wired_class = "" if wired else "feature-pill-unwired"
-        title = "Live — controls the client's actual Pipeline tab" if wired \
+        title = "Live — controls the client's actual dashboard" if wired \
             else "Entitlement only — no live engine yet, does not change behavior"
         suffix = "" if wired else " *"
         pills.append(
@@ -897,7 +899,7 @@ def home():
   {NAV_HTML}
   <h1>Clients</h1>
   <div class="sub">Local control panel — no terminal needed. Bookmark this page. Prospecting and demo generation live under Outreach now.</div>
-  <div class="sub" style="margin-top:-14px;">Set a tier on each card to apply its default features. Pipeline is live and takes effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
+  <div class="sub" style="margin-top:-14px;">Set a tier on each card to apply its default features. Pipeline and Priority routing are live and take effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
 
   <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:10px;">Sales snapshot</h2>
   {stats_html}
@@ -964,11 +966,13 @@ async def set_client_tier(client_id: str, request: Request):
     client["tier"] = tier or None
     client["features"] = dict(TIER_FEATURES.get(tier, {}))
     save_clients(clients)
-    pushed = push_pipeline_flag(client)
+    pushed = push_feature_flags(client)
     label = TIER_LABELS.get(tier, "no tier")
     message = f"{client['name']} set to {label}"
-    if client["features"].get("pipeline_enabled") and not pushed:
-        message += " — Pipeline will apply once the environment is started"
+    if not pushed:
+        pending = [FEATURE_LABELS[k] for k in LIVE_WIRED_FEATURES if client["features"].get(k)]
+        if pending:
+            message += f" — {', '.join(sorted(pending))} will apply once the environment is started"
     return {"ok": True, "message": message, "features": client["features"]}
 
 
@@ -985,8 +989,8 @@ async def toggle_client_feature(client_id: str, feature_key: str, request: Reque
     client.setdefault("features", {})[feature_key] = enabled
     save_clients(clients)
     message = f"{FEATURE_LABELS[feature_key]} {'enabled' if enabled else 'disabled'} for {client['name']}"
-    if feature_key == "pipeline_enabled":
-        pushed = push_pipeline_flag(client)
+    if feature_key in LIVE_WIRED_FEATURES:
+        pushed = push_feature_flags(client)
         if enabled and not pushed:
             message += " — will apply once the environment is started"
     return {"ok": True, "message": message, "features": client["features"]}
@@ -2916,7 +2920,7 @@ def outreach_page():
 
   <h2 style="margin-top:40px;">Demo instances</h2>
   <div class="sub">Every demo generated from a prospect above — start, pause, delete, or promote to a real client.</div>
-  <div class="sub" style="margin-top:-6px;">Set a tier before or after promoting to apply its default features. Pipeline is live and takes effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
+  <div class="sub" style="margin-top:-6px;">Set a tier before or after promoting to apply its default features. Pipeline and Priority routing are live and take effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
   <input id="demoSearch" class="search-input" placeholder="Search demos by name..." oninput="filterCards(this.value)" />
   <div class="grid">{demo_cards}</div>
 

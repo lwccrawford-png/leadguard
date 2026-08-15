@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS business (
     rot_aging_minutes INTEGER NOT NULL DEFAULT 1440,
     rot_rotting_minutes INTEGER NOT NULL DEFAULT 4320,
     pipeline_enabled INTEGER NOT NULL DEFAULT 0,
+    -- Gates the dashboard's "Configure intelligence & routing" link (priority scoring,
+    -- conditional routing) — tier-derived, pushed from ops/launcher_server.py's
+    -- TIER_FEATURES the same way pipeline_enabled is.
+    priority_routing_enabled INTEGER NOT NULL DEFAULT 0,
     last_crawled_at TEXT,
     -- Free-text provenance for what seeded this client's knowledge base — e.g.
     -- "BIP: HVAC v1.0" or "Manual". Purely informational (nothing reads this to change
@@ -247,6 +251,7 @@ def init_db():
             # from the assigned rep's booking link at demo-generation time and pushed live
             # again whenever that rep's link changes, so it never goes stale between demos.
             "ALTER TABLE business ADD COLUMN booking_link TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE business ADD COLUMN priority_routing_enabled INTEGER NOT NULL DEFAULT 0",
         ]:
             try:
                 conn.execute(migration)
