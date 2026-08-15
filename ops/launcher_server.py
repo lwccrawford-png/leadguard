@@ -17,6 +17,8 @@ that template — it does NOT run live against the template's own backend.
 That's deliberate: editing a prospect's demo must never mean editing (or
 risk corrupting) a real, actively-used client instance like LMTLSS.
 """
+import asyncio
+import html
 import json
 import os
 import pathlib
@@ -29,7 +31,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
@@ -48,6 +50,7 @@ PROJECT_ROOT = OPS_DIR.parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 WIDGET_DIR = PROJECT_ROOT / "widget"
 CLIENTS_PATH = OPS_DIR / "clients.json"
+PROSPECT_VIDEOS_DIR = OPS_DIR / "prospect_videos"
 
 # Required non-affiliation disclosure (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md).
 DEFAULT_DEMO_DISCLOSURE = (
@@ -99,6 +102,17 @@ PUBLIC_PATH_PREFIXES = ("/login", "/proxy/")
 # this Mac can ever reach it, so requiring a password here is friction with no real
 # security benefit. Set via the local LaunchAgent plist (ops/README.md), not here.
 LOGIN_DISABLED = os.environ.get("EVOLVEIQ_DISABLE_LOGIN") == "1"
+
+# Set on the cloud deployment only (systemd Environment=, not here) to
+# https://team.justaskevolveiq.com — when set, generated demo links route through
+# /proxy/{port}/... (a real, publicly reachable address) instead of localhost, which
+# is meaningless to anyone except the machine that generated it. Unset locally, where
+# localhost is exactly right since only this Mac ever opens these links.
+PUBLIC_BASE_URL = os.environ.get("EVOLVEIQ_PUBLIC_BASE_URL", "").rstrip("/")
+
+
+def public_base_for(port: int) -> str:
+    return f"{PUBLIC_BASE_URL}/proxy/{port}" if PUBLIC_BASE_URL else f"http://localhost:{port}"
 
 
 @app.middleware("http")
@@ -328,15 +342,45 @@ def start_client(client: dict):
     subprocess.Popen(
         ["venv/bin/uvicorn", "app.main:app", "--port", str(client["port"])],
         cwd=str(BACKEND_DIR),
-        env={"LEADGUARD_DATA_DIR": client["data_dir"], "PATH": "/usr/bin:/bin:/usr/local/bin"},
+        # Inherit this launcher's own environment (ANTHROPIC_API_KEY, RESEND_API_KEY, etc. —
+        # on the droplet these come from evolveiq-ops.service's own EnvironmentFile) rather
+        # than a hand-picked minimal dict. The old minimal env silently gave every demo/
+        # prospect instance started this way (anything not run via the systemd-templated
+        # evolveiq-client@.service real clients use) no API key at all — chat "worked" in
+        # the sense of not crashing, just always returned the same not-configured message.
+        env={**os.environ, "LEADGUARD_DATA_DIR": client["data_dir"]},
         stdout=open(log_path, "w"),
         stderr=subprocess.STDOUT,
+        # Detach into its own session so it survives independently of this launcher
+        # process — without this, every client backend it spawns shares the launcher's
+        # process group and dies right along with it on every restart (needed for every
+        # code deploy), which is exactly what happened locally after the last few fixes.
+        start_new_session=True,
     )
     for _ in range(30):
         time.sleep(0.3)
         if is_running(client["port"]):
+            if client.get("type") == "demo":
+                _touch_last_started(client["id"])
             return {"ok": True, "message": f"{client['name']} started on :{client['port']}"}
     return {"ok": False, "message": f"{client['name']} did not start — check {log_path}"}
+
+
+def _touch_last_started(client_id: str) -> None:
+    """Records when a demo was most recently (re)started, so the auto-stop policy
+    below can tell a fresh restart (7-day cap) from the original creation-time
+    start (30-day cap) — see _auto_stop_expired_demos()."""
+    clients = load_clients()
+    now = datetime.now(timezone.utc).isoformat()
+    changed = False
+    for c in clients:
+        if c["id"] == client_id:
+            c["last_started_at"] = now
+            c.setdefault("created_at", now)
+            changed = True
+            break
+    if changed:
+        save_clients(clients)
 
 
 def stop_client(client: dict) -> dict:
@@ -358,15 +402,74 @@ def stop_client(client: dict) -> dict:
     return {"ok": False, "message": f"{client['name']} did not stop in time"}
 
 
+# A demo left running indefinitely burns memory and (on the cloud) real hosting cost
+# for no reason once a sales conversation has gone cold — per Larry's call: 30 days
+# from its original creation, or just 7 days if someone's manually restarted it since
+# (a restart usually means "let me check on this one," not "keep it live for a month").
+AUTO_STOP_CHECK_INTERVAL_SECONDS = 1800
+DEMO_FIRST_RUN_MAX_DAYS = 30
+DEMO_RESTART_MAX_DAYS = 7
+
+
+async def _auto_stop_expired_demos():
+    while True:
+        await asyncio.sleep(AUTO_STOP_CHECK_INTERVAL_SECONDS)
+        try:
+            clients = load_clients()
+            now = datetime.now(timezone.utc)
+            backfilled = False
+            for c in clients:
+                if c.get("type") != "demo":
+                    continue
+                # Older demos (created before this feature existed) have no timestamps —
+                # give them a fresh clock starting now rather than treating "unknown" as
+                # "already expired."
+                if not c.get("created_at"):
+                    c["created_at"] = now.isoformat()
+                    c["last_started_at"] = now.isoformat()
+                    backfilled = True
+            if backfilled:
+                save_clients(clients)
+                clients = load_clients()
+
+            for c in clients:
+                if c.get("type") != "demo" or not is_running(c["port"]):
+                    continue
+                last_started = c.get("last_started_at") or c.get("created_at")
+                if not last_started:
+                    continue
+                started_dt = datetime.fromisoformat(last_started)
+                is_first_run = last_started == c.get("created_at")
+                cap_days = DEMO_FIRST_RUN_MAX_DAYS if is_first_run else DEMO_RESTART_MAX_DAYS
+                if (now - started_dt).days >= cap_days:
+                    stop_client(c)
+        except Exception:
+            pass  # a bad run shouldn't kill the loop — just try again next interval
+
+
+@app.on_event("startup")
+async def _start_background_tasks():
+    asyncio.create_task(_auto_stop_expired_demos())
+
+
 def delete_client_data(client: dict):
     """Best-effort removal of a client's data directory. Refuses to touch anything
-    outside BACKEND_DIR — data_dir comes from clients.json, a trusted local file, but
-    this stays defensive since the operation is irreversible."""
+    outside BACKEND_DIR or the cloud clients-data root (/opt/evolveiq/clients, used
+    for demos migrated to the droplet, which store data_dir as an absolute path
+    rather than relative to BACKEND_DIR) — data_dir comes from clients.json, a
+    trusted local file, but this stays defensive since the operation is irreversible."""
     data_path = (BACKEND_DIR / client["data_dir"]).resolve()
-    try:
-        data_path.relative_to(BACKEND_DIR.resolve())
-    except ValueError:
-        return  # outside BACKEND_DIR — refuse to touch it
+    allowed_roots = [BACKEND_DIR.resolve(), pathlib.Path("/opt/evolveiq/clients")]
+    allowed = False
+    for root in allowed_roots:
+        try:
+            data_path.relative_to(root)
+            allowed = True
+            break
+        except ValueError:
+            continue
+    if not allowed:
+        return  # outside every allowed root — refuse to touch it
     if data_path.exists():
         shutil.rmtree(data_path, ignore_errors=True)
 
@@ -374,14 +477,6 @@ def delete_client_data(client: dict):
 def fetch_support_requests(port: int) -> list:
     try:
         with urllib.request.urlopen(f"http://localhost:{port}/api/support-requests", timeout=3) as resp:
-            return json.loads(resp.read())
-    except Exception:
-        return []
-
-
-def fetch_leads(port: int) -> list:
-    try:
-        with urllib.request.urlopen(f"http://localhost:{port}/api/leads", timeout=3) as resp:
             return json.loads(resp.read())
     except Exception:
         return []
@@ -451,6 +546,18 @@ def client_card_html(c: dict) -> str:
     if bip_share is not None:
         kb_label += f" · {round(bip_share * 100)}% BIP content"
     kb_html = f'<span class="kb-source-pill">{kb_label}</span>' if kb_label else ""
+
+    demo_meta_html = ""
+    if c.get("type") == "demo" and c.get("created_at"):
+        created_dt = datetime.fromisoformat(c["created_at"])
+        demo_meta_html = f' &middot; created {created_dt.strftime("%b %-d, %Y")}'
+        if running:
+            last_started = c.get("last_started_at") or c["created_at"]
+            is_first_run = last_started == c["created_at"]
+            cap_days = DEMO_FIRST_RUN_MAX_DAYS if is_first_run else DEMO_RESTART_MAX_DAYS
+            expires = datetime.fromisoformat(last_started) + timedelta(days=cap_days)
+            demo_meta_html += f' &middot; auto-stops {expires.strftime("%b %-d")}'
+
     start_pause_html = (
         f'<button class="btn btn-pause" data-client="{c["id"]}" onclick="stopClient(\'{c["id"]}\', \'{c["name"]}\')">⏸ Pause</button>'
         if running else
@@ -461,7 +568,7 @@ def client_card_html(c: dict) -> str:
         if c.get("type") == "demo" else ""
     )
     return f"""
-    <div class="card">
+    <div class="card" data-name="{html.escape(c['name'].lower())}">
       <div class="card-head">
         <h3>{c['name']}</h3>
         {status_html}
@@ -469,12 +576,13 @@ def client_card_html(c: dict) -> str:
       <div class="card-actions">
         {start_pause_html}
         <a class="btn btn-visitor {'btn-disabled' if not running else ''}" href="{visitor_href}" target="_blank" {disabled}>🌐 Visitor view</a>
+        <a class="btn btn-record {'btn-disabled' if not running else ''}" href="{visitor_href}?record=1" target="_blank" {disabled} title="Hides suggested-question bubbles, turns on Option/Alt+1-3 typing hotkeys">🎥 Recording view</a>
         <a class="btn btn-admin {'btn-disabled' if not running else ''}" href="{admin_href}" target="_blank" {disabled}>🔑 Admin view</a>
         <a class="btn btn-client {'btn-disabled' if not running else ''}" href="{client_href}" target="_blank" {disabled}>🗂 Client view</a>
         {promote_html}
         <button class="btn btn-delete" onclick="deleteClient('{c['id']}', '{c['name']}')">🗑 Delete</button>
       </div>
-      <div class="card-meta">port :{c['port']} &middot; {visitor_target or "no demo generated yet"} {kb_html}</div>
+      <div class="card-meta">port :{c['port']} &middot; {visitor_target or "no demo generated yet"} {kb_html}{demo_meta_html}</div>
     </div>"""
 
 
@@ -518,6 +626,8 @@ PAGE_CSS = """
   .topnav-signout { margin-left: auto; color: var(--text-faint) !important; }
   .filters { display: flex; gap: 12px; margin-bottom: 18px; }
   .filters select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: var(--font-body); }
+  .search-input { display: block; width: 100%; max-width: 340px; padding: 9px 13px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: var(--font-body); box-sizing: border-box; }
+  .search-input:focus { outline: none; border-color: var(--accent); }
   table.requests { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   table.requests th, table.requests td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
   table.requests th { background: var(--surface-2); color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
@@ -542,6 +652,7 @@ PAGE_CSS = """
   .btn:active { transform: scale(.97); }
   .btn-start { background: var(--accent); color: var(--on-accent); }
   .btn-visitor { background: var(--teal-soft); color: var(--teal); }
+  .btn-record { background: #fde68a; color: #92400e; }
   .btn-admin { background: var(--accent-soft); color: var(--accent-strong); }
   .btn-client { background: var(--surface-2); color: var(--text-dim); }
   .btn-disabled { opacity: .4; pointer-events: none; }
@@ -549,11 +660,19 @@ PAGE_CSS = """
   .btn-pause { background: rgba(147,112,31,0.16); color: var(--gold); }
   .btn-promote { background: var(--teal-soft); color: var(--teal); }
   .btn-delete { background: var(--accent-soft); color: var(--accent-strong); }
-  .launcher-tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
-  .launcher-tab { background: none; border: none; padding: 10px 18px; font-size: 13.5px; font-weight: 600; color: var(--text-faint); cursor: pointer; border-bottom: 2px solid transparent; font-family: var(--font-body); }
-  .launcher-tab.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
-  .launcher-view { display: none; }
-  .launcher-view.active { display: block; }
+  .stats-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 110px; }
+  .stat-tile-accent { border-color: var(--accent); background: var(--accent-soft); }
+  .stat-value { font-size: 19px; font-weight: 700; color: var(--text); font-family: var(--font-display, var(--font-body)); font-variant-numeric: tabular-nums; }
+  .stat-tile-accent .stat-value { color: var(--accent-strong); }
+  .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-top: 3px; }
+  .stats-compact .stat-tile { min-width: 130px; }
+  .view-toggle { display: flex; gap: 4px; margin-bottom: 16px; }
+  .view-toggle-btn { background: var(--surface); border: 1px solid var(--border); padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; border-radius: 7px; font-family: var(--font-body); }
+  .view-toggle-btn.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--accent-strong); }
+  th.sortable .sort-arrow { opacity: .5; font-size: 10px; margin-left: 3px; }
   .kb-source-pill { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-weight: 600; }
   form.generate { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; max-width: 520px; }
   form.generate label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 4px; margin-top: 12px; text-transform: uppercase; letter-spacing: .04em; }
@@ -602,39 +721,19 @@ async function promoteClient(id, name) {
   window.location.reload();
 }
 
-function showLauncherTab(view) {
-  document.querySelectorAll(".launcher-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
-  document.querySelectorAll(".launcher-view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+function filterCards(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll(".card[data-name]").forEach((card) => {
+    card.style.display = !q || card.dataset.name.includes(q) ? "" : "none";
+  });
 }
 
-document.getElementById("genForm")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const status = document.getElementById("genStatus");
-  status.textContent = "Screenshotting and generating... (10-20s)";
-  const payload = Object.fromEntries(new FormData(e.target).entries());
-  const res = await fetch("/generate-demo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (data.ok) {
-    status.innerHTML = `${data.message}<br/><a href="${data.open_url}" target="_blank" style="font-weight:700;">Open the demo →</a>` +
-      ` &nbsp;·&nbsp; <a href="#" onclick="window.location.reload(); return false;">Refresh page to see its card above ↻</a>`;
-  } else {
-    status.textContent = "Error: " + data.message;
-  }
-  // Deliberately no auto-reload — it was wiping this message out before there was
-  // realistically enough time to click "Open the demo," the same class of "did it
-  // even work" confusion the Settings save-confirmation fix addressed earlier.
-});
 """
 
 
 NAV_HTML = """
 <div class="topnav">
-  <a href="/">Launcher</a>
-  <a href="/leads">Leads</a>
+  <a href="/">Clients</a>
   <a href="/outreach">Outreach</a>
   <a href="/support-requests">Support requests</a>
   <a href="/bip-import">BIP import</a>
@@ -649,42 +748,21 @@ def home():
     clients = load_clients()
     client_cards = "\n".join(client_card_html(c) for c in clients if c.get("type") == "client") \
         or '<p class="sub">No clients yet.</p>'
-    demo_cards = "\n".join(client_card_html(c) for c in clients if c.get("type") == "demo") \
-        or '<p class="sub">No demos yet — generate one below.</p>'
-    options = "\n".join(f'<option value="{c["id"]}">{c["name"]} (:{c["port"]})</option>' for c in clients)
+    stats_html = stats_strip_html(compute_sales_stats(), compact=True)
     return f"""<!doctype html>
 <html><head><title>LeadGuard Launcher</title><style>{PAGE_CSS}</style></head>
 <body>
   {NAV_HTML}
-  <h1>LeadGuard Demo Launcher</h1>
-  <div class="sub">Local control panel — no terminal needed. Bookmark this page.</div>
+  <h1>Clients</h1>
+  <div class="sub">Local control panel — no terminal needed. Bookmark this page. Prospecting and demo generation live under Outreach now.</div>
 
-  <div class="launcher-tabs">
-    <button class="launcher-tab active" data-view="clients" onclick="showLauncherTab('clients')">Clients</button>
-    <button class="launcher-tab" data-view="demos" onclick="showLauncherTab('demos')">Demos</button>
-  </div>
+  <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:10px;">Sales snapshot</h2>
+  {stats_html}
+  <a href="/outreach" style="display:inline-block;margin-bottom:24px;color:var(--teal);font-size:12.5px;font-weight:600;text-decoration:underline;">Full sales stats on Outreach →</a>
 
-  <div class="launcher-view active" id="view-clients">
-    <div class="grid">{client_cards}</div>
-  </div>
+  <input id="cardSearch" class="search-input" placeholder="Search by name..." oninput="filterCards(this.value)" />
 
-  <div class="launcher-view" id="view-demos">
-    <div class="grid">{demo_cards}</div>
-
-    <h1 style="font-size:16px;">Create a new personalized demo</h1>
-    <div class="sub">Screenshots a prospect's real homepage and drops a live widget on top.</div>
-    <form class="generate" id="genForm">
-      <label>Prospect's website URL</label>
-      <input name="url" type="url" placeholder="https://prospect.com" required />
-      <label>Prospect's business name</label>
-      <input name="name" type="text" placeholder="Prospect Business" required />
-      <label>Start from which client's config as a template?</label>
-      <select name="client_id">{options}</select>
-      <div class="sub" style="margin-top:4px;">Creates its own independent instance seeded from this — never edits the template client itself.</div>
-      <button type="submit">Generate demo</button>
-      <div id="genStatus"></div>
-    </form>
-  </div>
+  <div class="grid">{client_cards}</div>
 
   <script>{PAGE_JS}</script>
 </body></html>"""
@@ -718,6 +796,15 @@ def delete(client_id: str):
     delete_client_data(client)
     clients = [c for c in clients if c["id"] != client_id]
     save_clients(clients)
+    # A deleted demo's Outreach prospect (if any) previously kept pointing at the now-gone
+    # instance — client_id referenced nothing and demo_url silently went dead, both easy to
+    # miss since nothing about the prospect's own view changed to reflect the deletion.
+    if client.get("type") == "demo":
+        with outreach_db.db_session() as conn:
+            conn.execute(
+                "UPDATE prospects SET client_id = NULL, demo_url = NULL, updated_at = ? WHERE client_id = ?",
+                (datetime.now(timezone.utc).isoformat(), client_id),
+            )
     return {"ok": True, "message": f"{client['name']} deleted"}
 
 
@@ -801,7 +888,7 @@ def serve_file(path: str):
 
 
 @app.get("/open/{client_id}/visitor")
-def open_visitor(client_id: str):
+def open_visitor(client_id: str, record: str = ""):
     from fastapi.responses import RedirectResponse
     clients = load_clients()
     client = next((c for c in clients if c["id"] == client_id), None)
@@ -810,6 +897,10 @@ def open_visitor(client_id: str):
     target = client.get("sales_demo") or client.get("widget_demo")
     if not target:
         return JSONResponse({"ok": False, "message": "no demo generated for this client yet"}, status_code=404)
+    # record=1 is forwarded straight through to the demo page itself — see
+    # demo_template.html's RECORD_MODE flag: hides the suggested-question bubbles and
+    # turns on the Option/Alt+1-3 typing hotkeys, for solo screen recording.
+    record_suffix = "&record=1" if record == "1" else ""
     # New-style prospect demos (Phase 1, docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) are
     # written into the prospect's own data_dir and served by that instance's own GET
     # /demo route — recognizable by the "backend/data_..." path generate-demo writes.
@@ -817,11 +908,14 @@ def open_visitor(client_id: str):
     # the shared widget/ directory instead; those never get a GET /demo on their own
     # instance, so redirecting there 404s — serve them via the old /file route instead.
     if target.startswith("widget/"):
-        return RedirectResponse(f"/file?path={target}")
-    return RedirectResponse(f"http://localhost:{client['port']}/demo")
+        return RedirectResponse(f"/file?path={target}{record_suffix}")
+    # public_base_for() resolves to the scoped /proxy/{port} relay when EVOLVEIQ_PUBLIC_BASE_URL
+    # is set (cloud), localhost otherwise (local dev) — a literal "localhost:{port}" here would
+    # redirect the VISITOR'S OWN machine to that port, not the server that generated the link.
+    return RedirectResponse(f"{public_base_for(client['port'])}/demo{('?record=1' if record == '1' else '')}")
 
 
-def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> dict:
+def _generate_demo(url: str, name: str, client_id: str, industry: str = "", booking_link: str = "", video_source_path: Optional[pathlib.Path] = None, demo_questions: Optional[list] = None) -> dict:
     """Core demo-generation logic, shared by POST /generate-demo (the launcher's own
     form) and the Outreach CRM's create-demo action — see docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md
     and ops/outreach_db.py. Provisions (or regenerates) a prospect's own isolated backend
@@ -832,7 +926,13 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
     if not template:
         return {"ok": False, "message": "unknown template client"}
     if not is_running(template["port"]):
-        return {"ok": False, "message": f"{template['name']}'s backend isn't running — start it first, it's only used as a config template"}
+        # A stopped template used to be a hard failure with nothing saved anywhere —
+        # easy to trigger from a dropdown that gives no hint which entries are running,
+        # and easy to miss since the only sign was inline form text. Auto-start it
+        # instead, same as the "regenerating an existing prospect" path below already does.
+        started = start_client(template)
+        if not started["ok"]:
+            return {"ok": False, "message": f"{template['name']}'s backend couldn't be started to use as a config template: {started['message']}"}
 
     # Reuse the existing prospect if this is the same company by name (case-insensitive) —
     # that's a regeneration, not a collision. Only mint a fresh, collision-checked slug for
@@ -852,6 +952,7 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
         # First time generating for this prospect: provision a genuinely independent
         # backend instance — its own port, its own database — so editing its Settings
         # later can never touch the template client's real, actively-used config.
+        created_now = datetime.now(timezone.utc).isoformat()
         prospect = {
             "id": prospect_id,
             "name": name,
@@ -861,6 +962,8 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
             "widget_demo": None,
             "sales_demo": None,
             "type": "demo",
+            "created_at": created_now,
+            "last_started_at": created_now,
         }
         started = start_client(prospect)
         if not started["ok"]:
@@ -877,8 +980,13 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
                 "flow_script": template_business.get("flow_script", ""),
                 "accent_color": prospect["accent_color"],
                 "disclosure_text": DEFAULT_DEMO_DISCLOSURE.format(name=name),
-                "demo_suggested_questions": [],
+                # Powers both the visible suggested-question bubbles and the Option/Alt+1-3
+                # recording hotkeys — previously always seeded empty here even when the
+                # prospect already had curated questions sitting in demo_questions, which
+                # silently left every auto-generated demo's hotkeys with nothing to fire.
+                "demo_suggested_questions": (demo_questions or [])[:3],
                 "demo_expires_at": (datetime.now(timezone.utc) + timedelta(days=DEMO_LINK_LIFETIME_DAYS)).isoformat(),
+                "booking_link": booking_link,
             })
         except Exception as e:
             return {"ok": False, "message": f"provisioned but could not seed config: {e}"}
@@ -897,6 +1005,9 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
             current["demo_expires_at"] = (
                 datetime.now(timezone.utc) + timedelta(days=DEMO_LINK_LIFETIME_DAYS)
             ).isoformat()
+            current["booking_link"] = booking_link
+            if demo_questions:
+                current["demo_suggested_questions"] = demo_questions[:3]
             put_business(prospect["port"], current)
         except Exception:
             pass  # non-fatal — the demo itself still regenerates below
@@ -910,7 +1021,7 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
             str(BACKEND_DIR / "venv" / "bin" / "python3"), str(OPS_DIR / "generate_site_demo.py"),
             "--url", url,
             "--name", name,
-            "--api-base", f"http://localhost:{prospect['port']}",
+            "--api-base", public_base_for(prospect["port"]),
             "--color", prospect["accent_color"],
             "--out", str(out_path),
         ],
@@ -925,6 +1036,9 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
     if not out_path.exists():
         return {"ok": False, "message": result.stderr[-500:] or "screenshot failed"}
 
+    if video_source_path and video_source_path.exists():
+        shutil.copy(video_source_path, out_path.parent / "demo_video.mp4")
+
     rel_path = out_path.relative_to(PROJECT_ROOT)
     prospect["sales_demo"] = str(rel_path)
     clients = [prospect if c["id"] == prospect_id else c for c in load_clients()]
@@ -935,7 +1049,7 @@ def _generate_demo(url: str, name: str, client_id: str, industry: str = "") -> d
     return {
         "ok": True,
         "client_id": prospect_id,
-        "open_url": f"http://localhost:{prospect['port']}/demo",
+        "open_url": f"{public_base_for(prospect['port'])}/demo",
         "message": f"Created its own instance on :{prospect['port']}, seeded from {template['name']}'s config — "
                     f"edit it independently anytime via its own Admin view on the launcher.",
     }
@@ -1070,159 +1184,6 @@ async def proxy_update_status(client_id: str, request_id: int, body: dict):
         )
         urllib.request.urlopen(req, timeout=5)
         return {"ok": True}
-    except Exception as e:
-        return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
-
-
-LEAD_STATUS_OPTIONS = ["new", "claimed", "done"]
-LEAD_OUTCOME_OPTIONS = ["", "booked", "not_interested", "no_response", "duplicate", "spam", "other"]
-
-LEADS_PAGE_JS = """
-async function updateLead(clientId, leadId, field, value) {
-  const statusEl = document.querySelector(`tr[data-lead-id="${leadId}"] .lead-save-status`);
-  if (statusEl) statusEl.textContent = "Saving...";
-  const res = await fetch(`/leads/${clientId}/${leadId}/update`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ [field]: value }),
-  });
-  const data = await res.json();
-  if (statusEl) statusEl.textContent = data.ok ? "Saved" : "Failed";
-  setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 1500);
-  if (field === "status") {
-    document.querySelector(`tr[data-lead-id="${leadId}"]`).dataset.status = value;
-    applyLeadFilters();
-  }
-}
-
-function applyLeadFilters() {
-  const clientVal = document.getElementById("filterClient").value;
-  const statusVal = document.getElementById("filterStatus").value;
-  const claimedVal = document.getElementById("filterClaimed").value.trim().toLowerCase();
-  document.querySelectorAll("tr[data-client][data-status]").forEach((row) => {
-    const clientMatch = !clientVal || row.dataset.client === clientVal;
-    const statusMatch = !statusVal || row.dataset.status === statusVal;
-    const claimedMatch = !claimedVal || (row.dataset.claimedBy || "").toLowerCase().includes(claimedVal);
-    row.style.display = (clientMatch && statusMatch && claimedMatch) ? "" : "none";
-  });
-}
-document.getElementById("filterClient")?.addEventListener("change", applyLeadFilters);
-document.getElementById("filterStatus")?.addEventListener("change", applyLeadFilters);
-document.getElementById("filterClaimed")?.addEventListener("input", applyLeadFilters);
-
-document.querySelectorAll(".lead-status-select").forEach((sel) => {
-  sel.addEventListener("change", (e) => {
-    const row = e.target.closest("tr");
-    updateLead(row.dataset.client, row.dataset.leadId, "status", e.target.value);
-  });
-});
-document.querySelectorAll(".lead-outcome-select").forEach((sel) => {
-  sel.addEventListener("change", (e) => {
-    const row = e.target.closest("tr");
-    updateLead(row.dataset.client, row.dataset.leadId, "outcome", e.target.value);
-  });
-});
-document.querySelectorAll(".lead-claimed-input").forEach((inp) => {
-  inp.addEventListener("change", (e) => {
-    const row = e.target.closest("tr");
-    row.dataset.claimedBy = e.target.value;
-    updateLead(row.dataset.client, row.dataset.leadId, "claimed_by", e.target.value);
-  });
-});
-"""
-
-
-@app.get("/leads", response_class=HTMLResponse)
-def leads_page():
-    clients = load_clients()
-    all_rows = []
-    for c in clients:
-        if not is_running(c["port"]):
-            continue
-        for lead in fetch_leads(c["port"]):
-            lead["_client_id"] = c["id"]
-            lead["_client_name"] = c["name"]
-            all_rows.append(lead)
-    all_rows.sort(key=lambda r: r["created_at"], reverse=True)
-
-    client_options = "\n".join(f'<option value="{c["id"]}">{c["name"]}</option>' for c in clients)
-    status_options = "".join(f'<option value="{s}">{s.title()}</option>' for s in LEAD_STATUS_OPTIONS)
-
-    def row_html(r):
-        status = r.get("status") or "new"
-        claimed_by = r.get("claimed_by") or ""
-        status_opts = "".join(
-            f'<option value="{s}" {"selected" if status == s else ""}>{s.title()}</option>'
-            for s in LEAD_STATUS_OPTIONS
-        )
-        outcome = r.get("outcome") or ""
-        outcome_opts = "".join(
-            f'<option value="{o}" {"selected" if outcome == o else ""}>{(o or "—").replace("_", " ").title()}</option>'
-            for o in LEAD_OUTCOME_OPTIONS
-        )
-        contact = " / ".join(x for x in [r.get("name"), r.get("email"), r.get("phone")] if x) or "—"
-        return f"""
-        <tr data-client="{r['_client_id']}" data-status="{status}" data-lead-id="{r['id']}" data-claimed-by="{claimed_by}">
-          <td><strong>{r['_client_name']}</strong></td>
-          <td>{contact}</td>
-          <td>{r.get('intent', '') or '—'}</td>
-          <td style="max-width:240px;">{r.get('notes') or '—'}</td>
-          <td><select class="lead-status-select">{status_opts}</select></td>
-          <td><input class="lead-claimed-input" value="{claimed_by}" placeholder="Unclaimed" /></td>
-          <td><select class="lead-outcome-select">{outcome_opts}</select></td>
-          <td>{r['created_at'][:16].replace('T', ' ')}</td>
-          <td><span class="lead-save-status"></span></td>
-        </tr>"""
-
-    rows_html = "\n".join(row_html(r) for r in all_rows) or ""
-    no_rows_html = '<div class="no-rows">No leads yet.</div>' if not all_rows else ""
-
-    return f"""<!doctype html>
-<html><head><title>Leads — EvolveIQ Ops</title><style>{PAGE_CSS}</style></head>
-<body>
-  {NAV_HTML}
-  <h1>Leads</h1>
-  <div class="sub">Every lead, across every running client, in one place — {len(all_rows)} total.</div>
-
-  <div class="filters">
-    <select id="filterClient"><option value="">All clients</option>{client_options}</select>
-    <select id="filterStatus"><option value="">All statuses</option>{status_options}</select>
-    <input id="filterClaimed" placeholder="Filter by who's working it..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);" />
-  </div>
-
-  {no_rows_html}
-  <table class="requests" style="{'display:none;' if not all_rows else ''}">
-    <thead><tr>
-      <th>Client</th><th>Contact</th><th>Intent</th><th>Notes</th><th>Status</th><th>Working it</th><th>Outcome</th><th>Captured</th><th></th>
-    </tr></thead>
-    <tbody>{rows_html}</tbody>
-  </table>
-
-  <script>{LEADS_PAGE_JS}</script>
-</body></html>"""
-
-
-@app.post("/leads/{client_id}/{lead_id}/update")
-async def update_lead_proxy(client_id: str, lead_id: int, body: dict):
-    clients = load_clients()
-    client = next((c for c in clients if c["id"] == client_id), None)
-    if not client:
-        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
-    allowed = {"status", "claimed_by", "notes", "good_to_know", "outcome"}
-    payload = {k: v for k, v in body.items() if k in allowed}
-    if not payload:
-        return JSONResponse({"ok": False, "message": "nothing to update"}, status_code=400)
-    try:
-        req = urllib.request.Request(
-            f"http://localhost:{client['port']}/api/leads/{lead_id}",
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"},
-            method="PATCH",
-        )
-        urllib.request.urlopen(req, timeout=5)
-        return {"ok": True}
-    except urllib.error.HTTPError as e:
-        return JSONResponse({"ok": False, "message": e.read().decode()[:300]}, status_code=e.code)
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
 
@@ -1472,12 +1433,30 @@ def _prospect_row_to_dict(row) -> dict:
 VERTICAL_SPOKEN_NAMES = {"HVAC": "HVAC", "PI": "personal injury"}
 
 
+# Research-caveat text the import process sometimes writes directly into
+# decision_maker_name when it couldn't confirm a real one (e.g. "Not publicly
+# verified in quick scan") — this isn't a name and must never be spoken as one.
+_UNVERIFIED_NAME_MARKERS = ("not publicly verified", "not verified")
+
+
+def _first_name(decision_maker_name: str) -> str:
+    """First name only, for scripts ("Hi Tom" not "Hi Tom Crosley") — and for a
+    multi-person field ("Tim Tate; Claire Tate Rehmet") just the first person
+    listed. Returns "" (caller falls back to "there") for blank or caveat text."""
+    if not decision_maker_name:
+        return ""
+    if any(marker in decision_maker_name.strip().lower() for marker in _UNVERIFIED_NAME_MARKERS):
+        return ""
+    first_person = decision_maker_name.split(";")[0].strip()
+    return first_person.split()[0] if first_person else ""
+
+
 def _merge_fields(prospect: dict, rep_name: str) -> dict:
     questions = prospect.get("demo_questions") or []
     vertical_code = prospect.get("vertical") or ""
     return {
         "company": prospect.get("company_name") or "",
-        "name": prospect.get("decision_maker_name") or "there",
+        "name": _first_name(prospect.get("decision_maker_name") or "") or "there",
         "vertical": VERTICAL_SPOKEN_NAMES.get(vertical_code, vertical_code),
         "hook": prospect.get("personalization_hook") or "",
         "demo_link": prospect.get("demo_url") or "[DEMO LINK]",
@@ -1498,6 +1477,25 @@ class ProspectUpdate(BaseModel):
     status: Optional[str] = None
     assigned_rep: Optional[str] = None
     notes: Optional[str] = None
+    rating: Optional[str] = None
+    product: Optional[str] = None
+    mrr_value: Optional[float] = None
+    setup_amount: Optional[float] = None
+    lost: Optional[bool] = None
+    lost_reason: Optional[str] = None
+
+
+class ProspectCreate(BaseModel):
+    company_name: str
+    vertical: str = ""
+    city_metro: str = ""
+    website: str = ""
+    decision_maker_name: str = ""
+    decision_maker_role: str = ""
+    phone: str = ""
+    email_or_contact_url: str = ""
+    assigned_rep: str = ""
+    notes: str = ""
 
 
 class TouchInput(BaseModel):
@@ -1517,6 +1515,61 @@ class ScriptUpdate(BaseModel):
     body_template: Optional[str] = None
 
 
+def compute_sales_stats() -> dict:
+    with outreach_db.db_session() as conn:
+        rows = conn.execute("SELECT status, rating, lost, mrr_value, setup_amount FROM prospects").fetchall()
+    open_mrr = closed_mrr = closed_setup = 0.0
+    hot_count = lost_count = 0
+    by_stage = {s: 0 for s in outreach_db.STAGES}
+    for r in rows:
+        if r["status"] in by_stage:
+            by_stage[r["status"]] += 1
+        if r["lost"]:
+            lost_count += 1
+        if r["rating"] == "hot":
+            hot_count += 1
+        mrr = r["mrr_value"] or 0
+        setup = r["setup_amount"] or 0
+        if r["status"] == "Closed":
+            closed_mrr += mrr
+            closed_setup += setup
+        elif not r["lost"]:
+            open_mrr += mrr
+    return {
+        "open_mrr": open_mrr,
+        "closed_mrr": closed_mrr,
+        "closed_setup": closed_setup,
+        "hot_count": hot_count,
+        "lost_count": lost_count,
+        "by_stage": by_stage,
+        "total": len(rows),
+    }
+
+
+def stats_strip_html(stats: dict, compact: bool = False) -> str:
+    def money(v):
+        return f"${v:,.0f}"
+    if compact:
+        return f"""<div class="stats-strip stats-compact">
+          <div class="stat-tile"><div class="stat-value">{money(stats['open_mrr'])}/mo</div><div class="stat-label">Open pipeline</div></div>
+          <div class="stat-tile"><div class="stat-value">{money(stats['closed_mrr'])}/mo</div><div class="stat-label">Closed MRR</div></div>
+          <div class="stat-tile"><div class="stat-value">{money(stats['closed_setup'])}</div><div class="stat-label">Setup fees collected</div></div>
+          <div class="stat-tile"><div class="stat-value">{stats['hot_count']}</div><div class="stat-label">🔥 Hot leads</div></div>
+        </div>"""
+    stage_tiles = "".join(
+        f'<div class="stat-tile"><div class="stat-value">{stats["by_stage"].get(s, 0)}</div><div class="stat-label">{s}</div></div>'
+        for s in outreach_db.STAGES
+    )
+    return f"""<div class="stats-strip">
+      <div class="stat-tile stat-tile-accent"><div class="stat-value">{money(stats['open_mrr'])}/mo</div><div class="stat-label">Open pipeline value</div></div>
+      <div class="stat-tile stat-tile-accent"><div class="stat-value">{money(stats['closed_mrr'])}/mo</div><div class="stat-label">Closed MRR</div></div>
+      <div class="stat-tile stat-tile-accent"><div class="stat-value">{money(stats['closed_setup'])}</div><div class="stat-label">Setup fees collected</div></div>
+      {stage_tiles}
+      <div class="stat-tile"><div class="stat-value">{stats['hot_count']}</div><div class="stat-label">🔥 Hot</div></div>
+      <div class="stat-tile"><div class="stat-value">{stats['lost_count']}</div><div class="stat-label">Lost</div></div>
+    </div>"""
+
+
 @app.get("/api/outreach/prospects")
 def list_prospects(rep: str = "", status: str = ""):
     query = "SELECT * FROM prospects WHERE 1=1"
@@ -1534,6 +1587,33 @@ def list_prospects(rep: str = "", status: str = ""):
     with outreach_db.db_session() as conn:
         rows = conn.execute(query, params).fetchall()
     return [_prospect_row_to_dict(r) for r in rows]
+
+
+@app.post("/api/outreach/prospects")
+def create_prospect(prospect: ProspectCreate):
+    """Hand-add a single potential-client lead — someone you met, a referral — outside
+    the usual bulk-imported list. Starts life in the 'Lead' stage like every other
+    prospect; everything the research pipeline would normally fill in (reviews,
+    personalization hook, etc.) just starts blank and can be added later."""
+    if not prospect.company_name.strip():
+        raise HTTPException(400, "Company name is required")
+    now = datetime.now(timezone.utc).isoformat()
+    with outreach_db.db_session() as conn:
+        cursor = conn.execute(
+            """INSERT INTO prospects
+               (company_name, vertical, city_metro, website, decision_maker_name,
+                decision_maker_role, phone, email_or_contact_url, assigned_rep, notes,
+                status, cadence_step, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Lead', 1, ?, ?)""",
+            (
+                prospect.company_name.strip(), prospect.vertical.strip(), prospect.city_metro.strip(),
+                prospect.website.strip(), prospect.decision_maker_name.strip(), prospect.decision_maker_role.strip(),
+                prospect.phone.strip(), prospect.email_or_contact_url.strip(), prospect.assigned_rep.strip(),
+                prospect.notes, now, now,
+            ),
+        )
+        row = conn.execute("SELECT * FROM prospects WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    return _prospect_row_to_dict(row)
 
 
 @app.get("/api/outreach/prospects/{prospect_id}")
@@ -1616,7 +1696,20 @@ def create_demo_for_prospect(prospect_id: int, body: CreateDemoInput):
     if not url:
         return JSONResponse({"ok": False, "message": "prospect has no website URL on file"}, status_code=400)
     industry = VERTICAL_SPOKEN_NAMES.get(row["vertical"], row["vertical"])
-    result = _generate_demo(url, name, body.client_id, industry=industry)
+    with outreach_db.db_session() as conn:
+        rep_row = conn.execute("SELECT booking_link FROM reps WHERE name = ?", (row["assigned_rep"],)).fetchone()
+    booking_link = (rep_row["booking_link"] if rep_row else "") or ""
+    video_path = PROSPECT_VIDEOS_DIR / f"{prospect_id}.mp4"
+    try:
+        demo_questions = json.loads(row["demo_questions"] or "[]")
+    except json.JSONDecodeError:
+        demo_questions = []
+    result = _generate_demo(
+        url, name, body.client_id, industry=industry,
+        booking_link=booking_link,
+        video_source_path=video_path if video_path.exists() else None,
+        demo_questions=demo_questions,
+    )
     if result.get("ok"):
         with outreach_db.db_session() as conn:
             conn.execute(
@@ -1624,6 +1717,49 @@ def create_demo_for_prospect(prospect_id: int, body: CreateDemoInput):
                 (result.get("client_id"), result.get("open_url"), datetime.now(timezone.utc).isoformat(), prospect_id),
             )
     return result
+
+
+MAX_VIDEO_UPLOAD_BYTES = 300 * 1024 * 1024  # generous for a short pitch video; droplet has 42GB free
+
+
+@app.post("/api/outreach/prospects/{prospect_id}/video")
+async def upload_prospect_video(prospect_id: int, file: UploadFile = File(...)):
+    with outreach_db.db_session() as conn:
+        row = conn.execute("SELECT * FROM prospects WHERE id = ?", (prospect_id,)).fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "message": "unknown prospect"}, status_code=404)
+    if file.content_type not in ("video/mp4", "video/quicktime"):
+        return JSONResponse({"ok": False, "message": "please upload an MP4 (or MOV) file"}, status_code=400)
+
+    PROSPECT_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
+    dest = PROSPECT_VIDEOS_DIR / f"{prospect_id}.mp4"
+    size = 0
+    with open(dest, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_VIDEO_UPLOAD_BYTES:
+                f.close()
+                dest.unlink(missing_ok=True)
+                return JSONResponse({"ok": False, "message": "video is too large (300MB max)"}, status_code=400)
+            f.write(chunk)
+
+    with outreach_db.db_session() as conn:
+        conn.execute(
+            "UPDATE prospects SET has_video = 1, updated_at = ? WHERE id = ?",
+            (datetime.now(timezone.utc).isoformat(), prospect_id),
+        )
+
+    # If a demo already exists for this prospect, drop the video straight into its own
+    # data dir too — otherwise it'd only show up the next time someone regenerates the
+    # demo, which is easy to forget and would silently leave a stale/missing video.
+    if row["client_id"]:
+        client = next((c for c in load_clients() if c["id"] == row["client_id"]), None)
+        if client:
+            data_dir = (BACKEND_DIR / client["data_dir"]).resolve()
+            if data_dir.exists():
+                shutil.copy(dest, data_dir / "demo_video.mp4")
+
+    return {"ok": True, "size": size}
 
 
 @app.get("/api/outreach/scripts")
@@ -1653,7 +1789,17 @@ class RepInput(BaseModel):
 
 
 class RepUpdate(BaseModel):
-    name: str
+    name: Optional[str] = None
+    booking_link: Optional[str] = None
+
+
+@app.get("/api/outreach/template-clients")
+def list_template_clients():
+    """Real client instances usable as a demo-generation config template — the 'Template
+    client id' field used to be free text (easy to typo/mis-case, since it must match
+    clients.json's id exactly, not a display name), which is exactly the kind of thing a
+    dropdown fixes."""
+    return [{"id": c["id"], "name": c["name"]} for c in load_clients() if c.get("type") == "client"]
 
 
 @app.get("/api/outreach/reps")
@@ -1682,25 +1828,54 @@ def add_rep(rep: RepInput):
 
 
 @app.patch("/api/outreach/reps/{rep_id}")
-def rename_rep(rep_id: int, update: RepUpdate):
-    new_name = update.name.strip()
-    if not new_name:
-        return JSONResponse({"ok": False, "message": "name can't be empty"}, status_code=400)
+def update_rep(rep_id: int, update: RepUpdate):
     with outreach_db.db_session() as conn:
         existing = conn.execute("SELECT * FROM reps WHERE id = ?", (rep_id,)).fetchone()
         if not existing:
             return JSONResponse({"ok": False, "message": "unknown rep"}, status_code=404)
-        name_clash = conn.execute(
-            "SELECT id FROM reps WHERE name = ? AND id != ?", (new_name, rep_id)
-        ).fetchone()
-        if name_clash:
-            return JSONResponse({"ok": False, "message": f'"{new_name}" is already on the team'}, status_code=400)
-        old_name = existing["name"]
-        conn.execute("UPDATE reps SET name = ? WHERE id = ?", (new_name, rep_id))
-        # Cascade so existing assignments/scripts follow the rename instead of orphaning —
-        # assigned_rep is a plain text label, not a foreign key, per this table's own schema.
-        conn.execute("UPDATE prospects SET assigned_rep = ? WHERE assigned_rep = ?", (new_name, old_name))
+
+        if update.name is not None:
+            new_name = update.name.strip()
+            if not new_name:
+                return JSONResponse({"ok": False, "message": "name can't be empty"}, status_code=400)
+            name_clash = conn.execute(
+                "SELECT id FROM reps WHERE name = ? AND id != ?", (new_name, rep_id)
+            ).fetchone()
+            if name_clash:
+                return JSONResponse({"ok": False, "message": f'"{new_name}" is already on the team'}, status_code=400)
+            old_name = existing["name"]
+            conn.execute("UPDATE reps SET name = ? WHERE id = ?", (new_name, rep_id))
+            # Cascade so existing assignments/scripts follow the rename instead of orphaning —
+            # assigned_rep is a plain text label, not a foreign key, per this table's own schema.
+            conn.execute("UPDATE prospects SET assigned_rep = ? WHERE assigned_rep = ?", (new_name, old_name))
+
+        new_booking_link = None
+        if update.booking_link is not None:
+            new_booking_link = update.booking_link.strip()
+            conn.execute("UPDATE reps SET booking_link = ? WHERE id = ?", (new_booking_link, rep_id))
+
         row = conn.execute("SELECT * FROM reps WHERE id = ?", (rep_id,)).fetchone()
+
+    if new_booking_link is not None:
+        # Push straight into every already-generated demo for this rep's prospects —
+        # otherwise a rep updating their link later would leave every existing demo
+        # pointing at the old one until someone happens to regenerate it.
+        with outreach_db.db_session() as conn:
+            assigned = conn.execute(
+                "SELECT client_id FROM prospects WHERE assigned_rep = ? AND client_id IS NOT NULL", (row["name"],)
+            ).fetchall()
+        clients_by_id = {c["id"]: c for c in load_clients()}
+        for a in assigned:
+            client = clients_by_id.get(a["client_id"])
+            if not client or not is_running(client["port"]):
+                continue
+            try:
+                current = fetch_business(client["port"])
+                current["booking_link"] = new_booking_link
+                put_business(client["port"], current)
+            except Exception:
+                pass  # non-fatal — link still updates for the next regenerate
+
     return dict(row)
 
 
@@ -1725,7 +1900,28 @@ def delete_rep(rep_id: int):
 OUTREACH_CSS = """
   .rep-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-size: 13.5px; color: var(--text-dim); animation: rise .4s ease both; animation-delay: .08s; }
   .rep-picker select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: var(--font-body); }
-  .outreach-layout { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 20px; align-items: start; }
+  .outreach-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(720px, 880px); gap: 20px; align-items: start; }
+  .outreach-layout-list { min-width: 0; }
+  .table-scroll { overflow-x: auto; }
+  .outreach-layout-detail { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+  /* Two-class selector beats .detail-panel's single-class rule regardless of source
+     order. Needed because .detail-panel's "rise" keyframe ends on transform:translateY(0)
+     — a non-"none" transform makes the element its own containing block, which silently
+     breaks position:sticky (it stops tracking the viewport and scrolls away with the
+     page instead of staying put). */
+  .detail-panel.outreach-layout-detail { animation: none; }
+  /* Maximize toggle — same shape as the mobile fallback below: single column, detail
+     drops full-width beneath the list instead of sitting sticky alongside it. */
+  .outreach-layout.detail-maximized { grid-template-columns: 1fr; }
+  .outreach-layout.detail-maximized .outreach-layout-detail { position: static; max-height: none; }
+  /* 1200px, not 900px: the detail column's 720px floor plus gap needs ~1040px of
+     room before the list column has anything usable left. iPad landscape (up to
+     1194pt on 13" Pro) was falling between 900 and that real threshold, squeezing
+     the list into an unreadable sliver instead of stacking. */
+  @media (max-width: 1200px) {
+    .outreach-layout { grid-template-columns: 1fr; }
+    .outreach-layout-detail { position: static; max-height: none; }
+  }
   table.prospects { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   table.prospects th, table.prospects td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   table.prospects th { background: var(--surface-2); color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
@@ -1759,23 +1955,68 @@ OUTREACH_CSS = """
   .demo-panel input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; margin-bottom: 8px; background: var(--bg); color: var(--text); font-family: var(--font-mono); }
   .demo-panel button { background: var(--accent); color: var(--on-accent); border: none; padding: 9px 16px; border-radius: 7px; font-weight: 700; cursor: pointer; font-family: var(--font-body); }
   .demo-link-box { margin-top: 10px; font-size: 13px; font-family: var(--font-mono); word-break: break-all; color: var(--teal); }
+  .video-panel { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 12px; }
+  .video-panel input[type="file"] { display: block; font-size: 12.5px; margin: 8px 0; color: var(--text-dim); }
+  .video-panel button { background: var(--accent); color: var(--on-accent); border: none; padding: 8px 14px; border-radius: 7px; font-weight: 700; cursor: pointer; font-family: var(--font-body); font-size: 12.5px; }
   .touch-history { font-size: 12px; color: var(--text-dim); font-family: var(--font-mono); padding-left: 18px; }
   .touch-history li { margin-bottom: 4px; }
   .link-btn { background: none; border: none; color: var(--teal); font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline; font-family: var(--font-body); padding: 0; margin-left: 4px; }
-  .manage-team-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px; max-width: 420px; }
+  .manage-team-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px; max-width: 620px; }
   .manage-team-panel h4 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); font-weight: 700; }
   .rep-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .rep-name-input { flex: 1; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); }
+  .rep-name-input { flex: 0 0 130px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); }
+  .rep-booking-input { flex: 1; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); }
   .rep-remove-btn { background: var(--accent-soft); color: var(--accent-strong); border: none; border-radius: 6px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
   .add-rep-form { display: flex; gap: 8px; margin-top: 10px; }
   .add-rep-form input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); }
   .add-rep-form button { background: var(--teal-soft); color: var(--teal); border: none; border-radius: 6px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .outreach-search { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: var(--font-body); min-width: 220px; }
+  .outreach-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 12px; align-items: start; overflow-x: auto; padding-bottom: 8px; }
+  .outreach-board[hidden] { display: none; }
+  .outreach-col { background: var(--surface-2); border-radius: 10px; padding: 10px; min-height: 120px; }
+  .outreach-col h3 { margin: 4px 6px 10px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; font-family: var(--font-body); white-space: nowrap; }
+  .outreach-col h3 .count { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; font-size: 11px; }
+  .outreach-col-cards { display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+  .prospect-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: grab; font-size: 12.5px; }
+  .prospect-card.dragging { opacity: .4; }
+  .prospect-card .pc-name { font-weight: 600; color: var(--text); }
+  .prospect-card .pc-vertical { color: var(--text-faint); font-size: 11px; }
+  .prospect-card .pc-touch { margin-top: 6px; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+  .prospect-card .pc-touch.overdue { color: var(--accent-strong); font-weight: 700; }
+  .prospect-card .pc-deal { margin-top: 4px; font-size: 11px; color: var(--teal); font-weight: 600; }
+  .prospect-card.lost { opacity: .55; }
+  .lost-badge { display: inline-block; font-size: 10px; font-weight: 700; color: #b91c1c; background: #fee2e2; border-radius: 10px; padding: 1px 7px; margin-left: 4px; }
+  .deal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .deal-grid label { font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; display: flex; flex-direction: column; gap: 4px; }
+  .deal-grid select, .deal-grid input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); text-transform: none; letter-spacing: normal; font-weight: 400; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+  .add-prospect-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 10px 0 16px; }
+  .add-prospect-form[hidden] { display: none; }
+  .add-prospect-form label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); margin-bottom: 4px; }
+  .add-prospect-form input, .add-prospect-form select, .add-prospect-form textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; background: var(--surface); color: var(--text); font-family: var(--font-body); }
+  .add-prospect-form textarea { resize: vertical; }
+  .add-prospect-form button[type="submit"] { padding: 9px 18px; background: var(--accent); color: var(--on-accent); border: none; border-radius: 8px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 """
 
 OUTREACH_JS = """
 let outreachProspects = [];
 let selectedProspectId = null;
 let OUTREACH_REPS = [];
+let outreachSortKey = null;
+let outreachSortDir = 1;
+document.querySelectorAll("table.prospects th.sortable").forEach((th) => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.sort;
+    outreachSortDir = outreachSortKey === key ? -outreachSortDir : 1;
+    outreachSortKey = key;
+    document.querySelectorAll("table.prospects th.sortable .sort-arrow").forEach((a) => a.remove());
+    const arrow = document.createElement("span");
+    arrow.className = "sort-arrow";
+    arrow.textContent = outreachSortDir === 1 ? "▲" : "▼";
+    th.appendChild(arrow);
+    renderProspectList();
+  });
+});
 
 function currentRep() {
   return localStorage.getItem("outreachRep") || (OUTREACH_REPS[0] && OUTREACH_REPS[0].name) || "";
@@ -1793,7 +2034,38 @@ async function loadReps() {
     localStorage.setItem("outreachRep", OUTREACH_REPS[0].name);
   }
   renderRepList();
+  const addRepSel = document.getElementById("addProspectRep");
+  if (addRepSel) {
+    addRepSel.innerHTML = OUTREACH_REPS.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}</option>`).join("");
+    if (saved) addRepSel.value = saved;
+  }
 }
+
+function toggleAddProspectForm(show) {
+  const form = document.getElementById("addProspectForm");
+  form.hidden = show === false ? true : !form.hidden ? true : false;
+  if (!form.hidden) form.querySelector('[name="company_name"]').focus();
+}
+
+document.getElementById("addProspectForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const status = document.getElementById("addProspectStatus");
+  const payload = Object.fromEntries(new FormData(e.target).entries());
+  status.textContent = "Adding...";
+  const res = await fetch("/api/outreach/prospects", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    status.textContent = "Error: " + (data.detail || "could not add lead");
+    return;
+  }
+  e.target.reset();
+  toggleAddProspectForm(false);
+  status.textContent = "";
+  await loadProspects();
+  selectProspect(data.id);
+});
 
 function renderRepList() {
   const box = document.getElementById("repList");
@@ -1801,11 +2073,30 @@ function renderRepList() {
   box.innerHTML = OUTREACH_REPS.map((r) => `
     <div class="rep-row" data-id="${r.id}">
       <input class="rep-name-input" value="${esc(r.name)}" onblur="renameRep(${r.id}, this.value)" />
+      <input class="rep-booking-input" value="${esc(r.booking_link || "")}" placeholder="Booking link (Calendly, etc.)" onblur="updateRepBookingLink(${r.id}, this.value)" />
       <button type="button" class="rep-remove-btn" data-id="${r.id}" data-name="${esc(r.name)}">Remove</button>
     </div>`).join("");
   box.querySelectorAll(".rep-remove-btn").forEach((btn) => {
     btn.addEventListener("click", () => removeRep(Number(btn.dataset.id), btn.dataset.name));
   });
+}
+
+async function updateRepBookingLink(id, valueRaw) {
+  const value = valueRaw.trim();
+  const rep = OUTREACH_REPS.find((r) => r.id === id);
+  if (!rep || (rep.booking_link || "") === value) return;
+  const res = await fetch(`/api/outreach/reps/${id}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_link: value }),
+  });
+  const data = await res.json();
+  const status = document.getElementById("repFormStatus");
+  if (data.ok === false) {
+    status.textContent = data.message;
+    renderRepList();
+    return;
+  }
+  status.textContent = `Booking link updated for ${data.name}.`;
+  await loadReps();
 }
 
 async function renameRep(id, newNameRaw) {
@@ -1886,26 +2177,130 @@ async function loadProspects() {
   if (statusFilter) params.set("status", statusFilter);
   const res = await fetch(`/api/outreach/prospects?${params.toString()}`);
   outreachProspects = await res.json();
+  const vSel = document.getElementById("filterVertical");
+  if (vSel) {
+    const current = vSel.value;
+    const verticals = Array.from(new Set(outreachProspects.map((p) => p.vertical).filter(Boolean))).sort();
+    vSel.innerHTML = '<option value="">All verticals</option>' + verticals.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    if (verticals.includes(current)) vSel.value = current;
+  }
   renderProspectList();
+  renderProspectBoard();
+}
+
+function filteredProspects() {
+  const q = (document.getElementById("outreachSearch")?.value || "").trim().toLowerCase();
+  const vertical = document.getElementById("filterVertical")?.value || "";
+  return outreachProspects.filter((p) => {
+    const verticalMatch = !vertical || p.vertical === vertical;
+    const searchMatch = !q || [p.company_name, p.vertical, p.decision_maker_name, p.city_metro].some((v) => (v || "").toLowerCase().includes(q));
+    return verticalMatch && searchMatch;
+  });
+}
+document.getElementById("outreachSearch")?.addEventListener("input", () => {
+  renderProspectList();
+  renderProspectBoard();
+});
+document.getElementById("filterVertical")?.addEventListener("change", () => {
+  renderProspectList();
+  renderProspectBoard();
+});
+
+function showOutreachView(view) {
+  document.querySelectorAll(".outreach-view-toggle .view-toggle-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("outreachListView").hidden = view !== "list";
+  document.getElementById("outreachBoardView").hidden = view !== "board";
 }
 
 function renderProspectList() {
   const tbody = document.getElementById("prospectListBody");
-  if (!outreachProspects.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="no-rows">No prospects match this filter.</td></tr>';
+  let rows = filteredProspects();
+  if (outreachSortKey) {
+    rows = rows.slice().sort((a, b) => {
+      const av = (a[outreachSortKey] || "").toString().toLowerCase();
+      const bv = (b[outreachSortKey] || "").toString().toLowerCase();
+      return av < bv ? -outreachSortDir : av > bv ? outreachSortDir : 0;
+    });
+  }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-rows">No prospects match this filter.</td></tr>';
     return;
   }
   const now = new Date();
-  tbody.innerHTML = outreachProspects.map((p, i) => {
+  tbody.innerHTML = rows.map((p, i) => {
     const overdue = p.next_touch_at && new Date(p.next_touch_at) < now;
     const delay = Math.min(i * 0.025, 0.4);
     return `<tr class="${p.id === selectedProspectId ? 'selected' : ''}" style="animation-delay:${delay}s" onclick="selectProspect(${p.id})">
-      <td><strong>${esc(p.company_name)}</strong><br/><span style="color:var(--text-faint);">${esc(p.vertical)}</span></td>
+      <td><strong>${esc(p.company_name)}</strong></td>
+      <td>${esc(p.vertical) || "—"}</td>
+      <td>${p.rating ? esc(RATING_LABELS[p.rating] || p.rating) : "—"}</td>
+      <td>${p.product ? esc(p.product) : "—"}${p.mrr_value ? ` · $${p.mrr_value}/mo` : ""}${p.setup_amount ? ` · $${p.setup_amount} setup` : ""}</td>
       <td><span class="cadence-badge">Day ${p.cadence_step}</span></td>
       <td><span class="next-touch ${overdue ? 'overdue' : ''}">${fmtDate(p.next_touch_at)}</span></td>
-      <td>${esc(p.status)}</td>
+      <td>${esc(p.status)}${p.lost ? ' <span class="lost-badge">Lost</span>' : ""}</td>
     </tr>`;
   }).join("");
+}
+
+const OUTREACH_STAGES = ["Lead", "Prospect", "Demo Performed", "Client Agreement", "Closed"];
+const RATING_LABELS = { "": "Not rated", not_interested: "Not interested", interested: "Interested", hot: "🔥 Hot" };
+const PRODUCT_OPTIONS = ["", "Core", "Lead Launch", "Website Only", "Other"];
+// Starting-point pricing per docs/LEAD_LAUNCH_STRATEGY.md and the published pricing
+// card — Core defaults to its published floor ($99/$399); Lead Launch is $0 MRR for
+// the free 60-day trial with a $375 build fee; Website Only is the post-trial
+// hosting-only path ($50/mo, same $375 build). All editable after prefill — this is
+// just a starting point, not a locked price.
+const PRODUCT_DEFAULTS = {
+  "Core": { mrr: 99, setup: 399 },
+  "Lead Launch": { mrr: 0, setup: 375 },
+  "Website Only": { mrr: 50, setup: 375 },
+};
+
+const RATING_DOT = { not_interested: "⚪", interested: "🟡", hot: "🔥" };
+
+function prospectCardHtml(p) {
+  const overdue = p.next_touch_at && new Date(p.next_touch_at) < new Date();
+  const deal = [p.product, p.mrr_value ? `$${p.mrr_value}/mo` : "", p.setup_amount ? `$${p.setup_amount} setup` : ""]
+    .filter(Boolean).join(" · ");
+  return `
+    <div class="prospect-card ${p.lost ? 'lost' : ''}" draggable="true" data-id="${p.id}" onclick="selectProspect(${p.id})">
+      <div class="pc-name">${RATING_DOT[p.rating] || ""} ${esc(p.company_name)} ${p.lost ? '<span class="lost-badge">Lost</span>' : ""}</div>
+      <div class="pc-vertical">${esc(p.vertical)}${p.city_metro ? " · " + esc(p.city_metro) : ""}</div>
+      ${deal ? `<div class="pc-deal">${esc(deal)}</div>` : ""}
+      <div class="pc-touch ${overdue ? 'overdue' : ''}">Day ${p.cadence_step} · next ${fmtDate(p.next_touch_at)}</div>
+    </div>`;
+}
+
+function renderProspectBoard() {
+  const board = document.getElementById("outreachBoardView");
+  if (!board) return;
+  const rows = filteredProspects();
+  board.innerHTML = OUTREACH_STAGES.map((stage) => {
+    const inCol = rows.filter((p) => p.status === stage);
+    return `<div class="outreach-col" data-status="${esc(stage)}">
+      <h3>${esc(stage)} <span class="count">${inCol.length}</span></h3>
+      <div class="outreach-col-cards" data-status="${esc(stage)}">
+        ${inCol.map(prospectCardHtml).join("") || '<p class="muted board-empty">Nothing here.</p>'}
+      </div>
+    </div>`;
+  }).join("");
+
+  board.querySelectorAll(".prospect-card").forEach((card) => {
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", card.dataset.id);
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  });
+  board.querySelectorAll(".outreach-col-cards").forEach((col) => {
+    col.addEventListener("dragover", (e) => e.preventDefault());
+    col.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData("text/plain");
+      if (!id) return;
+      await updateStatus(Number(id), col.dataset.status);
+    });
+  });
 }
 
 async function selectProspect(id) {
@@ -1916,9 +2311,18 @@ async function selectProspect(id) {
   renderProspectDetail(p);
 }
 
+let detailMaximized = false;
+function toggleDetailMaximized() {
+  detailMaximized = !detailMaximized;
+  document.querySelector(".outreach-layout")?.classList.toggle("detail-maximized", detailMaximized);
+  const btn = document.getElementById("detailMaximizeBtn");
+  if (btn) btn.textContent = detailMaximized ? "⤡ Restore" : "⛶ Maximize";
+}
+
 function renderProspectDetail(p) {
   const panel = document.getElementById("prospectDetail");
-  panel.className = "detail-panel";
+  panel.className = "detail-panel outreach-layout-detail";
+  document.querySelector(".outreach-layout")?.classList.toggle("detail-maximized", detailMaximized);
   const questions = (p.demo_questions || []).map((q) => `<li>${esc(q)}</li>`).join("");
   const scripts = (p.scripts || []).map((s, i) => `
     <div class="script-card" style="animation-delay:${i * 0.06}s">
@@ -1928,30 +2332,44 @@ function renderProspectDetail(p) {
       </div>
       <pre>${esc(s.body)}</pre>
     </div>`).join("") || '<div class="sub">No script for this step yet.</div>';
-  const demoSection = p.demo_url
-    ? `<div class="demo-link-box">Live demo: <a href="${p.demo_url}" target="_blank">${p.demo_url}</a>
-        &nbsp;<button class="copy-btn" onclick="copyPlain('${p.demo_url}')">Copy link</button></div>`
-    : `<div class="demo-panel">
+  const videoSection = `<div class="video-panel">
+      <div class="sub">${p.has_video ? "✅ Video uploaded — shows on the demo page automatically." : "No pitch video yet — optional."}</div>
+      <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime" />
+      <button type="button" onclick="uploadProspectVideo(${p.id})">${p.has_video ? "Replace video" : "Upload video"}</button>
+      <div id="videoUploadStatus" class="sub" style="margin-top:6px;"></div>
+    </div>`;
+  const demoForm = `<div class="demo-panel" id="demoForm" ${p.demo_url ? "hidden" : ""}>
         <label style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Website to demo</label>
         <input id="demoUrl" value="${esc(p.website)}" />
         <label style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Business name</label>
         <input id="demoName" value="${esc(p.company_name)}" />
-        <label style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Template client id</label>
-        <input id="demoClientId" placeholder="e.g. lmtlss" />
-        <button onclick="createDemo(${p.id})">Create demo</button>
+        <label style="font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Template client (config to start from)</label>
+        <select id="demoClientId"><option value="">Loading…</option></select>
+        <button onclick="createDemo(${p.id})">${p.demo_url ? "Regenerate demo" : "Create demo"}</button>
         <div id="demoStatus" class="sub" style="margin-top:6px;"></div>
       </div>`;
+  const demoSection = p.demo_url
+    ? `<div class="demo-link-box">Live demo: <a href="${p.demo_url}" target="_blank">${p.demo_url}</a>
+        &nbsp;<button class="copy-btn" onclick="copyPlain('${p.demo_url}')">Copy link</button>
+        &nbsp;<button type="button" class="link-btn" onclick="document.getElementById('demoForm').hidden = !document.getElementById('demoForm').hidden">🔄 Regenerate (picks up the latest template)</button>
+      </div>${demoForm}`
+    : demoForm;
   const touches = (p.touches || []).map((t) =>
     `<li>${fmtDate(t.created_at)} — ${esc(t.channel)}${t.outcome ? ': ' + esc(t.outcome) : ''}</li>`
   ).join("") || "<li>No touches logged yet.</li>";
 
   panel.innerHTML = `
-    <h2>${esc(p.company_name)}</h2>
-    <div class="sub">${esc(p.vertical)} · ${esc(p.city_metro)} · Score ${p.score ?? "—"} · Priority #${p.priority_rank ?? "—"}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+      <div>
+        <h2>${esc(p.company_name)}</h2>
+        <div class="sub">${esc(p.vertical)} · ${esc(p.city_metro)} · Score ${p.score ?? "—"} · Priority #${p.priority_rank ?? "—"}</div>
+      </div>
+      <button type="button" id="detailMaximizeBtn" class="link-btn" style="white-space:nowrap;" onclick="toggleDetailMaximized()">${detailMaximized ? "⤡ Restore" : "⛶ Maximize"}</button>
+    </div>
 
     <div class="detail-section">
       <select class="status-select-lg" id="statusSelect" onchange="updateStatus(${p.id}, this.value)">
-        ${["Not Started", "Working", "Follow-up Due", "Engaged", "Won", "Lost", "Paused"].map(
+        ${OUTREACH_STAGES.map(
           (s) => `<option value="${s}" ${s === p.status ? "selected" : ""}>${s}</option>`
         ).join("")}
       </select>
@@ -1959,6 +2377,35 @@ function renderProspectDetail(p) {
       <select class="status-select-lg" id="repAssignSelect" onchange="updateAssignedRep(${p.id}, this.value)">
         ${OUTREACH_REPS.map((r) => `<option value="${esc(r.name)}" ${r.name === p.assigned_rep ? "selected" : ""}>${esc(r.name)}</option>`).join("")}
       </select>
+      &nbsp;
+      <select class="status-select-lg" id="ratingSelect" onchange="updateProspectField(${p.id}, 'rating', this.value)">
+        ${Object.entries(RATING_LABELS).map(([v, l]) => `<option value="${v}" ${v === (p.rating || "") ? "selected" : ""}>${l}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="detail-section">
+      <h4>Deal</h4>
+      <div class="deal-grid">
+        <label>Product
+          <select id="productSelect" onchange="onProductSelectChange(${p.id}, this.value)">
+            ${PRODUCT_OPTIONS.map((o) => `<option value="${esc(o)}" ${o === (PRODUCT_OPTIONS.includes(p.product) ? p.product : "Other") ? "selected" : ""}>${o || "— choose —"}</option>`).join("")}
+          </select>
+        </label>
+        <label id="productCustomLabel" ${PRODUCT_OPTIONS.includes(p.product) && p.product !== "Other" ? 'hidden' : ''}>Custom product name
+          <input id="productCustomInput" value="${PRODUCT_OPTIONS.includes(p.product) ? '' : esc(p.product)}" onblur="updateProspectField(${p.id}, 'product', this.value)" />
+        </label>
+        <label>MRR ($/mo)
+          <input id="mrrInput" type="number" step="1" min="0" value="${p.mrr_value ?? ''}" onblur="updateProspectField(${p.id}, 'mrr_value', this.value === '' ? null : Number(this.value))" />
+        </label>
+        <label>Setup fee ($)
+          <input id="setupInput" type="number" step="1" min="0" value="${p.setup_amount ?? ''}" onblur="updateProspectField(${p.id}, 'setup_amount', this.value === '' ? null : Number(this.value))" />
+        </label>
+      </div>
+      <label class="checkbox-label" style="margin-top:10px;">
+        <input type="checkbox" ${p.lost ? "checked" : ""} onchange="updateProspectField(${p.id}, 'lost', this.checked)" /> Marked lost
+      </label>
+      ${p.lost ? `<textarea class="notes-box" placeholder="Why was this lost?" onblur="updateProspectField(${p.id}, 'lost_reason', this.value)">${esc(p.lost_reason)}</textarea>` : ""}
+      ${p.status === "Closed" && p.client_id ? `<button type="button" style="margin-top:10px;" onclick="pushToClient('${p.client_id}', '${esc(p.company_name)}')">Push to Client →</button>` : ""}
     </div>
 
     <div class="detail-section">
@@ -1982,6 +2429,7 @@ function renderProspectDetail(p) {
     <div class="detail-section">
       <h4>Demo</h4>
       ${demoSection}
+      ${videoSection}
     </div>
 
     <div class="detail-section">
@@ -2007,6 +2455,20 @@ function renderProspectDetail(p) {
       <ul class="touch-history">${touches}</ul>
     </div>
   `;
+
+  const demoClientSelect = document.getElementById("demoClientId");
+  if (demoClientSelect) loadTemplateClients(demoClientSelect);
+}
+
+let TEMPLATE_CLIENTS_CACHE = null;
+async function loadTemplateClients(select) {
+  if (!TEMPLATE_CLIENTS_CACHE) {
+    const res = await fetch("/api/outreach/template-clients");
+    TEMPLATE_CLIENTS_CACHE = await res.json();
+  }
+  select.innerHTML = TEMPLATE_CLIENTS_CACHE.length
+    ? TEMPLATE_CLIENTS_CACHE.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.id)})</option>`).join("")
+    : '<option value="">No running clients yet</option>';
 }
 
 function copyPlain(text) {
@@ -2025,12 +2487,65 @@ async function updateStatus(id, status) {
   await fetch(`/api/outreach/prospects/${id}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }),
   });
+  if (status === "Closed") {
+    const p = outreachProspects.find((x) => x.id === id);
+    if (p && p.client_id) {
+      if (confirm(`Push ${p.company_name}'s demo to a real client now?`)) {
+        await pushToClient(p.client_id, p.company_name);
+      }
+    }
+  }
   loadProspects();
 }
 
-async function updateAssignedRep(id, assigned_rep) {
+async function pushToClient(clientId, name) {
+  const res = await fetch(`/promote/${clientId}`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || `Could not push ${name} to client status`);
+}
+
+async function onProductSelectChange(id, value) {
+  const customLabel = document.getElementById("productCustomLabel");
+  if (value === "Other") {
+    if (customLabel) customLabel.hidden = false;
+    document.getElementById("productCustomInput")?.focus();
+    return;
+  }
+  if (customLabel) customLabel.hidden = true;
+  await updateProspectField(id, "product", value, { skipReload: true, skipDetailReload: true });
+  const defaults = PRODUCT_DEFAULTS[value];
+  if (defaults) {
+    const mrrInput = document.getElementById("mrrInput");
+    const setupInput = document.getElementById("setupInput");
+    if (mrrInput) mrrInput.value = defaults.mrr;
+    if (setupInput) setupInput.value = defaults.setup;
+    await updateProspectField(id, "mrr_value", defaults.mrr, { skipReload: true, skipDetailReload: true });
+    await updateProspectField(id, "setup_amount", defaults.setup);
+  } else {
+    loadProspects();
+  }
+}
+
+async function updateProspectField(id, field, value, opts) {
+  opts = opts || {};
   await fetch(`/api/outreach/prospects/${id}`, {
-    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assigned_rep }),
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: value }),
+  });
+  if (!opts.skipReload) loadProspects();
+  if (selectedProspectId === id && !opts.skipDetailReload) selectProspect(id);
+}
+
+async function updateAssignedRep(id, assigned_rep) {
+  const p = outreachProspects.find((x) => x.id === id);
+  const priorRep = p?.assigned_rep;
+  const patch = { assigned_rep };
+  if (priorRep && assigned_rep && priorRep !== assigned_rep) {
+    const stamp = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const line = `— Reassigned from ${priorRep} to ${assigned_rep} (${stamp}) —`;
+    patch.notes = p.notes ? `${p.notes}\n${line}` : line;
+  }
+  await fetch(`/api/outreach/prospects/${id}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
   });
   loadProspects();
 }
@@ -2070,6 +2585,25 @@ async function createDemo(id) {
   }
 }
 
+async function uploadProspectVideo(id) {
+  const input = document.getElementById("videoFileInput");
+  const status = document.getElementById("videoUploadStatus");
+  if (!input.files.length) {
+    status.textContent = "Choose a file first.";
+    return;
+  }
+  status.textContent = "Uploading...";
+  const formData = new FormData();
+  formData.append("file", input.files[0]);
+  const res = await fetch(`/api/outreach/prospects/${id}/video`, { method: "POST", body: formData });
+  const data = await res.json();
+  if (data.ok) {
+    selectProspect(id);
+  } else {
+    status.textContent = "Error: " + data.message;
+  }
+}
+
 document.getElementById("repSelect")?.addEventListener("change", loadProspects);
 document.getElementById("statusFilter")?.addEventListener("change", loadProspects);
 """
@@ -2077,16 +2611,19 @@ document.getElementById("statusFilter")?.addEventListener("change", loadProspect
 
 @app.get("/outreach", response_class=HTMLResponse)
 def outreach_page():
-    status_options = "".join(
-        f'<option value="{s}">{s}</option>' for s in
-        ["Not Started", "Working", "Follow-up Due", "Engaged", "Won", "Lost", "Paused"]
-    )
+    status_options = "".join(f'<option value="{s}">{s}</option>' for s in outreach_db.STAGES)
+    demo_clients = [c for c in load_clients() if c.get("type") == "demo"]
+    demo_cards = "\n".join(client_card_html(c) for c in demo_clients) \
+        or '<p class="sub">No demo instances yet — create one from a prospect below.</p>'
+    stats_html = stats_strip_html(compute_sales_stats())
     return f"""<!doctype html>
 <html><head><title>Outreach — LeadGuard Launcher</title><style>{PAGE_CSS}</style><style>{OUTREACH_CSS}</style></head>
 <body>
   {NAV_HTML}
   <h1>Outreach</h1>
   <div class="sub">Work your assigned prospects — scripts, cadence, and demo creation in one place.</div>
+
+  {stats_html}
 
   <div class="rep-picker">
     Who's working? <select id="repSelect"><option>Loading…</option></select>
@@ -2104,14 +2641,62 @@ def outreach_page():
     <div id="repFormStatus" class="sub"></div>
   </div>
 
-  <div class="outreach-layout">
-    <table class="prospects">
-      <thead><tr><th>Company</th><th>Cadence</th><th>Next touch</th><th>Status</th></tr></thead>
-      <tbody id="prospectListBody"><tr><td colspan="4" class="no-rows">Loading...</td></tr></tbody>
-    </table>
-    <div id="prospectDetail" class="detail-empty">Select a prospect to see their script and log a touch.</div>
+  <div class="view-toggle outreach-view-toggle">
+    <button type="button" class="view-toggle-btn active" data-view="list" onclick="showOutreachView('list')">☰ List</button>
+    <button type="button" class="view-toggle-btn" data-view="board" onclick="showOutreachView('board')">▦ Board (by stage)</button>
+    <button type="button" class="view-toggle-btn" onclick="toggleAddProspectForm()">+ Add lead</button>
+  </div>
+  <div class="filters">
+    <input id="outreachSearch" class="outreach-search" placeholder="Search prospects by name, vertical, metro, decision-maker..." />
+    <select id="filterVertical"><option value="">All verticals</option></select>
   </div>
 
+  <form id="addProspectForm" class="add-prospect-form" hidden>
+    <div><label>Company name</label><input name="company_name" required /></div>
+    <div><label>Vertical</label><input name="vertical" placeholder="e.g. HVAC" /></div>
+    <div><label>City / metro</label><input name="city_metro" /></div>
+    <div><label>Website</label><input name="website" placeholder="https://" /></div>
+    <div><label>Decision-maker name</label><input name="decision_maker_name" /></div>
+    <div><label>Decision-maker role</label><input name="decision_maker_role" /></div>
+    <div><label>Phone</label><input name="phone" /></div>
+    <div><label>Email / contact URL</label><input name="email_or_contact_url" /></div>
+    <div><label>Assign to</label>
+      <select name="assigned_rep" id="addProspectRep"></select>
+    </div>
+    <div style="flex:1 1 100%;"><label>Notes</label><textarea name="notes" rows="2" placeholder="How you met them, context so far..."></textarea></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button type="submit">Add lead</button>
+      <button type="button" class="link-btn" onclick="toggleAddProspectForm(false)">Cancel</button>
+      <span id="addProspectStatus" class="sub"></span>
+    </div>
+  </form>
+
+  <div class="outreach-layout">
+    <div class="outreach-layout-list">
+      <div id="outreachListView" class="table-scroll">
+        <table class="prospects">
+          <thead><tr>
+            <th class="sortable" data-sort="company_name">Company</th>
+            <th class="sortable" data-sort="vertical">Vertical</th>
+            <th class="sortable" data-sort="rating">Rating</th>
+            <th>Deal</th>
+            <th>Cadence</th><th>Next touch</th><th>Status</th>
+          </tr></thead>
+          <tbody id="prospectListBody"><tr><td colspan="7" class="no-rows">Loading...</td></tr></tbody>
+        </table>
+      </div>
+      <div id="outreachBoardView" class="outreach-board" hidden></div>
+    </div>
+
+    <div id="prospectDetail" class="detail-empty outreach-layout-detail">Select a prospect to see their script and log a touch.</div>
+  </div>
+
+  <h2 style="margin-top:40px;">Demo instances</h2>
+  <div class="sub">Every demo generated from a prospect above — start, pause, delete, or promote to a real client.</div>
+  <input id="demoSearch" class="search-input" placeholder="Search demos by name..." oninput="filterCards(this.value)" />
+  <div class="grid">{demo_cards}</div>
+
+  <script>{PAGE_JS}</script>
   <script>{OUTREACH_JS}</script>
   <script>
     (async function() {{
