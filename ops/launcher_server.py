@@ -115,6 +115,70 @@ def public_base_for(port: int) -> str:
     return f"{PUBLIC_BASE_URL}/proxy/{port}" if PUBLIC_BASE_URL else f"http://localhost:{port}"
 
 
+# Tier-linked feature defaults, mirroring the feature matrix on the marketing site.
+# pipeline_enabled is the only flag with a real, live-wired effect today — it's the
+# same field the client's own dashboard Settings tab writes to, and it directly gates
+# that dashboard's Pipeline tab/board. The other three record what a client is
+# entitled to under their tier for when the routing engine ships (currently sitting
+# unmerged and stale on feature/hvac-premium-bip-v2) — toggling them today does not
+# change any live behavior. multi_location_enabled is Enterprise-only bookkeeping;
+# there's no multi-instance shared view built yet either.
+TIER_FEATURES = {
+    "core": {
+        "pipeline_enabled": False,
+        "priority_routing_enabled": False,
+        "compliance_escalation_enabled": False,
+        "handoff_summaries_enabled": False,
+        "multi_location_enabled": False,
+    },
+    "entrepreneur": {
+        "pipeline_enabled": True,
+        "priority_routing_enabled": False,
+        "compliance_escalation_enabled": False,
+        "handoff_summaries_enabled": False,
+        "multi_location_enabled": False,
+    },
+    "business": {
+        "pipeline_enabled": True,
+        "priority_routing_enabled": True,
+        "compliance_escalation_enabled": True,
+        "handoff_summaries_enabled": True,
+        "multi_location_enabled": False,
+    },
+    "enterprise": {
+        "pipeline_enabled": True,
+        "priority_routing_enabled": True,
+        "compliance_escalation_enabled": True,
+        "handoff_summaries_enabled": True,
+        "multi_location_enabled": True,
+    },
+}
+TIER_LABELS = {"core": "Core", "entrepreneur": "Entrepreneur", "business": "Business", "enterprise": "Enterprise"}
+FEATURE_LABELS = {
+    "pipeline_enabled": "Pipeline",
+    "priority_routing_enabled": "Priority routing",
+    "compliance_escalation_enabled": "Compliance escalation",
+    "handoff_summaries_enabled": "Handoff summaries",
+    "multi_location_enabled": "Multi-location view",
+}
+LIVE_WIRED_FEATURES = {"pipeline_enabled"}
+
+
+def push_pipeline_flag(client: dict) -> bool:
+    """Push this client's stored pipeline_enabled flag to its own running backend
+    (fetch-then-put — see promote()'s comment on why PUT /api/business needs the
+    full object, not a partial one). Returns True if the push actually happened."""
+    if not is_running(client["port"]):
+        return False
+    try:
+        current = fetch_business(client["port"])
+        current["pipeline_enabled"] = bool((client.get("features") or {}).get("pipeline_enabled"))
+        put_business(client["port"], current)
+        return True
+    except Exception:
+        return False
+
+
 @app.middleware("http")
 async def require_login(request: Request, call_next):
     if LOGIN_DISABLED or request.url.path.startswith(PUBLIC_PATH_PREFIXES):
@@ -318,6 +382,12 @@ def load_clients():
         if "type" not in c:
             c["type"] = "demo" if c["id"].startswith("prospect_") else "client"
             migrated = True
+        if "tier" not in c:
+            c["tier"] = None
+            migrated = True
+        if "features" not in c:
+            c["features"] = dict(TIER_FEATURES.get(c["tier"], {})) if c.get("tier") else {}
+            migrated = True
     if migrated:
         save_clients(clients)
     return clients
@@ -362,6 +432,7 @@ def start_client(client: dict):
         if is_running(client["port"]):
             if client.get("type") == "demo":
                 _touch_last_started(client["id"])
+            push_pipeline_flag(client)
             return {"ok": True, "message": f"{client['name']} started on :{client['port']}"}
     return {"ok": False, "message": f"{client['name']} did not start — check {log_path}"}
 
@@ -528,8 +599,8 @@ def client_card_html(c: dict) -> str:
     )
     visitor_target = c.get("sales_demo") or c.get("widget_demo")
     visitor_href = f"/open/{c['id']}/visitor"
-    admin_href = f"http://localhost:{c['port']}/dashboard/"
-    client_href = f"http://localhost:{c['port']}/dashboard/?view=client"
+    admin_href = f"{public_base_for(c['port'])}/dashboard/"
+    client_href = f"{public_base_for(c['port'])}/dashboard/?view=client"
     disabled = "" if running else "disabled"
     knowledge_source = ""
     bip_share = None
@@ -567,12 +638,37 @@ def client_card_html(c: dict) -> str:
         f'<button class="btn btn-promote" onclick="promoteClient(\'{c["id"]}\', \'{c["name"]}\')">⬆ Promote to client</button>'
         if c.get("type") == "demo" else ""
     )
+    tier = c.get("tier") or ""
+    tier_options_html = '<option value="">— set tier —</option>' + "".join(
+        f'<option value="{key}" {"selected" if tier == key else ""}>{label}</option>'
+        for key, label in TIER_LABELS.items()
+    )
+    features = c.get("features") or {}
+    pills = []
+    for key, label in FEATURE_LABELS.items():
+        on = bool(features.get(key))
+        wired = key in LIVE_WIRED_FEATURES
+        state_class = "feature-pill-on" if on else "feature-pill-off"
+        wired_class = "" if wired else "feature-pill-unwired"
+        title = "Live — controls the client's actual Pipeline tab" if wired \
+            else "Entitlement only — no live engine yet, does not change behavior"
+        suffix = "" if wired else " *"
+        pills.append(
+            f'<button type="button" class="feature-pill {state_class} {wired_class}" title="{title}" '
+            f'onclick="toggleClientFeature(\'{c["id"]}\', \'{key}\', {str(not on).lower()})">{label}{suffix}</button>'
+        )
+    feature_pills_html = "".join(pills)
     return f"""
     <div class="card" data-name="{html.escape(c['name'].lower())}">
       <div class="card-head">
         <h3>{c['name']}</h3>
         {status_html}
       </div>
+      <div class="tier-row">
+        <label class="tier-label" for="tier-{c['id']}">Tier</label>
+        <select id="tier-{c['id']}" class="tier-select" onchange="setClientTier('{c['id']}', this.value)">{tier_options_html}</select>
+      </div>
+      <div class="feature-row">{feature_pills_html}</div>
       <div class="card-actions">
         {start_pause_html}
         <a class="btn btn-visitor {'btn-disabled' if not running else ''}" href="{visitor_href}" target="_blank" {disabled}>🌐 Visitor view</a>
@@ -657,6 +753,15 @@ PAGE_CSS = """
   .btn-client { background: var(--surface-2); color: var(--text-dim); }
   .btn-disabled { opacity: .4; pointer-events: none; }
   .card-meta { margin-top: 10px; font-size: 11.5px; color: var(--text-faint); font-family: var(--font-mono); }
+  .tier-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .tier-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); font-weight: 700; }
+  .tier-select { flex: 1; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; font-size: 12.5px; background: var(--surface-2); color: var(--text); font-family: var(--font-body); }
+  .feature-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .feature-pill { border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: var(--font-body); transition: filter .15s; }
+  .feature-pill:hover { filter: brightness(1.08); }
+  .feature-pill-on { background: var(--teal-soft); color: var(--teal); border-color: transparent; }
+  .feature-pill-off { background: var(--surface-2); color: var(--text-faint); }
+  .feature-pill-unwired.feature-pill-on { background: var(--accent-soft); color: var(--accent-strong); }
   .btn-pause { background: rgba(147,112,31,0.16); color: var(--gold); }
   .btn-promote { background: var(--teal-soft); color: var(--teal); }
   .btn-delete { background: var(--accent-soft); color: var(--accent-strong); }
@@ -721,6 +826,28 @@ async function promoteClient(id, name) {
   window.location.reload();
 }
 
+async function setClientTier(id, tier) {
+  const res = await fetch(`/api/clients/${id}/tier`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tier }),
+  });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || "Could not set tier");
+  window.location.reload();
+}
+
+async function toggleClientFeature(id, key, enabled) {
+  const res = await fetch(`/api/clients/${id}/features/${key}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  const data = await res.json();
+  if (!data.ok) alert(data.message || "Could not update feature");
+  window.location.reload();
+}
+
 function filterCards(query) {
   const q = query.trim().toLowerCase();
   document.querySelectorAll(".card[data-name]").forEach((card) => {
@@ -755,6 +882,7 @@ def home():
   {NAV_HTML}
   <h1>Clients</h1>
   <div class="sub">Local control panel — no terminal needed. Bookmark this page. Prospecting and demo generation live under Outreach now.</div>
+  <div class="sub" style="margin-top:-14px;">Set a tier on each card to apply its default features. Pipeline is live and takes effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
 
   <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:10px;">Sales snapshot</h2>
   {stats_html}
@@ -806,6 +934,47 @@ def delete(client_id: str):
                 (datetime.now(timezone.utc).isoformat(), client_id),
             )
     return {"ok": True, "message": f"{client['name']} deleted"}
+
+
+@app.post("/api/clients/{client_id}/tier")
+async def set_client_tier(client_id: str, request: Request):
+    body = await request.json()
+    tier = (body.get("tier") or "").strip().lower()
+    if tier and tier not in TIER_FEATURES:
+        return JSONResponse({"ok": False, "message": f"Unknown tier: {tier}"}, status_code=400)
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    client["tier"] = tier or None
+    client["features"] = dict(TIER_FEATURES.get(tier, {}))
+    save_clients(clients)
+    pushed = push_pipeline_flag(client)
+    label = TIER_LABELS.get(tier, "no tier")
+    message = f"{client['name']} set to {label}"
+    if client["features"].get("pipeline_enabled") and not pushed:
+        message += " — Pipeline will apply once the environment is started"
+    return {"ok": True, "message": message, "features": client["features"]}
+
+
+@app.post("/api/clients/{client_id}/features/{feature_key}")
+async def toggle_client_feature(client_id: str, feature_key: str, request: Request):
+    if feature_key not in FEATURE_LABELS:
+        return JSONResponse({"ok": False, "message": f"Unknown feature: {feature_key}"}, status_code=400)
+    body = await request.json()
+    enabled = bool(body.get("enabled"))
+    clients = load_clients()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return JSONResponse({"ok": False, "message": "unknown client"}, status_code=404)
+    client.setdefault("features", {})[feature_key] = enabled
+    save_clients(clients)
+    message = f"{FEATURE_LABELS[feature_key]} {'enabled' if enabled else 'disabled'} for {client['name']}"
+    if feature_key == "pipeline_enabled":
+        pushed = push_pipeline_flag(client)
+        if enabled and not pushed:
+            message += " — will apply once the environment is started"
+    return {"ok": True, "message": message, "features": client["features"]}
 
 
 @app.post("/promote/{client_id}")
@@ -2693,6 +2862,7 @@ def outreach_page():
 
   <h2 style="margin-top:40px;">Demo instances</h2>
   <div class="sub">Every demo generated from a prospect above — start, pause, delete, or promote to a real client.</div>
+  <div class="sub" style="margin-top:-6px;">Set a tier before or after promoting to apply its default features. Pipeline is live and takes effect immediately; features marked * record entitlement only — no engine to enforce them yet.</div>
   <input id="demoSearch" class="search-input" placeholder="Search demos by name..." oninput="filterCards(this.value)" />
   <div class="grid">{demo_cards}</div>
 
