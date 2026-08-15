@@ -36,6 +36,25 @@
     transition: transform .1s ease, border-color .1s ease;
   }
   .suggested-questions button:hover { border-color: __ACCENT_COLOR__; transform: translateY(-1px); }
+  .prospect-video-card {
+    position: fixed; left: 20px; top: 78px; z-index: 2147483000;
+    width: 300px; background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+    font-family: -apple-system, sans-serif; overflow: hidden;
+  }
+  .prospect-video-card .pv-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; font-size: 12px; font-weight: 600; color: #333;
+  }
+  .prospect-video-card .pv-close {
+    border: none; background: none; cursor: pointer; font-size: 15px; line-height: 1; color: #999; padding: 2px 4px;
+  }
+  .prospect-video-card video { display: block; width: 100%; max-height: 220px; background: #000; }
+  .booking-cta-wrap { position: fixed; left: 20px; bottom: 20px; z-index: 2147483000; }
+  .booking-cta-wrap a {
+    display: inline-block; font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 700;
+    color: #fff; background: __ACCENT_COLOR__; border-radius: 20px; padding: 11px 18px;
+    text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,.18);
+  }
 </style>
 </head>
 <body>
@@ -46,6 +65,14 @@
   <div class="site-bg"></div>
 
   <div class="suggested-questions" id="suggestedQuestions"></div>
+
+  <div class="prospect-video-card" id="prospectVideoCard" style="display:none;">
+    <div class="pv-head"><span>A quick message for you</span><button type="button" class="pv-close" id="prospectVideoClose" aria-label="Close">&times;</button></div>
+    <video id="prospectVideo" controls playsinline></video>
+  </div>
+  <div class="booking-cta-wrap" id="bookingCtaWrap" style="display:none;">
+    <a id="bookingCtaLink" href="#" target="_blank" rel="noopener">📅 Book a call</a>
+  </div>
 
   <script
     src="__API_BASE__/widget/widget.js"
@@ -78,8 +105,13 @@
       trackEvent('demo_page_opened');
 
       var QUESTIONS = __SUGGESTED_QUESTIONS_JSON__;
+      // Opt-in only (?record=1), never present in a link sent to a real visitor — lets
+      // whoever's driving a screen recording fire a scripted question with a keystroke
+      // instead of clicking a visible "canned chatbot" bubble on camera. See below.
+      var RECORD_MODE = /[?&]record=1(&|$)/.test(window.location.search);
+
       var container = document.getElementById('suggestedQuestions');
-      if (QUESTIONS.length && container) {
+      if (!RECORD_MODE && QUESTIONS.length && container) {
         QUESTIONS.slice(0, 3).forEach(function (q) {
           var btn = document.createElement('button');
           btn.type = 'button';
@@ -114,6 +146,62 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         sendBtn.click();
         if (container) container.style.display = 'none';
+      }
+
+      // Recording-mode only: same end result as askWidget (opens the panel, sends the
+      // question), but visibly types it into the real input character-by-character first —
+      // on camera this is indistinguishable from a person typing, with no bubble UI ever
+      // rendered to give away that it's scripted. Triggered by Option+1/2/3 on Mac /
+      // Alt+1/2/3 on Windows — both fire the same KeyboardEvent.altKey (mapped to
+      // QUESTIONS[0..2]), never by a click, so there's nothing on screen to give it away.
+      var typingInProgress = false;
+      function typeAndSendWidget(question) {
+        if (typingInProgress) return;
+        var host = document.getElementById('ai-frontdesk-widget-host');
+        if (!host || !host.shadowRoot) {
+          setTimeout(function () { typeAndSendWidget(question); }, 150);
+          return;
+        }
+        var root = host.shadowRoot;
+        var panel = root.querySelector('.panel');
+        if (panel && !panel.classList.contains('open')) {
+          root.querySelector('.bubble').click();
+        }
+        var input = root.querySelector('.inputRow input');
+        var sendBtn = root.querySelector('.inputRow button');
+        if (!input || !sendBtn) return;
+        typingInProgress = true;
+        input.focus();
+        input.value = '';
+        var i = 0;
+        (function typeChar() {
+          if (i < question.length) {
+            input.value += question.charAt(i);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            i++;
+            setTimeout(typeChar, 28 + Math.random() * 45);
+          } else {
+            setTimeout(function () {
+              sendBtn.click();
+              typingInProgress = false;
+            }, 450);
+          }
+        })();
+      }
+
+      if (RECORD_MODE) {
+        document.addEventListener('keydown', function (e) {
+          if (!e.altKey) return;
+          // e.code (physical key) not e.key (character produced) — on Mac, Option+1/2/3
+          // don't type "1"/"2"/"3" at all, they type "¡"/"™"/"£" (macOS's built-in Option-key
+          // symbol map), so e.key would never match here. e.code stays "Digit1" etc.
+          // regardless of modifiers or keyboard layout, on both Mac and PC.
+          var idx = { 'Digit1': 0, 'Digit2': 1, 'Digit3': 2 }[e.code];
+          if (idx === undefined || !QUESTIONS[idx]) return;
+          e.preventDefault();
+          trackEvent('suggested_question_clicked', { question: QUESTIONS[idx], via: 'record_mode_hotkey' });
+          typeAndSendWidget(QUESTIONS[idx]);
+        });
       }
 
       // Fires for every send — whether from a suggested-question chip (programmatic click,
@@ -153,6 +241,46 @@
         });
       }
       attachSendTracking();
+
+      fetch('__API_BASE__/api/demo/config')
+        .then(function (r) { return r.json(); })
+        .then(function (config) {
+          if (config.has_video) {
+            var card = document.getElementById('prospectVideoCard');
+            var video = document.getElementById('prospectVideo');
+            video.src = '__API_BASE__/demo/video';
+            card.style.display = 'block';
+            document.getElementById('prospectVideoClose').addEventListener('click', function () {
+              card.style.display = 'none';
+            });
+            var startedTracked = false;
+            var progressMarks = { 25: false, 50: false, 75: false };
+            video.addEventListener('play', function () {
+              if (!startedTracked) { startedTracked = true; trackEvent('video_started'); }
+            });
+            video.addEventListener('timeupdate', function () {
+              if (!video.duration) return;
+              var pct = (video.currentTime / video.duration) * 100;
+              [25, 50, 75].forEach(function (mark) {
+                if (pct >= mark && !progressMarks[mark]) {
+                  progressMarks[mark] = true;
+                  trackEvent('video_' + mark);
+                }
+              });
+            });
+            video.addEventListener('ended', function () { trackEvent('video_completed'); });
+          }
+          if (config.booking_link) {
+            var wrap = document.getElementById('bookingCtaWrap');
+            var link = document.getElementById('bookingCtaLink');
+            link.href = config.booking_link;
+            wrap.style.display = 'block';
+            link.addEventListener('click', function () {
+              trackEvent('lead_cta_clicked', { type: 'booking_link' });
+            });
+          }
+        })
+        .catch(function () {});
     })();
   </script>
 </body>

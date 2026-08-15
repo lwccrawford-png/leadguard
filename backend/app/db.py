@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS business (
     disclosure_text TEXT NOT NULL DEFAULT '',
     demo_suggested_questions TEXT NOT NULL DEFAULT '[]',
     demo_expires_at TEXT,
-    demo_enabled INTEGER NOT NULL DEFAULT 1
+    demo_enabled INTEGER NOT NULL DEFAULT 1,
+    booking_link TEXT NOT NULL DEFAULT ''
 );
 
 -- A "source" is either a crawled site page (source_type='site', url set) or a manually
@@ -242,6 +243,10 @@ def init_db():
             "ALTER TABLE business ADD COLUMN demo_expires_at TEXT",
             "ALTER TABLE business ADD COLUMN demo_enabled INTEGER NOT NULL DEFAULT 1",
             "ALTER TABLE business ADD COLUMN industry TEXT NOT NULL DEFAULT ''",
+            # Prospect-demo booking CTA (docs/PROSPECT_DEMO_ARCHITECTURE_SPEC.md) — seeded
+            # from the assigned rep's booking link at demo-generation time and pushed live
+            # again whenever that rep's link changes, so it never goes stale between demos.
+            "ALTER TABLE business ADD COLUMN booking_link TEXT NOT NULL DEFAULT ''",
         ]:
             try:
                 conn.execute(migration)

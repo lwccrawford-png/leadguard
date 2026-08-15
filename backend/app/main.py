@@ -130,6 +130,18 @@ def serve_demo():
     )
 
 
+@app.get("/demo/video")
+def serve_demo_video():
+    """Optional per-prospect pitch video, dropped into this instance's own
+    data dir by the Outreach video-upload flow (see ops/launcher_server.py).
+    Most instances never get one — the demo template only links here when
+    the video actually exists, so a 404 just means none was uploaded."""
+    video_path = DATA_DIR / "demo_video.mp4"
+    if not video_path.exists():
+        raise HTTPException(404, "No video for this demo")
+    return FileResponse(video_path, media_type="video/mp4")
+
+
 app.mount("/widget", StaticFiles(directory=str(WIDGET_DIR)), name="widget")
 app.mount("/dashboard", StaticFiles(directory=str(DASHBOARD_DIR), html=True), name="dashboard")
 app.mount("/support", StaticFiles(directory=str(SUPPORT_DIR), html=True), name="support")
