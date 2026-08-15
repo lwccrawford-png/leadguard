@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS prospects (
     assigned_rep TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
     source_urls TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'Not Started',
+    status TEXT NOT NULL DEFAULT 'Lead',
     cadence_step INTEGER NOT NULL DEFAULT 1,
     last_touch_at TEXT,
     next_touch_at TEXT,
@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS reps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     position INTEGER NOT NULL,
+    booking_link TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
 );
 """
@@ -240,14 +241,48 @@ def compute_next_touch(from_step: int, from_time: datetime) -> Optional[str]:
     return (from_time + timedelta(days=gap)).isoformat() if gap else None
 
 
+STAGES = ["Lead", "Prospect", "Demo Performed", "Client Agreement", "Closed"]
+RATINGS = ["", "not_interested", "interested", "hot"]
+
+# Old 7-status board (Not Started/Working/Follow-up Due/Engaged/Won/Lost/Paused)
+# replaced by the 5-stage sales pipeline above (2026-08-14) — every prospect starts
+# life as a Lead and is manually promoted from there, per Larry's call. Existing rows
+# get remapped once here rather than left on the old vocabulary the UI no longer
+# offers. "Lost" has no stage equivalent by design — it's tracked as a flag so a
+# card keeps whatever stage it reached instead of losing that history.
+_STATUS_REMAP = {
+    "Not Started": "Lead",
+    "Working": "Lead",
+    "Follow-up Due": "Lead",
+    "Paused": "Lead",
+    "Engaged": "Prospect",
+    "Won": "Closed",
+}
+
+
 def init_db():
     with db_session() as conn:
         conn.executescript(SCHEMA)
-        for migration in []:
+        for migration in [
+            "ALTER TABLE prospects ADD COLUMN rating TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE prospects ADD COLUMN product TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE prospects ADD COLUMN mrr_value REAL",
+            "ALTER TABLE prospects ADD COLUMN setup_amount REAL",
+            "ALTER TABLE prospects ADD COLUMN lost INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE prospects ADD COLUMN lost_reason TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE prospects ADD COLUMN has_video INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE reps ADD COLUMN booking_link TEXT NOT NULL DEFAULT ''",
+        ]:
             try:
                 conn.execute(migration)
             except sqlite3.OperationalError:
                 pass  # column already exists
+        conn.execute(
+            "UPDATE prospects SET lost = 1, lost_reason = 'Marked lost before pipeline redesign', "
+            "status = 'Lead' WHERE status = 'Lost'"
+        )
+        for old, new in _STATUS_REMAP.items():
+            conn.execute("UPDATE prospects SET status = ? WHERE status = ?", (new, old))
         existing_keys = {r["key"] for r in conn.execute("SELECT key FROM script_templates").fetchall()}
         for s in DEFAULT_SCRIPTS:
             if s["key"] in existing_keys:
