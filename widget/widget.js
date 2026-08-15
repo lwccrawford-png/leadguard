@@ -9,6 +9,12 @@
   var GREETING =
     (scriptTag && scriptTag.getAttribute("data-greeting")) ||
     "Hi! I'm the AI assistant here — ask me anything or book an appointment.";
+  var SUGGESTED_QUESTIONS = [];
+  try {
+    SUGGESTED_QUESTIONS = JSON.parse((scriptTag && scriptTag.getAttribute("data-suggested-questions")) || "[]");
+  } catch (e) {
+    SUGGESTED_QUESTIONS = [];
+  }
 
   if (!API_BASE) {
     console.error("[ai-frontdesk widget] Missing data-api-base on the script tag.");
@@ -118,7 +124,12 @@
     ".inputRow button{min-height:44px;min-width:44px;background:" +
     ACCENT +
     ";color:#fff;border:none;border-radius:22px;padding:0 18px;font-size:15px;cursor:pointer;}" +
-    ".inputRow button:disabled{opacity:.5;cursor:default;}";
+    ".inputRow button:disabled{opacity:.5;cursor:default;}" +
+    ".suggestions{position:fixed;bottom:90px;right:20px;z-index:2147482999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:280px;}" +
+    ".suggestions button{font-family:inherit;font-size:13px;text-align:left;background:#fff;border:1px solid #ddd;border-radius:14px;padding:9px 14px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);transition:transform .1s ease,border-color .1s ease;}" +
+    ".suggestions button:hover{border-color:" +
+    ACCENT +
+    ";transform:translateY(-1px);}";
   root.appendChild(style);
 
   var CHAT_ICON_SVG =
@@ -135,6 +146,24 @@
     bubble.innerHTML = CHAT_ICON_SVG;
   }
   root.appendChild(bubble);
+
+  var suggestionsEl = null;
+  if (SUGGESTED_QUESTIONS.length) {
+    suggestionsEl = document.createElement("div");
+    suggestionsEl.className = "suggestions";
+    SUGGESTED_QUESTIONS.slice(0, 3).forEach(function (q) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = q;
+      btn.addEventListener("click", function () {
+        openPanel();
+        inputEl.value = q;
+        sendMessage();
+      });
+      suggestionsEl.appendChild(btn);
+    });
+    root.appendChild(suggestionsEl);
+  }
 
   // With an avatar configured, the header becomes a tall, centered "hero" card (avatar
   // top and center, name below) so visitors immediately see a face, not just a color bar.
@@ -168,9 +197,32 @@
   function addMessage(role, text) {
     var el = document.createElement("div");
     el.className = "msg " + role;
-    el.innerHTML = linkify(escHtml(text));
     messagesEl.appendChild(el);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    if (role !== "assistant") {
+      el.innerHTML = linkify(escHtml(text));
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    // Assistant replies reveal progressively instead of landing as one instant block,
+    // and scroll anchors to the TOP of this message rather than scrollTop = scrollHeight
+    // (the bottom) — a reply taller than the visible chat window previously landed with
+    // its ending in view and its beginning already scrolled past, forcing the visitor to
+    // scroll back up just to read it from the start. Anchoring once at the top and then
+    // leaving scroll alone as the text fills in keeps the beginning in view throughout.
+    el.scrollIntoView({ block: "start" });
+    var words = text.split(/(\s+)/);
+    var i = 0;
+    var shown = "";
+    (function reveal() {
+      if (i < words.length) {
+        shown += words[i];
+        el.innerHTML = linkify(escHtml(shown));
+        i++;
+        setTimeout(reveal, 20);
+      }
+    })();
     return el;
   }
 
@@ -186,6 +238,7 @@
   var greeted = false;
   function openPanel() {
     panel.classList.add("open");
+    if (suggestionsEl) suggestionsEl.style.display = "none";
     if (!greeted) {
       addMessage("assistant", GREETING);
       greeted = true;
@@ -216,6 +269,13 @@
     greeted = true;
   });
 
+  // Opt-in only (?record=1 on the page this widget is embedded in — never present on a
+  // real client's own site, only on our own demo pages in recording mode). Without this,
+  // the sent question and the "typing..." indicator appear in the exact same instant,
+  // which reads as rushed on a screen recording — a real visitor doesn't need or want
+  // the delay, so this never touches normal response latency.
+  var RECORD_MODE_SEND_PAUSE_MS = /[?&]record=1(&|$)/.test(window.location.search) ? 1100 : 0;
+
   var sending = false;
   function sendMessage() {
     var text = inputEl.value.trim();
@@ -224,8 +284,14 @@
     inputEl.value = "";
     sending = true;
     sendBtn.disabled = true;
-    var typingEl = addTypingIndicator();
 
+    setTimeout(function () {
+      var typingEl = addTypingIndicator();
+      doSend(text, typingEl);
+    }, RECORD_MODE_SEND_PAUSE_MS);
+  }
+
+  function doSend(text, typingEl) {
     fetch(API_BASE.replace(/\/$/, "") + "/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -9,7 +9,7 @@ import anthropic
 
 from ..config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from ..db import db_session
-from . import faq_matching, handoff, rate_limit, retrieval
+from . import email, faq_matching, handoff, rate_limit, retrieval
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -286,12 +286,22 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
 def _execute_tool(tool_name: str, tool_input: dict, business: dict, conversation_id: int) -> dict:
     if tool_name == "capture_lead":
         intent = tool_input.get("intent") or "general_inquiry"
-        notified = handoff.notify(
+        lead_payload = {**tool_input, "intent": intent}
+        webhook_notified = handoff.notify(
             business.get("handoff_webhook_url", ""),
             business.get("name", "your business"),
-            {**tool_input, "intent": intent},
+            lead_payload,
             notify_email=business.get("handoff_email", ""),
         )
+        # Native email is the zero-setup default alongside the webhook, not a
+        # replacement — fires independently so a client with no automation
+        # configured still hears about their own lead. See email.notify().
+        email_notified = email.notify(
+            business.get("handoff_email", ""),
+            business.get("name", "your business"),
+            lead_payload,
+        )
+        notified = webhook_notified or email_notified
         with db_session() as conn:
             conn.execute(
                 "INSERT INTO leads (conversation_id, name, email, phone, intent, discovery_phase, notes, handoff_notified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -351,12 +361,19 @@ def handle_message(session_id: str, user_message: str, visitor_ip: str | None = 
         if not already_notified_this_month:
             # Only alert once per month — every message after the cap would otherwise spam the
             # webhook/email for every visitor who talks to an already-capped assistant.
-            notified = handoff.notify(
+            cap_payload = {"intent": "capacity_reached", "notes": notes}
+            webhook_notified = handoff.notify(
                 business.get("handoff_webhook_url", ""),
                 business.get("name", "your business"),
-                {"intent": "capacity_reached", "notes": notes},
+                cap_payload,
                 notify_email=business.get("handoff_email", ""),
             )
+            email_notified = email.notify(
+                business.get("handoff_email", ""),
+                business.get("name", "your business"),
+                cap_payload,
+            )
+            notified = webhook_notified or email_notified
 
         with db_session() as conn:
             conn.execute(

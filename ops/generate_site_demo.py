@@ -25,7 +25,42 @@ import tempfile
 import urllib.error
 import urllib.request
 
-CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+def _find_chrome_path() -> str:
+    """Locate a Chrome/Chromium binary across macOS (local dev) and Linux (the
+    production droplet) — this script needs to run in both places unchanged."""
+    candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",  # macOS
+        # Real Google Chrome (Google's own apt repo) is checked before any snap
+        # path — snap-packaged Chromium run as root hits AppArmor/DBus sandbox
+        # denials on this droplet and the render pipeline falls apart (confirmed
+        # directly: ListActivatableNames AccessDenied, then cascading mojo/zygote
+        # errors, then a silent hang with no screenshot produced). Google's .deb
+        # package isn't snap-confined and doesn't have this problem.
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/google-chrome",
+        # These are checked last and mostly won't be hit on this droplet, but
+        # stay here for other Linux setups where snap isn't the install method
+        # (e.g. a plain `apt install chromium` on Debian, not Ubuntu-snap).
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+    ]
+    for path in candidates:
+        if pathlib.Path(path).exists():
+            return path
+    raise RuntimeError(
+        "No Chrome/Chromium binary found. On macOS, install Google Chrome. "
+        "On Linux, install real Google Chrome (not the Ubuntu snap, which hits "
+        "AppArmor sandbox denials as root) via Google's own apt repo. If it's "
+        "installed somewhere not listed here, add its path to _find_chrome_path()."
+    )
+
+
+CHROME_PATH = _find_chrome_path()
+# Headless Chromium refuses to start as root (the normal user on the production
+# droplet) without this — Chrome's sandbox needs a setuid helper binary that isn't
+# set up in that environment. Harmless to always include, including on macOS.
+CHROME_SERVER_FLAGS = ["--no-sandbox", "--disable-dev-shm-usage"]
 TEMPLATE_PATH = pathlib.Path(__file__).parent / "demo_template.html"
 BACKEND_DIR = pathlib.Path(__file__).parent.parent / "backend"
 
@@ -80,6 +115,7 @@ def screenshot(url: str, width: int, height: int) -> bytes:
                 CHROME_PATH,
                 "--headless",
                 "--disable-gpu",
+                *CHROME_SERVER_FLAGS,
                 f"--screenshot={out_path}",
                 f"--window-size={width},{height}",
                 url,
@@ -116,6 +152,7 @@ def render_page_text(url: str) -> str:
         result = subprocess.run(
             [
                 CHROME_PATH, "--headless", "--disable-gpu",
+                *CHROME_SERVER_FLAGS,
                 "--dump-dom", "--virtual-time-budget=4000",
                 url,
             ],

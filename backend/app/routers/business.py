@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from ..config import AGENCY_NOTIFY_EMAIL, AGENCY_NOTIFY_WEBHOOK_URL, PRODUCT_NAME
 from ..db import db_session
-from ..services import faq_matching, handoff, ingestion, rate_limit, seo
+from ..services import email, faq_matching, handoff, ingestion, rate_limit, seo
 
 LEAD_STATUSES = {"new", "claimed", "done"}
 LEAD_OUTCOMES = {"booked", "not_interested", "no_response", "duplicate", "spam", "other"}
@@ -39,6 +39,7 @@ class BusinessSettings(BaseModel):
     demo_suggested_questions: list[str] = []
     demo_expires_at: Optional[str] = None
     demo_enabled: bool = True
+    booking_link: str = ""
 
 
 class LeadUpdate(BaseModel):
@@ -110,7 +111,7 @@ def update_business(settings: BusinessSettings):
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
                knowledge_source=?, greeting=?, disclosure_text=?, demo_suggested_questions=?,
-               demo_expires_at=?, demo_enabled=? WHERE id=1""",
+               demo_expires_at=?, demo_enabled=?, booking_link=? WHERE id=1""",
             (
                 settings.name,
                 settings.industry,
@@ -132,6 +133,7 @@ def update_business(settings: BusinessSettings):
                 json.dumps(settings.demo_suggested_questions[:3]),
                 settings.demo_expires_at,
                 int(settings.demo_enabled),
+                settings.booking_link,
             ),
         )
     return {"ok": True}
@@ -284,6 +286,8 @@ def list_leads():
     with db_session() as conn:
         rows = conn.execute("SELECT * FROM leads ORDER BY id DESC LIMIT 200").fetchall()
     return [dict(r) for r in rows]
+
+
 
 
 @router.patch("/leads/{lead_id}")
@@ -454,18 +458,21 @@ def submit_support_request(req: SupportRequestInput):
     # The raw image isn't sent through the webhook itself — payload size limits on
     # Slack/Zapier-style endpoints make that risky. It's stored on the request record;
     # the notification just flags that one's attached.
-    notified = handoff.notify(
+    support_lead = {
+        "intent": "support_request",
+        "name": business_name,
+        "notes": f"[{req.category}] {req.details}"
+        + (f" (contact: {req.contact_info})" if req.contact_info else "")
+        + (" [screenshot attached — see request record]" if req.screenshot_data_uri else ""),
+    }
+    webhook_notified = handoff.notify(
         AGENCY_NOTIFY_WEBHOOK_URL,
         business_name,
-        {
-            "intent": "support_request",
-            "name": business_name,
-            "notes": f"[{req.category}] {req.details}"
-            + (f" (contact: {req.contact_info})" if req.contact_info else "")
-            + (" [screenshot attached — see request record]" if req.screenshot_data_uri else ""),
-        },
+        support_lead,
         notify_email=AGENCY_NOTIFY_EMAIL,
     )
+    email_notified = email.notify(AGENCY_NOTIFY_EMAIL, business_name, support_lead)
+    notified = webhook_notified or email_notified
     with db_session() as conn:
         conn.execute(
             "INSERT INTO support_requests "
@@ -520,12 +527,15 @@ def submit_demo_request(req: DemoRequestInput, request: Request):
         notes += f"\n\n{message}"
 
     lead = {"intent": "call_booking", "name": name, "email": email, "phone": phone, "notes": notes}
-    notified = handoff.notify(
+    handoff_email = business["handoff_email"] if business else ""
+    webhook_notified = handoff.notify(
         business["handoff_webhook_url"] if business else "",
         business_name,
         lead,
-        notify_email=business["handoff_email"] if business else "",
+        notify_email=handoff_email,
     )
+    email_notified = email.notify(handoff_email, business_name, lead)
+    notified = webhook_notified or email_notified
     with db_session() as conn:
         conn.execute(
             "INSERT INTO leads (name, email, phone, intent, notes, handoff_notified, created_at) "

@@ -56,6 +56,7 @@ function greetingPreset(assistantName, businessName) {
 document.getElementById("useGreetingPreset")?.addEventListener("click", () => {
   const form = $("#settingsForm");
   form.elements["greeting"].value = greetingPreset(form.elements["assistant_name"].value, form.elements["name"].value);
+  form.elements["greeting"].dispatchEvent(new Event("input", { bubbles: true }));
 });
 
 // Curated starter-question pools an admin can pick 3 from instead of writing from
@@ -123,6 +124,7 @@ const SUGGESTED_QUESTION_BANKS = {
         const emptySlot = slots.find((s) => !s.value.trim());
         if (!emptySlot) return;
         emptySlot.value = q;
+        emptySlot.dispatchEvent(new Event("input", { bubbles: true }));
       });
       list.appendChild(chip);
     });
@@ -186,6 +188,9 @@ async function loadBusiness() {
     `  data-color="${data.accent_color || "#4f46e5"}"\n` +
     `  data-greeting="${greeting.replace(/"/g, "&quot;")}"\n` +
     (data.assistant_image_url ? `  data-avatar-url="${data.assistant_image_url.replace(/"/g, "&quot;")}"\n` : "") +
+    (data.demo_suggested_questions && data.demo_suggested_questions.length
+      ? `  data-suggested-questions="${JSON.stringify(data.demo_suggested_questions).replace(/"/g, "&quot;")}"\n`
+      : "") +
     `  defer\n` +
     `><\/script>`;
 
@@ -198,6 +203,41 @@ async function loadBusiness() {
   } else {
     usageEl.textContent = `${used} messages used this month (no limit set).`;
   }
+  initFieldUndo(form);
+}
+
+// Snapshots every field's current value as its "last saved" baseline and gives it an
+// inline Undo control that reverts just that field — the bottom Save Settings button is
+// still what actually confirms/persists changes, this just protects against losing a
+// half-edited flow_script or disclosure_text to an accidental keystroke before you hit it.
+function initFieldUndo(form) {
+  form.querySelectorAll("input[name], textarea[name], select[name]").forEach((el) => {
+    const readValue = () => (el.type === "checkbox" ? String(el.checked) : el.value);
+    el.dataset.savedValue = readValue();
+    let undoBtn = el.nextElementSibling;
+    if (!undoBtn || !undoBtn.classList.contains("field-undo")) {
+      undoBtn = document.createElement("button");
+      undoBtn.type = "button";
+      undoBtn.className = "field-undo";
+      undoBtn.textContent = "Undo change";
+      el.insertAdjacentElement("afterend", undoBtn);
+      const refreshDirty = () => {
+        undoBtn.classList.toggle("dirty", readValue() !== el.dataset.savedValue);
+      };
+      el.addEventListener("input", refreshDirty);
+      el.addEventListener("change", refreshDirty);
+      undoBtn.addEventListener("click", () => {
+        if (el.type === "checkbox") {
+          el.checked = el.dataset.savedValue === "true";
+        } else {
+          el.value = el.dataset.savedValue;
+        }
+        undoBtn.classList.remove("dirty");
+      });
+    } else {
+      undoBtn.classList.remove("dirty");
+    }
+  });
 }
 
 $("#settingsForm").addEventListener("submit", async (e) => {
@@ -616,14 +656,24 @@ async function loadDashboard() {
     if (demo.has_any_events) {
       demoCard.hidden = false;
       const lastActivity = demo.last_activity_at ? timeAgo(demo.last_activity_at) : "—";
-      $("#dashDemoStats").innerHTML = [
+      const stats = [
         ["Page opens", demo.total_opens],
         ["Unique sessions", demo.unique_sessions],
         ["Conversations started", demo.conversations_started],
         ["Messages sent", demo.messages_sent],
         ["Suggested-question clicks", demo.suggested_question_clicks],
-        ["Last activity", lastActivity],
-      ].map(([label, value]) => `<li><span>${label}</span><strong>${value}</strong></li>`).join("");
+      ];
+      // Only shown once a video/booking-link CTA is actually in play on this demo —
+      // most prospects never get one, so a permanent zero row would just be noise.
+      if (demo.video_views > 0) {
+        stats.push(["Video views", demo.video_views], ["Video completions", demo.video_completions]);
+      }
+      if (demo.lead_cta_clicks > 0) {
+        stats.push(["Booking link clicks", demo.lead_cta_clicks]);
+      }
+      stats.push(["Last activity", lastActivity]);
+      $("#dashDemoStats").innerHTML = stats
+        .map(([label, value]) => `<li><span>${label}</span><strong>${value}</strong></li>`).join("");
     } else {
       demoCard.hidden = true;
     }
@@ -645,6 +695,53 @@ const INTENT_LABELS = {
   capacity_reached: "📈 Cap reached",
 };
 
+function showLeadsView(view) {
+  document.querySelectorAll("#leadsViewToggle .view-toggle-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("leadsListView").hidden = view !== "list";
+  document.getElementById("leadsBoard").hidden = view !== "board";
+}
+
+function renderLeadsList(rows) {
+  const tbody = document.getElementById("leadsListBody");
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="muted">No leads yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((r) => {
+    const contact = [r.email, r.phone].filter(Boolean).join(" / ") || "—";
+    const status = r.status || "new";
+    return `<tr data-id="${r.id}">
+      <td>${esc(r.name) || "—"}</td>
+      <td>${esc(contact)}</td>
+      <td>${esc(INTENT_LABELS[r.intent] || r.intent || "")}</td>
+      <td>${esc(STATUS_LABELS[status] || status)}</td>
+      <td><input class="claimed-by-input" value="${esc(r.claimed_by) || ""}" placeholder="Unclaimed" /></td>
+      <td>${fmtDate(r.created_at)}</td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll(".claimed-by-input").forEach((input) => {
+    const priorName = input.value;
+    input.addEventListener("change", async () => {
+      const row = input.closest("tr");
+      const id = row.dataset.id;
+      const r = rows.find((x) => String(x.id) === id);
+      const newName = input.value.trim();
+      const patch = { claimed_by: newName };
+      if (!priorName && newName) {
+        patch.status = "claimed";
+      } else if (priorName && newName && priorName !== newName) {
+        const stamp = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        const line = `— Reassigned from ${priorName} to ${newName} (${stamp}) —`;
+        patch.notes = r?.notes ? `${r.notes}\n${line}` : line;
+      }
+      await patchLead(id, patch);
+      loadLeads();
+    });
+  });
+}
+
 async function loadLeads() {
   const res = await fetch("/api/leads");
   const allRows = await res.json();
@@ -661,6 +758,8 @@ async function loadLeads() {
 
   const filterOn = document.getElementById("unresolvedFilter")?.checked;
   const rows = filterOn ? allRows.filter((r) => r.intent === "unresolved_question") : allRows;
+
+  renderLeadsList(rows);
 
   for (const status of ["new", "claimed", "done"]) {
     const col = document.querySelector(`.board-col-cards[data-status="${status}"]`);
@@ -681,11 +780,33 @@ async function loadLeads() {
       card.querySelector(".claim-btn").hidden = true;
       card.querySelector(".claim-input").focus();
     });
+    card.querySelector(".reassign-btn")?.addEventListener("click", () => {
+      const prompt = card.querySelector(".claim-prompt");
+      prompt.hidden = false;
+      card.querySelector(".claimed-by").hidden = true;
+      card.querySelector(".reassign-btn").hidden = true;
+      const input = card.querySelector(".claim-input");
+      input.value = "";
+      input.placeholder = "New name";
+      input.focus();
+    });
 
     card.querySelector(".claim-confirm")?.addEventListener("click", async () => {
       const input = card.querySelector(".claim-input");
-      if (!input.value.trim()) return;
-      await patchLead(card.dataset.id, { claimed_by: input.value.trim(), status: "claimed" });
+      const newName = input.value.trim();
+      if (!newName) return;
+      const priorName = r.claimed_by;
+      const patch = { claimed_by: newName };
+      if (!priorName) {
+        patch.status = "claimed";
+      } else if (priorName !== newName) {
+        // Reassignment, not a first claim — leave a plain-text trail rather than a new
+        // column, per Larry's call: "something easy" beats a schema change for this.
+        const stamp = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        const line = `— Reassigned from ${priorName} to ${newName} (${stamp}) —`;
+        patch.notes = r.notes ? `${r.notes}\n${line}` : line;
+      }
+      await patchLead(card.dataset.id, patch);
       loadLeads();
     });
     card.querySelector(".claim-input")?.addEventListener("keydown", (e) => {
@@ -795,13 +916,14 @@ function cardHtml(r) {
       <div class="lead-card-claim">
         ${
           r.claimed_by
-            ? `<span class="claimed-by">👤 ${esc(r.claimed_by)}</span>`
-            : `<button class="claim-btn">Claim</button>
-               <span class="claim-prompt" hidden>
-                 <input class="claim-input" type="text" placeholder="Your name" />
-                 <button class="claim-confirm">OK</button>
-               </span>`
+            ? `<span class="claimed-by">👤 ${esc(r.claimed_by)}</span>
+               <button type="button" class="reassign-btn" title="Reassign to someone else">Reassign</button>`
+            : `<button type="button" class="claim-btn">Claim</button>`
         }
+        <span class="claim-prompt" hidden>
+          <input class="claim-input" type="text" placeholder="Name" />
+          <button type="button" class="claim-confirm">OK</button>
+        </span>
       </div>
       ${status === "claimed" && PIPELINE_ENABLED ? `<button class="promote-btn" data-id="${r.id}">Move to Pipeline →</button>` : ""}
     </div>`;

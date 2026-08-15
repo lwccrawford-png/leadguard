@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from ..config import DATA_DIR
 from ..db import db_session
 from ..services import rate_limit
 
@@ -23,6 +24,11 @@ ALLOWED_EVENT_TYPES = {
     "conversation_started",
     "message_sent",
     "lead_cta_clicked",
+    "video_started",
+    "video_25",
+    "video_50",
+    "video_75",
+    "video_completed",
 }
 
 
@@ -30,6 +36,19 @@ class DemoEventInput(BaseModel):
     event_type: str
     session_id: str = ""
     metadata: dict = {}
+
+
+@router.get("/config")
+def demo_config():
+    """Minimal public config for the demo page's video/booking CTA — deliberately
+    separate from /api/business, which carries admin-only settings (webhook URLs,
+    etc.) that must never be exposed on a page whose link gets sent to a prospect."""
+    with db_session() as conn:
+        row = conn.execute("SELECT booking_link FROM business WHERE id = 1").fetchone()
+    return {
+        "has_video": (DATA_DIR / "demo_video.mp4").exists(),
+        "booking_link": (row["booking_link"] if row else "") or "",
+    }
 
 
 @router.post("/events")
@@ -74,6 +93,8 @@ def events_summary():
         "messages_sent": by_type.get("message_sent", 0),
         "suggested_question_clicks": by_type.get("suggested_question_clicked", 0),
         "lead_cta_clicks": by_type.get("lead_cta_clicked", 0),
+        "video_views": by_type.get("video_started", 0),
+        "video_completions": by_type.get("video_completed", 0),
         "last_activity_at": last_activity,
         "has_any_events": len(rows) > 0,
     }

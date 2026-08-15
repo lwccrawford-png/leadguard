@@ -268,7 +268,17 @@
         <h3>❓ Unanswered questions <span class="hint">(things visitors asked that weren't in the knowledge base — add the real answer as an FAQ, then mark it done)</span></h3>
         <label class="checkbox-label"><input type="checkbox" id="unresolvedFilter" /> Show only unanswered questions</label>
       </div>
-      <div class="board" id="leadsBoard">
+      <div class="view-toggle" id="leadsViewToggle">
+        <button type="button" class="view-toggle-btn active" data-view="list" onclick="showLeadsView('list')">☰ List</button>
+        <button type="button" class="view-toggle-btn" data-view="board" onclick="showLeadsView('board')">▦ Board</button>
+      </div>
+      <div id="leadsListView">
+        <table class="leads-table">
+          <thead><tr><th>Name</th><th>Contact</th><th>Intent</th><th>Status</th><th>Claimed by</th><th>Captured</th></tr></thead>
+          <tbody id="leadsListBody"></tbody>
+        </table>
+      </div>
+      <div class="board" id="leadsBoard" hidden>
         <div class="board-col" data-status="new">
           <h3>New <span class="count" id="count-new">0</span></h3>
           <div class="board-col-cards" data-status="new"></div>
