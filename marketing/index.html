@@ -293,6 +293,25 @@ header.nav {
 .demo-disclaimer { font-size: 12.5px; color: var(--ink-faint); margin: 12px auto 0; max-width: 52ch; }
 
 .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; align-items: stretch; }
+.pricing-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.matrix-head { text-align: center; margin: 56px 0 20px; }
+.matrix-head h3 { font-family: var(--serif); font-weight: 600; font-size: 22px; color: var(--ink); }
+.matrix-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); background: var(--card); }
+table.feature-matrix { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13.5px; }
+table.feature-matrix th, table.feature-matrix td { padding: 13px 16px; border-bottom: 1px solid var(--line); }
+table.feature-matrix thead th {
+  font-family: var(--serif); font-weight: 600; font-size: 14.5px; color: var(--ink);
+  text-align: center; background: var(--bg-soft); border-bottom: 1px solid var(--line);
+}
+table.feature-matrix thead th.matrix-row-label { background: var(--card); }
+table.feature-matrix tbody tr:last-child td { border-bottom: none; }
+table.feature-matrix td.matrix-row-label { text-align: left; color: var(--ink-dim); font-weight: 500; white-space: nowrap; }
+table.feature-matrix td { text-align: center; }
+table.feature-matrix td.matrix-col-featured, table.feature-matrix th.matrix-col-featured { background: var(--amber-pale); }
+.mx-yes { color: var(--amber-deep); font-weight: 700; font-size: 15px; }
+.mx-no { color: var(--ink-faint); }
+.mx-partial { font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--moss); background: var(--moss-soft); padding: 3px 9px; border-radius: 999px; }
 .price-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 30px 24px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
 .price-card-featured { background: linear-gradient(155deg, var(--amber) 0%, var(--amber-deep) 100%); border-color: var(--amber-deep); box-shadow: 0 24px 50px -18px rgba(176, 111, 15, 0.45); transform: translateY(-6px); }
 .price-card-recommended { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--moss); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border-radius: 999px; }
@@ -470,6 +489,10 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
 }
 @media (max-width: 1180px) {
   .wordmark .tag { display: none; }
+}
+@media (max-width: 1100px) {
+  .pricing-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .price-card-featured { transform: none; }
 }
 @media (max-width: 880px) {
   .hero-grid { grid-template-columns: 1fr; }
@@ -916,36 +939,120 @@ footer { border-top: 1px solid var(--line); padding: 34px 0 40px; background: va
       <h2>Let your experience &amp; industry knowledge work as hard as you do.</h2>
       <p style="margin:0 auto;">Your website is already getting visits — but do visitors get the info you want them to receive? Core is a real, useful starting point. Business is where the ROI story gets serious — best fit for companies where one captured job, case, consultation, or estimate can justify the month.</p>
     </div>
-    <div class="pricing-grid">
+    <div class="pricing-grid pricing-grid-4">
       <div class="price-card">
-        <span class="plan-label plan-label-light">Core Starter</span>
-        <p class="price-card-fit">Small businesses ready to give prospects better answers, capture more opportunities, and create a clear next step.</p>
+        <span class="plan-label plan-label-light">Core</span>
+        <p class="price-card-fit">Solo operators and simple businesses ready to give visitors better answers and capture every opportunity.</p>
         <div class="price-card-amount"><span class="accent">$99–$149</span><span class="price-card-unit">/mo</span></div>
-        <div class="price-card-setup">+ $399–$799 setup</div>
-        <p class="price-card-desc">Your starter Business Intelligence Pack, turning your site's content into real answers — plus lead capture, scheduling, and a dashboard that shows what's working.</p>
-        <p class="price-card-boundary">No custom intelligence, custom routing, or hands-on monthly strategy — that belongs in Business and above.</p>
+        <div class="price-card-setup">+ $499 setup</div>
+        <p class="price-card-desc">Your site's own knowledge turned into real answers — plus lead capture, scheduling handoff, and a dashboard that shows what's working.</p>
+        <p class="price-card-boundary">No vertical intelligence or hands-on monthly strategy — that starts with Entrepreneur.</p>
         <a class="btn-ghost price-card-cta" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=Start%20with%20EvolveIQ%20Core">Start with Core →</a>
       </div>
+      <div class="price-card">
+        <span class="plan-label plan-label-light">Entrepreneur</span>
+        <p class="price-card-fit">Growing businesses that need real industry expertise built in from day one.</p>
+        <div class="price-card-amount"><span class="accent">$399–$599</span><span class="price-card-unit">/mo</span></div>
+        <div class="price-card-setup">+ $799 setup</div>
+        <p class="price-card-desc">Your industry's Business Intelligence Pack, a dedicated sales Pipeline, and hands-on setup — real vertical depth, not just FAQs.</p>
+        <p class="price-card-boundary">Best fit outside medical, legal, and financial — those live in Business, where escalation discipline matters most.</p>
+        <a class="btn-ghost price-card-cta" href="#demo">Build my demo →</a>
+      </div>
       <div class="price-card price-card-featured">
-        <span class="price-card-recommended">Entrepreneur Package</span>
+        <span class="price-card-recommended">Recommended</span>
         <span class="plan-label">Business</span>
-        <p class="price-card-fit">Businesses where each lead, case, job, or consultation has meaningful value.</p>
-        <div class="price-card-amount"><span class="accent">$497–$697</span><span class="price-card-unit">/mo</span></div>
-        <div class="price-card-setup">First 60 days · then $797–$997/mo · + $1,500–$2,500 setup</div>
-        <p class="price-card-desc">Managed setup, your vertical's Business Intelligence Pack, 30-day tuning, lead board, monthly insights, and webhook/email handoff.</p>
-        <p class="price-card-boundary">Best fit when one captured job, consultation, case, or estimate can justify the monthly subscription.</p>
+        <p class="price-card-fit">Medical, legal, and financial practices where one case or client is worth the whole month.</p>
+        <div class="price-card-amount"><span class="accent">$799–$999</span><span class="price-card-unit">/mo</span></div>
+        <div class="price-card-setup">+ $999–$1,500 setup</div>
+        <p class="price-card-desc">Priority scoring, conditional routing, and compliance-aware escalation — every lead triaged and routed the way your practice actually works, with intelligent handoff summaries for your team.</p>
+        <p class="price-card-boundary">Best fit when sophisticated triage and escalation discipline matter as much as capturing the lead.</p>
         <a class="btn-primary price-card-cta" href="#demo">Build my demo →</a>
       </div>
       <div class="price-card">
         <span class="plan-label plan-label-light">Enterprise</span>
-        <p class="price-card-fit">Multi-location, multi-team, high-volume, or custom-workflow organizations.</p>
-        <div class="price-card-amount"><span class="accent">From $997+</span><span class="price-card-unit">/mo</span></div>
-        <div class="price-card-setup">from $2,500</div>
-        <p class="price-card-desc">Custom routing across departments and locations, integration planning, higher usage, and a dedicated success cadence.</p>
+        <p class="price-card-fit">Multi-location and multi-site operations that need it all working together.</p>
+        <div class="price-card-amount"><span class="accent">Custom</span></div>
+        <div class="price-card-setup">Call for pricing</div>
+        <p class="price-card-desc">Everything in Business, per location, plus one unified view across every site and a dedicated success cadence.</p>
         <a class="btn-ghost price-card-cta" href="mailto:hello@justaskevolveiq.com?cc=lwc.crawford%40icloud.com&amp;subject=EvolveIQ%20Enterprise">Talk through rollout →</a>
       </div>
     </div>
     <p class="pricing-fine">Pricing shown is a planning range, not a guarantee — actual quotes depend on volume, vertical, and scope. Not producing real conversations on Core? Cancel before month two.</p>
+
+    <div class="matrix-head">
+      <h3>See exactly what's included, tier by tier.</h3>
+    </div>
+    <div class="matrix-scroll">
+      <table class="feature-matrix">
+        <thead>
+          <tr>
+            <th class="matrix-row-label"></th>
+            <th>Core</th>
+            <th>Entrepreneur</th>
+            <th class="matrix-col-featured">Business</th>
+            <th>Enterprise</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="matrix-row-label">Website assistant, lead capture &amp; scheduling handoff</td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Leads board &amp; dashboard</td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Business Intelligence Pack</td>
+            <td><span class="mx-partial">Starter</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Sales Pipeline board</td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Priority scoring &amp; conditional routing</td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Compliance-aware escalation rules</td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Intelligent handoff summaries</td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td class="matrix-col-featured"><span class="mx-yes" aria-label="Included">✓</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+          <tr>
+            <td class="matrix-row-label">Unified multi-location view</td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-no" aria-label="Not included">—</span></td>
+            <td class="matrix-col-featured"><span class="mx-no" aria-label="Not included">—</span></td>
+            <td><span class="mx-yes" aria-label="Included">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
