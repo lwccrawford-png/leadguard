@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import BASE_DIR, DATA_DIR, PRODUCT_NAME, WIDGET_ALLOWED_ORIGINS
 from .db import db_session, init_db
 from .services import retention, retrieval
-from .routers import chat, business, demo, pipeline
+from .routers import chat, business, demo, pipeline, intelligence
 
 PROJECT_ROOT = BASE_DIR.parent  # leadguard/
 WIDGET_DIR = PROJECT_ROOT / "widget"
@@ -27,6 +27,7 @@ app.include_router(chat.router)
 app.include_router(business.router)
 app.include_router(demo.router)
 app.include_router(pipeline.router)
+app.include_router(intelligence.router)
 
 
 @app.middleware("http")

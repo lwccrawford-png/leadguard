@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Intelligence Configuration</title>
+  <link rel="stylesheet" href="/dashboard/style.css" />
+  <style>
+    body{max-width:1100px;margin:0 auto;padding:28px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px}.full{grid-column:1/-1}label{display:block;font-weight:600;margin-top:12px}input,textarea,select{width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid #d1d5db;border-radius:8px}textarea{min-height:86px}.actions{display:flex;gap:10px;margin-top:18px}button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer}.primary{background:#111827;color:#fff}.muted{color:#6b7280}.rule{border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;font-size:12px}@media(max-width:760px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <p><a href="/dashboard/">← Dashboard</a></p>
+  <h1>Intelligence Configuration</h1>
+  <p class="muted">Generic jurisdiction, qualification, priority, and routing controls used by premium BIPs. These settings are not law-specific; Legal is simply the first vertical using them.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Profile</h2>
+      <label><input id="enabled" type="checkbox" style="width:auto" /> Enable intelligence processing</label>
+      <label>Vertical<input id="vertical" placeholder="personal_injury" /></label>
+      <label>Primary jurisdiction<input id="primary_jurisdiction" placeholder="TX" /></label>
+      <label>Additional jurisdictions<input id="additional_jurisdictions" placeholder="OK, AR" /></label>
+      <label>Jurisdiction mode<select id="jurisdiction_mode"><option value="single_state">Single state</option><option value="multi_state">Multi-state</option><option value="national_referral">National / referral</option></select></label>
+      <label>Languages<input id="languages" placeholder="English, Spanish" /></label>
+    </section>
+
+    <section class="card">
+      <h2>Fit Policies</h2>
+      <label>Accepted matter / service types<textarea id="accepted_types" placeholder="car_accident, truck_accident"></textarea></label>
+      <label>Excluded types<textarea id="excluded_types"></textarea></label>
+      <label>Existing-representation policy<textarea id="existing_representation_policy"></textarea></label>
+      <label>Out-of-area policy<textarea id="out_of_area_policy"></textarea></label>
+      <label>Property-damage-only policy<textarea id="property_damage_only_policy"></textarea></label>
+    </section>
+
+    <section class="card full">
+      <h2>Guardrails</h2>
+      <label>Approved boundary / disclaimer text<textarea id="approved_boundary_text"></textarea></label>
+      <label>Never-say rules<textarea id="never_say_text"></textarea></label>
+    </section>
+
+    <section class="card">
+      <h2>Standard Routing</h2>
+      <label>Destination webhook<input id="standard_handoff_webhook_url" /></label>
+      <label>Destination email<input id="standard_handoff_email" type="email" /></label>
+      <label>After-hours behavior<select id="after_hours_behavior"><option value="capture_and_notify">Capture + notify</option><option value="capture_next_business_day">Capture for next business day</option><option value="urgent_only">Notify urgent only</option></select></label>
+    </section>
+
+    <section class="card">
+      <h2>Urgent Routing</h2>
+      <label>Urgent webhook<input id="urgent_handoff_webhook_url" /></label>
+      <label>Urgent email<input id="urgent_handoff_email" type="email" /></label>
+      <p class="muted">Used by P1 leads unless a more specific routing rule matches.</p>
+    </section>
+
+    <section class="card full">
+      <h2>Priority Scoring</h2>
+      <p class="muted">JSON signal-to-points map. BIPs emit signal names; the platform scores them without hardcoding the vertical.</p>
+      <textarea id="scoring_rules" style="min-height:220px;font-family:monospace"></textarea>
+      <label>Thresholds JSON<textarea id="priority_thresholds" style="font-family:monospace"></textarea></label>
+    </section>
+
+    <section class="card full">
+      <h2>Routing Rules</h2>
+      <p class="muted">First matching active rule wins. Conditions support <code>any_signal</code>, <code>all_signals</code>, <code>priority_level_in</code>, and <code>attributes_equal</code>.</p>
+      <div id="rules"></div>
+      <h3>Add rule</h3>
+      <div class="grid">
+        <label>Label<input id="rule_label" placeholder="Commercial truck urgent" /></label>
+        <label>Destination label<input id="rule_destination" placeholder="Senior intake" /></label>
+        <label>Priority override<select id="rule_priority"><option value="">None</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option><option>P5</option></select></label>
+        <label>Position<input id="rule_position" type="number" value="0" /></label>
+        <label class="full">Condition JSON<textarea id="rule_condition" style="font-family:monospace">{"any_signal":["commercial_truck"]}</textarea></label>
+        <label>Webhook<input id="rule_webhook" /></label>
+        <label>Email<input id="rule_email" type="email" /></label>
+      </div>
+      <div class="actions"><button id="addRule">Add routing rule</button></div>
+    </section>
+  </div>
+
+  <div class="actions"><button id="save" class="primary">Save Intelligence Settings</button><span id="status" class="muted"></span></div>
+  <script src="/dashboard/intelligence.js"></script>
+</body>
+</html>
