@@ -207,6 +207,35 @@ DEFAULT_SCRIPTS = [
             "who would be?"
         ),
     },
+    # cadence_step 0 is reserved for scripts triggered by an event (a booked call)
+    # rather than a position in the cold-outreach cadence above — it won't appear
+    # on a prospect's per-cadence-step script view by design, only in the full
+    # script library (GET /api/outreach/scripts).
+    {
+        "key": "call_confirmation",
+        "cadence_step": 0,
+        "channel": "phone",
+        "title": "Booked-call confirmation (day-before)",
+        "body_template": (
+            "Hi {{name}}, it's {{rep}} with EvolveIQ — just confirming your call tomorrow at "
+            "{{time}} to walk through the demo we built for {{company}}. Does that time still "
+            "work for you?\n\n"
+            "If yes: \"Great, talk then — I'll send the link over again in case you need it.\"\n"
+            "If they want to reschedule: \"No problem — what time works better? I can get you "
+            "rebooked right now.\" (Use the booking link to move it, don't just note it and hope.)\n"
+            "If no answer: leave a short voicemail, then send the text version below."
+        ),
+    },
+    {
+        "key": "text_confirmation",
+        "cadence_step": 0,
+        "channel": "text",
+        "title": "Booked-call confirmation (text, after voicemail or as follow-up)",
+        "body_template": (
+            "Hi {{name}} — {{rep}} with EvolveIQ. Confirming your call tomorrow at {{time}} for "
+            "{{company}}. Reply here if you need to reschedule, otherwise see you then!"
+        ),
+    },
 ]
 
 
