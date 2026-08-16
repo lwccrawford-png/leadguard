@@ -24,3 +24,7 @@ ops/.auth_secret
 backend/data_prospect_*/demo.html
 widget/prospect_*.html
 widget/*demo*.html
+
+# tidycal_poller.py's own runtime bookkeeping (which bookings it's already
+# alerted on) — regenerated on every server, not source.
+ops/tidycal_poller_state.json
