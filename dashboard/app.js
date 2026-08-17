@@ -1,5 +1,14 @@
 const $ = (sel) => document.querySelector(sel);
 
+// Every fetch() below hits a path like `${API_BASE}/api/...`. Direct access
+// (lmtlss.justaskevolveiq.com/dashboard/) has no prefix, so API_BASE is "".
+// Accessed through the admin launcher's proxy (team.justaskevolveiq.com/
+// proxy/8002/dashboard/...), a bare "/api/..." fetch would resolve against
+// the domain root instead of the proxy path and 404 — the launcher has no
+// /api/business route, only each client backend does. Deriving the prefix
+// from the current URL instead of hardcoding it makes both paths work.
+const API_BASE = window.location.pathname.replace(/\/dashboard(\/.*)?$/, "");
+
 const ROT_CONFIG = { agingMinutes: 1440, rottingMinutes: 4320 };
 let PIPELINE_ENABLED = false;
 
@@ -133,7 +142,7 @@ const SUGGESTED_QUESTION_BANKS = {
 })();
 
 async function loadBusiness() {
-  const res = await fetch("/api/business");
+  const res = await fetch(API_BASE + "/api/business");
   const data = await res.json();
   if (data.product_name) {
     document.title = `${data.product_name} — Dashboard`;
@@ -259,7 +268,7 @@ $("#settingsForm").addEventListener("submit", async (e) => {
     return;
   }
   status.textContent = "Saving…";
-  const res = await fetch("/api/business", {
+  const res = await fetch(API_BASE + "/api/business", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -281,7 +290,7 @@ $("#settingsForm").addEventListener("submit", async (e) => {
 $("#crawlBtn").addEventListener("click", async () => {
   const status = $("#crawlStatus");
   status.textContent = "Starting crawl…";
-  const res = await fetch("/api/knowledge/crawl", { method: "POST" });
+  const res = await fetch(API_BASE + "/api/knowledge/crawl", { method: "POST" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     status.textContent = err.detail || "Could not start crawl";
@@ -306,7 +315,7 @@ $("#docForm").addEventListener("submit", async (e) => {
   const payload = Object.fromEntries(new FormData(e.target).entries());
   const status = $("#docStatus");
   status.textContent = "Adding…";
-  const res = await fetch("/api/knowledge/documents", {
+  const res = await fetch(API_BASE + "/api/knowledge/documents", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -318,7 +327,7 @@ $("#docForm").addEventListener("submit", async (e) => {
 });
 
 async function loadSources() {
-  const res = await fetch("/api/knowledge/sources");
+  const res = await fetch(API_BASE + "/api/knowledge/sources");
   const rows = await res.json();
   const tbody = $("#sourcesTable tbody");
   tbody.innerHTML =
@@ -330,7 +339,7 @@ async function loadSources() {
       .join("") || `<tr><td colspan="5" class="muted">No knowledge sources yet.</td></tr>`;
   tbody.querySelectorAll("button.delete").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await fetch(`/api/knowledge/sources/${btn.dataset.id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/knowledge/sources/${btn.dataset.id}`, { method: "DELETE" });
       loadSources();
     });
   });
@@ -341,7 +350,7 @@ $("#faqForm").addEventListener("submit", async (e) => {
   const payload = Object.fromEntries(new FormData(e.target).entries());
   const status = $("#faqStatus");
   status.textContent = "Saving…";
-  const res = await fetch("/api/knowledge/faqs", {
+  const res = await fetch(API_BASE + "/api/knowledge/faqs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -354,7 +363,7 @@ $("#faqForm").addEventListener("submit", async (e) => {
 });
 
 async function loadUnresolvedKnowledge() {
-  const res = await fetch("/api/leads");
+  const res = await fetch(API_BASE + "/api/leads");
   const rows = await res.json();
   const open = rows.filter((r) => r.intent === "unresolved_question" && (r.status || "new") !== "done");
   const card = $("#unresolvedKnowledgeCard");
@@ -397,7 +406,7 @@ async function loadUnresolvedKnowledge() {
 }
 
 async function loadComposition() {
-  const res = await fetch("/api/knowledge/composition");
+  const res = await fetch(API_BASE + "/api/knowledge/composition");
   const data = await res.json();
   const card = $("#compositionCard");
   if (data.total_rows === 0) {
@@ -413,7 +422,7 @@ async function loadComposition() {
 }
 
 async function loadFaqs() {
-  const res = await fetch("/api/knowledge/faqs");
+  const res = await fetch(API_BASE + "/api/knowledge/faqs");
   const rows = await res.json();
   const tbody = $("#faqsTable tbody");
   tbody.innerHTML =
@@ -425,7 +434,7 @@ async function loadFaqs() {
       .join("") || `<tr><td colspan="4" class="muted">No FAQs added yet.</td></tr>`;
   tbody.querySelectorAll("button.delete").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await fetch(`/api/knowledge/faqs/${btn.dataset.id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/knowledge/faqs/${btn.dataset.id}`, { method: "DELETE" });
       loadFaqs();
       loadComposition();
     });
@@ -451,7 +460,7 @@ function startFaqEdit(tr, faq) {
     const answer = tr.querySelector(".edit-answer").value.trim();
     const category = tr.querySelector(".edit-category").value.trim();
     if (!question || !answer) return;
-    await fetch(`/api/knowledge/faqs/${faq.id}`, {
+    await fetch(`${API_BASE}/api/knowledge/faqs/${faq.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, answer, category, priority: faq.priority }),
@@ -466,7 +475,7 @@ $("#factForm").addEventListener("submit", async (e) => {
   const payload = Object.fromEntries(new FormData(e.target).entries());
   const status = $("#factStatus");
   status.textContent = "Saving…";
-  const res = await fetch("/api/knowledge/facts", {
+  const res = await fetch(API_BASE + "/api/knowledge/facts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -479,7 +488,7 @@ $("#factForm").addEventListener("submit", async (e) => {
 });
 
 async function loadFacts() {
-  const res = await fetch("/api/knowledge/facts");
+  const res = await fetch(API_BASE + "/api/knowledge/facts");
   const rows = await res.json();
   const tbody = $("#factsTable tbody");
   tbody.innerHTML =
@@ -491,7 +500,7 @@ async function loadFacts() {
       .join("") || `<tr><td colspan="3" class="muted">No facts added yet.</td></tr>`;
   tbody.querySelectorAll("button.delete").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await fetch(`/api/knowledge/facts/${btn.dataset.id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/knowledge/facts/${btn.dataset.id}`, { method: "DELETE" });
       loadFacts();
       loadComposition();
     });
@@ -515,7 +524,7 @@ function startFactEdit(tr, fact) {
     const label = tr.querySelector(".edit-label").value.trim();
     const value = tr.querySelector(".edit-value").value.trim();
     if (!label || !value) return;
-    await fetch(`/api/knowledge/facts/${fact.id}`, {
+    await fetch(`${API_BASE}/api/knowledge/facts/${fact.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label, value }),
@@ -526,7 +535,7 @@ function startFactEdit(tr, fact) {
 }
 
 async function loadFaqSchema() {
-  const res = await fetch("/api/seo/faq-schema");
+  const res = await fetch(API_BASE + "/api/seo/faq-schema");
   const schema = await res.json();
   const el = $("#faqSchemaSnippet");
   if (!schema.mainEntity || schema.mainEntity.length === 0) {
@@ -543,7 +552,7 @@ $("#checkCrawlersBtn").addEventListener("click", async () => {
   btn.textContent = "Checking…";
   tbody.innerHTML = `<tr><td colspan="3" class="muted">Checking robots.txt…</td></tr>`;
 
-  const res = await fetch("/api/seo/ai-crawler-access");
+  const res = await fetch(API_BASE + "/api/seo/ai-crawler-access");
   const data = await res.json();
   btn.disabled = false;
   btn.textContent = "Check Now";
@@ -561,7 +570,7 @@ $("#checkCrawlersBtn").addEventListener("click", async () => {
 });
 
 async function loadUsage() {
-  const res = await fetch("/api/usage/summary");
+  const res = await fetch(API_BASE + "/api/usage/summary");
   const d = await res.json();
 
   const stats = [
@@ -595,9 +604,9 @@ async function loadUsage() {
 
 async function loadDashboard() {
   const [usageRes, leadsRes, businessRes] = await Promise.all([
-    fetch("/api/usage/summary"),
-    fetch("/api/leads"),
-    fetch("/api/business"),
+    fetch(API_BASE + "/api/usage/summary"),
+    fetch(API_BASE + "/api/leads"),
+    fetch(API_BASE + "/api/business"),
   ]);
   const d = await usageRes.json();
   const leads = await leadsRes.json();
@@ -640,7 +649,7 @@ async function loadDashboard() {
   const pipelineCard = $("#dashPipelineCard");
   if (business.pipeline_enabled) {
     pipelineCard.hidden = false;
-    const cardsRes = await fetch("/api/pipeline/cards");
+    const cardsRes = await fetch(API_BASE + "/api/pipeline/cards");
     const pipelineCards = await cardsRes.json();
     $("#dashPipelineSummary").textContent = `${pipelineCards.length} card${pipelineCards.length === 1 ? "" : "s"} in the pipeline.`;
   } else {
@@ -652,7 +661,7 @@ async function loadDashboard() {
   // them automatically — no separate "is this a demo" flag needed on the business record.
   const demoCard = $("#dashDemoEngagementCard");
   try {
-    const demoRes = await fetch("/api/demo/events/summary");
+    const demoRes = await fetch(API_BASE + "/api/demo/events/summary");
     const demo = await demoRes.json();
     if (demo.has_any_events) {
       demoCard.hidden = false;
@@ -744,11 +753,11 @@ function renderLeadsList(rows) {
 }
 
 async function loadLeads() {
-  const res = await fetch("/api/leads");
+  const res = await fetch(API_BASE + "/api/leads");
   const allRows = await res.json();
   // Premium intelligence (priority/routing/summary) is optional — most businesses don't have
   // it enabled, so this 404s or returns {} for them and cards just render without a badge.
-  const intelMap = await fetch("/api/intelligence/leads")
+  const intelMap = await fetch(API_BASE + "/api/intelligence/leads")
     .then((r) => (r.ok ? r.json() : {}))
     .catch(() => ({}));
 
@@ -840,7 +849,7 @@ async function loadLeads() {
 
     card.querySelector(".promote-btn")?.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const res = await fetch(`/api/leads/${card.dataset.id}/promote`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/api/leads/${card.dataset.id}/promote`, { method: "POST" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert(err.detail || "Could not move this lead to Pipeline.");
@@ -943,7 +952,7 @@ function cardHtml(r, intel) {
 }
 
 async function patchLead(id, body) {
-  await fetch(`/api/leads/${id}`, {
+  await fetch(`${API_BASE}/api/leads/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -955,7 +964,7 @@ async function patchLead(id, body) {
 const pipelineExpanded = {};
 
 async function loadPipeline() {
-  const [stagesRes, cardsRes] = await Promise.all([fetch("/api/pipeline/stages"), fetch("/api/pipeline/cards")]);
+  const [stagesRes, cardsRes] = await Promise.all([fetch(API_BASE + "/api/pipeline/stages"), fetch(API_BASE + "/api/pipeline/cards")]);
   const stages = await stagesRes.json();
   const cards = await cardsRes.json();
   renderStageConfig(stages);
@@ -1003,7 +1012,7 @@ function renderStageConfig(stages) {
   list.querySelectorAll(".stage-delete").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("Remove this stage? Any cards in it will be removed too.")) return;
-      await fetch(`/api/pipeline/stages/${btn.dataset.id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/pipeline/stages/${btn.dataset.id}`, { method: "DELETE" });
       loadPipeline();
     });
   });
@@ -1012,7 +1021,7 @@ function renderStageConfig(stages) {
       e.preventDefault();
       const label = form.elements["label"].value.trim();
       if (!label) return;
-      await fetch(`/api/pipeline/stages/${form.dataset.stageId}/dropdown-options`, {
+      await fetch(`${API_BASE}/api/pipeline/stages/${form.dataset.stageId}/dropdown-options`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label }),
@@ -1023,7 +1032,7 @@ function renderStageConfig(stages) {
 }
 
 async function patchStage(id, body) {
-  return fetch(`/api/pipeline/stages/${id}`, {
+  return fetch(`${API_BASE}/api/pipeline/stages/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -1040,7 +1049,7 @@ $("#pipelineStageForm").addEventListener("submit", async (e) => {
     is_won: form.elements["is_won"].checked,
   };
   if (!payload.label) return;
-  const res = await fetch("/api/pipeline/stages", {
+  const res = await fetch(API_BASE + "/api/pipeline/stages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -1168,7 +1177,7 @@ function pipelineCardHtml(c, stage) {
 }
 
 async function patchCard(id, body) {
-  await fetch(`/api/pipeline/cards/${id}`, {
+  await fetch(`${API_BASE}/api/pipeline/cards/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -1199,7 +1208,7 @@ async function loadConversations() {
   if (since) params.set("since", since);
   if (until) params.set("until", until);
 
-  const res = await fetch("/api/conversations?" + params.toString());
+  const res = await fetch(API_BASE + "/api/conversations?" + params.toString());
   const rows = await res.json();
   const tbody = $("#conversationsTable tbody");
   tbody.innerHTML =
@@ -1215,7 +1224,7 @@ async function loadConversations() {
 }
 
 async function loadConversationDetail(id) {
-  const res = await fetch(`/api/conversations/${id}/messages`);
+  const res = await fetch(`${API_BASE}/api/conversations/${id}/messages`);
   const rows = await res.json();
   $("#conversationDetail").innerHTML = rows
     .map((m) => `<div class="msg-row"><div class="msg-role">${esc(m.role)}</div><div class="msg-content">${esc(m.content)}</div></div>`)
