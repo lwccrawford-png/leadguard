@@ -35,12 +35,15 @@ Nothing below is the VA's job to arrange. Have this ready before they start:
 - [ ] CRM login — access to the Outreach tab in the launcher
       (`team.justaskevolveiq.com`), where the prospect list, cadence, and
       script library (§4 below) all live
-- [ ] View access to the booking calendar (TidyCal) so they can see
-      upcoming booked calls
-- [ ] TidyCal SMS reminders enabled (Agency plan — already active) on the
-      booking type reps use
-- [ ] The Zapier "new booking → notify VA" automation connected (Slack,
-      email, or text — whichever the VA will actually check in real time)
+- [ ] View access to the booking calendar (Zoom Scheduler, as of
+      2026-08-17 — moved from TidyCal, which had no way to collect a
+      phone number on the booking form itself) so they can see upcoming
+      booked calls
+- [ ] An automated new-booking → notify-VA alert connected (Slack, email,
+      or text — whichever the VA will actually check in real time). The
+      TidyCal-based version of this (`ops/tidycal_poller.py`) is now
+      pointed at an abandoned booking page and needs a Zoom Scheduler
+      equivalent — not yet rebuilt as of this writing.
 - [ ] A consistent name/identity the VA introduces themselves with — same
       name on the email signature, the caller ID, and the calendar invite
       for a given prospect, not a different name per channel
