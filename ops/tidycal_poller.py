@@ -50,7 +50,15 @@ def save_state(state: dict) -> None:
 def fetch_bookings() -> list:
     req = urllib.request.Request(
         f"https://tidycal.com/api/teams/{TIDYCAL_TEAM_ID}/bookings?per_page=100",
-        headers={"Authorization": f"Bearer {TIDYCAL_API_TOKEN}", "Accept": "application/json"},
+        headers={
+            "Authorization": f"Bearer {TIDYCAL_API_TOKEN}",
+            "Accept": "application/json",
+            # urllib's default User-Agent ("Python-urllib/3.x") gets a 403 from
+            # TidyCal's API even with a valid token — same request works fine
+            # with curl's UA. Not a real browser claim, just avoiding the
+            # generic-scraper fingerprint that's actually getting blocked.
+            "User-Agent": "curl/8.7.1",
+        },
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
         return json.loads(resp.read())["data"]
