@@ -540,9 +540,20 @@ def submit_demo_request(req: DemoRequestInput, request: Request):
     notified = webhook_notified or email_notified
     with db_session() as conn:
         conn.execute(
-            "INSERT INTO leads (name, email, phone, intent, notes, handoff_notified, created_at) "
-            "VALUES (?, ?, ?, 'call_booking', ?, ?, ?)",
-            (name, email, phone, notes, 1 if notified else 0, datetime.now(timezone.utc).isoformat()),
+            "INSERT INTO leads (name, email, phone, intent, notes, handoff_notified, sms_consent, created_at) "
+            "VALUES (?, ?, ?, 'call_booking', ?, ?, ?, ?)",
+            (
+                name,
+                email,
+                phone,
+                notes,
+                1 if notified else 0,
+                # Consent is disclosed on the form itself next to the phone field ("By
+                # submitting this form...") rather than a separate checkbox — so providing
+                # a phone number here is the actual consent signal, not a distinct flag.
+                1 if phone else 0,
+                datetime.now(timezone.utc).isoformat(),
+            ),
         )
     return {"ok": True}
 

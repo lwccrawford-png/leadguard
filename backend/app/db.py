@@ -127,6 +127,12 @@ CREATE TABLE IF NOT EXISTS leads (
     claimed_by TEXT,
     outcome TEXT,
     handoff_notified INTEGER NOT NULL DEFAULT 0,
+    -- SMS marketing consent for call_booking-intent leads from the marketing site's demo
+    -- request form — disclosed as "by submitting this form..." next to the phone field there,
+    -- so providing a phone number IS the consent signal, not a separate checkbox. Kept as its
+    -- own column (not folded into notes) so it's queryable evidence, not just typed text.
+    -- Unset (0) for every other lead source/intent.
+    sms_consent INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
 
@@ -252,6 +258,7 @@ def init_db():
             # again whenever that rep's link changes, so it never goes stale between demos.
             "ALTER TABLE business ADD COLUMN booking_link TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN priority_routing_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE leads ADD COLUMN sms_consent INTEGER NOT NULL DEFAULT 0",
         ]:
             try:
                 conn.execute(migration)
