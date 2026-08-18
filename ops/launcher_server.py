@@ -1019,7 +1019,7 @@ def promote(client_id: str):
     return {"ok": True, "message": f"{client['name']} promoted to client status"}
 
 
-@app.api_route("/proxy/{port}/{path:path}", methods=["GET", "POST", "OPTIONS"])
+@app.api_route("/proxy/{port}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 async def proxy_to_client(port: int, path: str, request: Request):
     """Forward a request to a client/demo instance's own backend, so a demo page's
     live widget (loaded from a public demo link, opened by anyone, not just this
