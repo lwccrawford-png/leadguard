@@ -1606,7 +1606,16 @@ def bip_import_apply(bip_id: str, req: BipApplyRequest):
             # not a per-client customization, it's "which template is this."
             settings["vertical"] = bip_id.removesuffix("_premium")
             settings["enabled"] = True
-            for key in ("scoring_rules", "priority_thresholds", "never_say_text", "approved_boundary_text",
+            # scoring_rules/priority_thresholds are never actually "blank" — every client's
+            # row is eagerly seeded with the platform default the moment it's first read, so
+            # plain truthiness can never detect "not yet customized" for these two. The
+            # client's own backend flags whether its stored values still exactly match that
+            # seeded default (see intelligence.get_settings); treat "still at default" the
+            # same as blank, same as every other field here.
+            for key in ("scoring_rules", "priority_thresholds"):
+                if key in intel_defaults and settings.get(f"{key}_is_default", True):
+                    settings[key] = intel_defaults[key]
+            for key in ("never_say_text", "approved_boundary_text",
                         "existing_representation_policy", "out_of_area_policy", "property_damage_only_policy"):
                 if key in intel_defaults and not settings.get(key):
                     settings[key] = intel_defaults[key]

@@ -152,6 +152,13 @@ def get_settings() -> dict:
     ):
         data[field.removesuffix("_json")] = _loads(data.pop(field), [] if field.endswith("s_json") and field not in ("scoring_rules_json", "priority_thresholds_json") else {})
     data["enabled"] = bool(data["enabled"])
+    # A fresh client's scoring_rules/priority_thresholds are eagerly seeded with the
+    # platform default the moment this row is first created (see ensure_schema), so
+    # they're never actually "blank" — plain truthiness can't tell BIP Import whether a
+    # client's values are still just that seeded default or a real customization/BIP
+    # application. Expose that distinction explicitly instead.
+    data["scoring_rules_is_default"] = data["scoring_rules"] == DEFAULT_SCORING_RULES
+    data["priority_thresholds_is_default"] = data["priority_thresholds"] == DEFAULT_PRIORITY_THRESHOLDS
     return data
 
 
