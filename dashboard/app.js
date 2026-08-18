@@ -252,22 +252,33 @@ function initFieldUndo(form) {
 
 $("#settingsForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const payload = Object.fromEntries(new FormData(e.target).entries());
-  payload.pipeline_enabled = e.target.elements["pipeline_enabled"].checked;
-  payload.demo_suggested_questions = [
-    payload.demo_suggested_questions_1,
-    payload.demo_suggested_questions_2,
-    payload.demo_suggested_questions_3,
-  ].map((q) => (q || "").trim()).filter(Boolean);
-  delete payload.demo_suggested_questions_1;
-  delete payload.demo_suggested_questions_2;
-  delete payload.demo_suggested_questions_3;
   const status = $("#saveStatus");
+  status.textContent = "Saving…";
+
+  // Merge form fields on top of a fresh copy of the current record, rather than
+  // sending only what's in the form. Fields with no form control at all — e.g.
+  // priority_routing_enabled, which is set by the launcher's tier system, not
+  // editable here — would otherwise be absent from the payload and silently
+  // reset to the backend model's default on every save.
+  const currentRes = await fetch(API_BASE + "/api/business");
+  const current = await currentRes.json();
+
+  const formPayload = Object.fromEntries(new FormData(e.target).entries());
+  formPayload.pipeline_enabled = e.target.elements["pipeline_enabled"].checked;
+  formPayload.demo_suggested_questions = [
+    formPayload.demo_suggested_questions_1,
+    formPayload.demo_suggested_questions_2,
+    formPayload.demo_suggested_questions_3,
+  ].map((q) => (q || "").trim()).filter(Boolean);
+  delete formPayload.demo_suggested_questions_1;
+  delete formPayload.demo_suggested_questions_2;
+  delete formPayload.demo_suggested_questions_3;
+
+  const payload = { ...current, ...formPayload };
   if (Number(payload.rot_rotting_minutes) < Number(payload.rot_aging_minutes)) {
     status.textContent = "Rotting threshold must be equal to or later than the aging threshold";
     return;
   }
-  status.textContent = "Saving…";
   const res = await fetch(API_BASE + "/api/business", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
