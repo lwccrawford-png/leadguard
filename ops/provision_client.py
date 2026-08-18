@@ -22,7 +22,12 @@ import sys
 
 CLIENTS_DIR = pathlib.Path("/opt/evolveiq/clients")
 CADDY_SITES_DIR = pathlib.Path("/etc/caddy/sites")
-REGISTRY_PATH = pathlib.Path("/opt/evolveiq/clients.json")
+# Must match ops/launcher_server.py's CLIENTS_PATH exactly (OPS_DIR / "clients.json",
+# i.e. inside the git-managed app dir) — NOT /opt/evolveiq/clients.json, a stale path
+# from an earlier schema that the launcher stopped reading from. Writing to the wrong
+# file meant every client provisioned by this script silently never showed up in the
+# admin dashboard (discovered 2026-08-18, re-registering Evolve Credit Repair).
+REGISTRY_PATH = pathlib.Path("/opt/evolveiq/app/ops/clients.json")
 DOMAIN = "justaskevolveiq.com"
 PORT_RANGE_START = 8000
 PORT_RANGE_END = 8999
@@ -63,7 +68,7 @@ def main():
     parser.add_argument("--name", required=True, help="Human-readable business name, e.g. 'Acme HVAC'")
     parser.add_argument("--subdomain", default=None, help="Defaults to --id if omitted")
     parser.add_argument("--port", type=int, default=None, help="Defaults to next free port if omitted")
-    parser.add_argument("--industry", default="", help="Optional, purely informational")
+    parser.add_argument("--accent-color", default="#4f46e5", help="Hex color for the dashboard/widget accent")
     args = parser.parse_args()
 
     client_id = slugify(args.id)
@@ -106,20 +111,30 @@ def main():
     run(["caddy", "validate", "--config", "/etc/caddy/Caddyfile"])
     run(["systemctl", "reload", "caddy"])
 
-    # 4. Registry (local record of what's running — mirrors ops/clients.json's role locally)
+    # 4. Registry — shape must match what ops/launcher_server.py's load_clients()
+    # actually expects (data_dir/accent_color/type/tier/features), not the older
+    # subdomain/industry shape. tier/features start unset; set via the launcher's
+    # tier dropdown after provisioning, same as every other client.
     registry.append({
         "id": client_id,
         "name": args.name,
-        "subdomain": f"{subdomain}.{DOMAIN}",
         "port": port,
-        "industry": args.industry,
+        "data_dir": str(data_dir),
+        "accent_color": args.accent_color,
+        "widget_demo": None,
+        "sales_demo": None,
+        "type": "client",
+        "tier": None,
+        "features": {},
     })
     save_registry(registry)
 
     print(f"\nDone. Live at:")
     print(f"  Dashboard: https://{subdomain}.{DOMAIN}/dashboard/")
     print(f"  Widget:    https://{subdomain}.{DOMAIN}/widget/widget.js")
-    print(f"\n(HTTPS cert issues automatically on first real request — may take a few seconds.)")
+    print(f"\nSet tier, industry, and the rest of the business details via the")
+    print(f"admin dashboard (team.{DOMAIN}) — nothing here configures those.")
+    print(f"(HTTPS cert issues automatically on first real request — may take a few seconds.)")
 
 
 if __name__ == "__main__":
