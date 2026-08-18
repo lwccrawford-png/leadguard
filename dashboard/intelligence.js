@@ -1,3 +1,10 @@
+// Direct access (evolve.justaskevolveiq.com/dashboard/intelligence.html) has no prefix,
+// so API_BASE is "". Viewed through the admin launcher's proxy
+// (team.justaskevolveiq.com/proxy/{port}/dashboard/intelligence.html), it's
+// "/proxy/{port}" — without this, fetch("/api/...") would hit the launcher's own
+// domain root instead of staying inside the proxy prefix. Same fix as dashboard/app.js.
+const API_BASE = window.location.pathname.replace(/\/dashboard(\/.*)?$/, "");
+
 const $ = (id) => document.getElementById(id);
 const splitList = (value) => value.split(/[,\n]/).map(v => v.trim()).filter(Boolean);
 const show = (message) => { $('status').textContent = message; setTimeout(() => $('status').textContent = '', 2500); };
@@ -43,7 +50,7 @@ function readTypeCheckboxes(prefix) {
 }
 
 async function api(path, options={}) {
-  const res = await fetch(path, {headers:{'Content-Type':'application/json'}, ...options});
+  const res = await fetch(API_BASE + path, {headers:{'Content-Type':'application/json'}, ...options});
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

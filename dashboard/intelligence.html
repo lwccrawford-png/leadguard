@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Intelligence Configuration</title>
-  <link rel="stylesheet" href="/dashboard/style.css" />
+  <link rel="stylesheet" href="style.css" />
   <style>
     body{max-width:1100px;margin:0 auto;padding:28px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px}.full{grid-column:1/-1}label{display:block;font-weight:600;margin-top:12px}input,textarea,select{width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid #d1d5db;border-radius:8px}textarea{min-height:86px}.actions{display:flex;gap:10px;margin-top:18px}button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer}.primary{background:#111827;color:#fff}.muted{color:#6b7280}.rule{border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;font-size:12px}
     .field-help{font-weight:400;font-size:12px;color:#6b7280;margin-top:3px}
@@ -17,7 +17,7 @@
   </style>
 </head>
 <body>
-  <p><a href="/dashboard/">← Dashboard</a></p>
+  <p><a href="index.html">← Dashboard</a></p>
   <h1>Intelligence Configuration</h1>
   <p class="muted">Generic jurisdiction, qualification, priority, and routing controls used by premium BIPs. These settings are not law-specific; Legal is simply the first vertical using them. Applying a premium BIP via <a href="/bip-import">BIP Import</a> prefills most of this page automatically — you should mainly be reviewing and adjusting the fields below, not typing them from a blank page.</p>
 
@@ -148,6 +148,6 @@
   </div>
 
   <div class="actions"><button id="save" class="primary">Save Intelligence Settings</button><span id="status" class="muted"></span></div>
-  <script src="/dashboard/intelligence.js"></script>
+  <script src="intelligence.js"></script>
 </body>
 </html>
