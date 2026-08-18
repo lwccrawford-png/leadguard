@@ -13,25 +13,24 @@ logger = logging.getLogger(__name__)
 
 INTEL_RE = re.compile(r"\[EIQ_INTEL\](.*?)\[/EIQ_INTEL\]", re.DOTALL)
 
+
+# Vertical-neutral starting point — used only until a client's own scoring_rules is set
+# (via BIP Import or manual customization on the Intelligence Configuration page). A
+# premium BIP for any vertical is expected to supply its own domain-specific signal
+# vocabulary that overrides this; these keys are deliberately generic enough to make
+# sense for any local service business, not tuned to one.
 DEFAULT_SCORING_RULES = {
-    "fatality": 25,
-    "major_surgery_or_hospitalization": 20,
-    "significant_injury": 15,
-    "active_treatment": 8,
-    "commercial_truck": 15,
-    "commercial_vehicle": 10,
-    "pedestrian_or_motorcycle": 8,
-    "child_involved": 10,
-    "police_or_incident_report": 5,
-    "photos_or_video": 3,
-    "witnesses": 3,
-    "within_72_hours": 10,
-    "within_30_days": 7,
-    "requests_attorney_conversation": 10,
-    "provides_contact_info": 5,
-    "requests_consultation": 8,
-    "inside_jurisdiction": 10,
-    "accepted_case_type": 10,
+    "urgent_situation": 20,
+    "safety_or_property_risk": 15,
+    "requests_human_conversation": 15,
+    "requests_consultation_or_quote": 12,
+    "provides_contact_info": 10,
+    "inside_service_area": 10,
+    "within_24_hours": 10,
+    "within_7_days": 6,
+    "matches_accepted_type": 8,
+    "repeat_visitor": 5,
+    "photos_or_documentation_provided": 5,
 }
 
 DEFAULT_PRIORITY_THRESHOLDS = {"p1": 70, "p2": 45, "p3": 20}

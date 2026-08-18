@@ -19,7 +19,7 @@
 <body>
   <p><a href="index.html">← Dashboard</a></p>
   <h1>Intelligence Configuration</h1>
-  <p class="muted">Generic jurisdiction, qualification, priority, and routing controls used by premium BIPs. These settings are not law-specific; Legal is simply the first vertical using them. Applying a premium BIP via <a href="/bip-import">BIP Import</a> prefills most of this page automatically — you should mainly be reviewing and adjusting the fields below, not typing them from a blank page.</p>
+  <p class="muted">Industry-neutral qualification, priority-scoring, and routing controls, usable by any vertical's premium BIP — legal was the first BIP built against them, not what they're built for. Applying a premium BIP via <a href="/bip-import">BIP Import</a> prefills most of this page automatically — you should mainly be reviewing and adjusting the fields below, not typing them from a blank page.</p>
 
   <div class="grid">
     <section class="card">
@@ -31,17 +31,17 @@
         <input id="vertical" class="readonly-field" readonly placeholder="Set by BIP Import" />
         <div class="field-help">Set automatically when a premium BIP is applied via BIP Import — not something to type here directly.</div>
       </label>
-      <label>Primary jurisdiction
-        <input id="primary_jurisdiction" placeholder="TX" />
-        <div class="field-help">The state (or region) this business is licensed/based in. Two-letter abbreviation, e.g. TX.</div>
+      <label>Primary service area
+        <input id="primary_jurisdiction" placeholder="TX, or Dallas-Fort Worth" />
+        <div class="field-help">The state or region this business is primarily based in / serves.</div>
       </label>
-      <label>Additional jurisdictions
+      <label>Additional service areas
         <input id="additional_jurisdictions" placeholder="OK, AR" />
-        <div class="field-help">Any other states this business also serves, comma-separated. Leave blank if single-state only.</div>
+        <div class="field-help">Any other states or regions this business also serves, comma-separated. Leave blank if single-area only.</div>
       </label>
-      <label>Jurisdiction mode
-        <select id="jurisdiction_mode"><option value="single_state">Single state</option><option value="multi_state">Multi-state</option><option value="national_referral">National / referral</option></select>
-        <div class="field-help">Single state: only the primary jurisdiction is served. Multi-state: primary + additional jurisdictions above. National/referral: takes inquiries from anywhere and refers out-of-area ones.</div>
+      <label>Service area mode
+        <select id="jurisdiction_mode"><option value="single_state">Single area</option><option value="multi_state">Multiple areas</option><option value="national_referral">National / referral</option></select>
+        <div class="field-help">Single area: only the primary service area is served. Multiple areas: primary + additional areas above. National/referral: takes inquiries from anywhere and refers out-of-area ones.</div>
       </label>
       <label>Languages
         <div class="check-grid">
@@ -56,26 +56,24 @@
     <section class="card">
       <h2>Fit Policies</h2>
       <label>Accepted matter / service types
-        <div id="accepted_types_grid" class="check-grid"></div>
-        <input id="accepted_types_other" placeholder="Other accepted types, comma-separated" style="margin-top:8px" />
-        <div class="field-help">Which case types THIS business actually takes. Checked ones came from the BIP as a common starting point — add or remove per firm.</div>
+        <input id="accepted_types" placeholder="e.g. Emergency repair, Installation, Maintenance plans — comma-separated" />
+        <div class="field-help">What THIS business actually takes on, in whatever terms fit its vertical. A premium BIP can prefill a common starting list — add or remove per business.</div>
       </label>
       <label>Excluded types
-        <div id="excluded_types_grid" class="check-grid"></div>
-        <input id="excluded_types_other" placeholder="Other excluded types, comma-separated" style="margin-top:8px" />
-        <div class="field-help">Case types this business explicitly does NOT take — the assistant should not intake these, only capture contact info for a referral if appropriate.</div>
+        <input id="excluded_types" placeholder="Comma-separated" />
+        <div class="field-help">Types this business explicitly does NOT take — the assistant should not intake these, only capture contact info for a referral if appropriate.</div>
       </label>
-      <label>Existing-representation policy
+      <label>Existing-provider policy
         <textarea id="existing_representation_policy"></textarea>
-        <div class="field-help">What to say/do when a visitor mentions they already have representation for this matter.</div>
+        <div class="field-help">What to say/do when a visitor mentions they're already working with someone else on this — a competitor, another provider, or (for regulated verticals) another attorney.</div>
       </label>
       <label>Out-of-area policy
         <textarea id="out_of_area_policy"></textarea>
-        <div class="field-help">What to say/do when the inquiry is outside this business's configured jurisdiction(s).</div>
+        <div class="field-help">What to say/do when the inquiry is outside this business's configured service area(s).</div>
       </label>
       <label>Property-damage-only policy
         <textarea id="property_damage_only_policy"></textarea>
-        <div class="field-help">What to say/do when there's property damage but no reported injury (only relevant to some verticals).</div>
+        <div class="field-help">What to say/do when there's property damage but no reported injury — only relevant to some verticals (e.g. auto/PI); leave blank otherwise.</div>
       </label>
     </section>
 
@@ -87,7 +85,7 @@
       </label>
       <label>Never-say rules
         <textarea id="never_say_text"></textarea>
-        <div class="field-help">Specific claims, promises, or advice the assistant must never give — prefilled from the BIP's legal/compliance boundaries.</div>
+        <div class="field-help">Specific claims, promises, or advice the assistant must never give — prefilled from the BIP's compliance boundaries.</div>
       </label>
     </section>
 
@@ -135,11 +133,11 @@
       <div id="rules"></div>
       <h3>Add rule</h3>
       <div class="grid">
-        <label>Label<input id="rule_label" placeholder="Commercial truck urgent" /></label>
-        <label>Destination label<input id="rule_destination" placeholder="Senior intake" /></label>
+        <label>Label<input id="rule_label" placeholder="e.g. Emergency / same-day" /></label>
+        <label>Destination label<input id="rule_destination" placeholder="e.g. On-call specialist" /></label>
         <label>Priority override<select id="rule_priority"><option value="">None</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option><option>P5</option></select></label>
         <label>Position<input id="rule_position" type="number" value="0" /></label>
-        <label class="full">Condition JSON<textarea id="rule_condition" style="font-family:monospace">{"any_signal":["commercial_truck"]}</textarea></label>
+        <label class="full">Condition JSON<textarea id="rule_condition" style="font-family:monospace">{"any_signal":["example_signal"]}</textarea></label>
         <label>Webhook<input id="rule_webhook" /></label>
         <label>Email<input id="rule_email" type="email" /></label>
       </div>

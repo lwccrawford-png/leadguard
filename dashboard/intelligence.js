@@ -9,46 +9,6 @@ const $ = (id) => document.getElementById(id);
 const splitList = (value) => value.split(/[,\n]/).map(v => v.trim()).filter(Boolean);
 const show = (message) => { $('status').textContent = message; setTimeout(() => $('status').textContent = '', 2500); };
 
-// Common personal-injury case types, matching onboarding/bips/personal_injury_premium.md's
-// accepted/excluded_types_suggested — a starting checklist, not a closed vocabulary. Anything
-// a business needs beyond this list still goes in the adjacent "Other" free-text field, so no
-// business is ever blocked by a type this list doesn't happen to cover yet.
-const KNOWN_CASE_TYPES = [
-  ['auto_accident', 'Auto accident'],
-  ['truck_accident', 'Truck accident'],
-  ['motorcycle_accident', 'Motorcycle accident'],
-  ['pedestrian_accident', 'Pedestrian accident'],
-  ['slip_and_fall', 'Slip and fall'],
-  ['dog_bite', 'Dog bite'],
-  ['wrongful_death', 'Wrongful death'],
-  ['medical_malpractice', 'Medical malpractice'],
-  ['workers_comp', "Workers' comp"],
-  ['product_liability', 'Product liability'],
-];
-
-function renderCaseTypeGrid(gridId, prefix) {
-  $(gridId).innerHTML = KNOWN_CASE_TYPES.map(([value, label]) =>
-    `<label class="check-item"><input type="checkbox" id="${prefix}_${value}" /> ${label}</label>`
-  ).join('');
-}
-renderCaseTypeGrid('accepted_types_grid', 'accepted');
-renderCaseTypeGrid('excluded_types_grid', 'excluded');
-
-function loadTypeCheckboxes(prefix, values) {
-  const known = new Set(KNOWN_CASE_TYPES.map(([v]) => v));
-  const other = [];
-  for (const v of values || []) {
-    if (known.has(v)) $(`${prefix}_${v}`).checked = true;
-    else other.push(v);
-  }
-  $(`${prefix}_types_other`).value = other.join(', ');
-}
-
-function readTypeCheckboxes(prefix) {
-  const checked = KNOWN_CASE_TYPES.filter(([v]) => $(`${prefix}_${v}`).checked).map(([v]) => v);
-  return [...checked, ...splitList($(`${prefix}_types_other`).value)];
-}
-
 async function api(path, options={}) {
   const res = await fetch(API_BASE + path, {headers:{'Content-Type':'application/json'}, ...options});
   if (!res.ok) throw new Error(await res.text());
@@ -63,8 +23,8 @@ async function loadSettings(){
   $('additional_jurisdictions').value = (s.additional_jurisdictions || []).join(', ');
   $('jurisdiction_mode').value = s.jurisdiction_mode || 'single_state';
   $('approved_boundary_text').value = s.approved_boundary_text || '';
-  loadTypeCheckboxes('accepted', s.accepted_types);
-  loadTypeCheckboxes('excluded', s.excluded_types);
+  $('accepted_types').value = (s.accepted_types || []).join(', ');
+  $('excluded_types').value = (s.excluded_types || []).join(', ');
   $('existing_representation_policy').value = s.existing_representation_policy || '';
   $('out_of_area_policy').value = s.out_of_area_policy || '';
   $('property_damage_only_policy').value = s.property_damage_only_policy || '';
@@ -103,8 +63,8 @@ async function saveSettings(){
     additional_jurisdictions: splitList($('additional_jurisdictions').value),
     jurisdiction_mode: $('jurisdiction_mode').value,
     approved_boundary_text: $('approved_boundary_text').value.trim(),
-    accepted_types: readTypeCheckboxes('accepted'),
-    excluded_types: readTypeCheckboxes('excluded'),
+    accepted_types: splitList($('accepted_types').value),
+    excluded_types: splitList($('excluded_types').value),
     existing_representation_policy: $('existing_representation_policy').value.trim(),
     out_of_area_policy: $('out_of_area_policy').value.trim(),
     property_damage_only_policy: $('property_damage_only_policy').value.trim(),
