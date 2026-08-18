@@ -259,6 +259,9 @@ def init_db():
             "ALTER TABLE business ADD COLUMN booking_link TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE business ADD COLUMN priority_routing_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE leads ADD COLUMN sms_consent INTEGER NOT NULL DEFAULT 0",
+            # Optional short line under the avatar on the collapsed widget bubble. Empty
+            # means the widget falls back to an auto-generated "Hi, I'm {name}..." line.
+            "ALTER TABLE business ADD COLUMN bubble_teaser_text TEXT NOT NULL DEFAULT ''",
         ]:
             try:
                 conn.execute(migration)

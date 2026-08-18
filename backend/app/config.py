@@ -19,6 +19,10 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5")
 # rebrand is a one-line config change, not a find-and-replace across the codebase.
 PRODUCT_NAME = os.getenv("PRODUCT_NAME", "LeadGuard")
 
+# Where the widget's "AI powered by {PRODUCT_NAME}" footer link points — same
+# rebrand-safety reasoning as PRODUCT_NAME above.
+PRODUCT_URL = os.getenv("PRODUCT_URL", "https://justaskevolveiq.com")
+
 # Agency-level (your own) contact info for the /support page — identical across every
 # deployed client instance, so it lives in env config, not the per-client `business` table.
 AGENCY_NOTIFY_WEBHOOK_URL = os.getenv("AGENCY_NOTIFY_WEBHOOK_URL", "")

@@ -150,7 +150,7 @@ async function loadBusiness() {
     if (brand) brand.textContent = data.product_name;
   }
   const form = $("#settingsForm");
-  for (const key of ["name", "industry", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting", "disclosure_text"]) {
+  for (const key of ["name", "industry", "assistant_name", "assistant_image_url", "website_url", "scheduling_link", "handoff_webhook_url", "handoff_email", "flow_script", "accent_color", "monthly_message_limit", "rot_aging_minutes", "rot_rotting_minutes", "knowledge_source", "greeting", "bubble_teaser_text", "disclosure_text"]) {
     if (form.elements[key]) form.elements[key].value = data[key] ?? "";
   }
   const nameHeader = document.getElementById("businessNameHeader");

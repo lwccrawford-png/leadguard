@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from datetime import datetime, timezone
 
-from ..config import AGENCY_NOTIFY_EMAIL, AGENCY_NOTIFY_WEBHOOK_URL, PRODUCT_NAME
+from ..config import AGENCY_NOTIFY_EMAIL, AGENCY_NOTIFY_WEBHOOK_URL, PRODUCT_NAME, PRODUCT_URL
 from ..db import db_session
 from ..services import email, faq_matching, handoff, ingestion, rate_limit, seo
 
@@ -36,6 +36,7 @@ class BusinessSettings(BaseModel):
     priority_routing_enabled: bool = False
     knowledge_source: str = ""
     greeting: str = ""
+    bubble_teaser_text: str = ""
     disclosure_text: str = ""
     demo_suggested_questions: list[str] = []
     demo_expires_at: Optional[str] = None
@@ -99,6 +100,7 @@ def get_business():
     data["demo_enabled"] = bool(data.get("demo_enabled", 1))
     data["messages_used_this_month"] = rate_limit.messages_used_this_month()
     data["product_name"] = PRODUCT_NAME
+    data["product_url"] = PRODUCT_URL
     return data
 
 
@@ -111,8 +113,9 @@ def update_business(settings: BusinessSettings):
             """UPDATE business SET name=?, industry=?, assistant_name=?, assistant_image_url=?, website_url=?,
                scheduling_link=?, handoff_webhook_url=?, handoff_email=?, flow_script=?, accent_color=?,
                monthly_message_limit=?, rot_aging_minutes=?, rot_rotting_minutes=?, pipeline_enabled=?,
-               priority_routing_enabled=?, knowledge_source=?, greeting=?, disclosure_text=?,
-               demo_suggested_questions=?, demo_expires_at=?, demo_enabled=?, booking_link=? WHERE id=1""",
+               priority_routing_enabled=?, knowledge_source=?, greeting=?, bubble_teaser_text=?,
+               disclosure_text=?, demo_suggested_questions=?, demo_expires_at=?, demo_enabled=?,
+               booking_link=? WHERE id=1""",
             (
                 settings.name,
                 settings.industry,
@@ -131,6 +134,7 @@ def update_business(settings: BusinessSettings):
                 int(settings.priority_routing_enabled),
                 settings.knowledge_source,
                 settings.greeting,
+                settings.bubble_teaser_text,
                 settings.disclosure_text,
                 json.dumps(settings.demo_suggested_questions[:3]),
                 settings.demo_expires_at,

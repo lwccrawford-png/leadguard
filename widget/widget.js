@@ -3,12 +3,20 @@
 
   var scriptTag = document.currentScript;
   var API_BASE = (scriptTag && scriptTag.getAttribute("data-api-base")) || "";
+  var HAS_NAME = !!(scriptTag && scriptTag.getAttribute("data-business-name"));
   var BUSINESS_NAME = (scriptTag && scriptTag.getAttribute("data-business-name")) || "Chat with us";
   var ACCENT = (scriptTag && scriptTag.getAttribute("data-color")) || "#4f46e5";
   var AVATAR_URL = (scriptTag && scriptTag.getAttribute("data-avatar-url")) || "";
   var GREETING =
     (scriptTag && scriptTag.getAttribute("data-greeting")) ||
     "Hi! I'm the AI assistant here — ask me anything or book an appointment.";
+  // Short line shown under the avatar on the collapsed launcher, before the panel opens.
+  // Falls back to an auto-generated line once a real name is known (see buildWidget).
+  var TEASER_TEXT = (scriptTag && scriptTag.getAttribute("data-teaser")) || "";
+  // Agency branding shown at the bottom of the chat panel — not client-configurable, so
+  // it isn't part of the static embed attributes, only the live-fetched config below.
+  var PRODUCT_NAME = "EvolveIQ";
+  var PRODUCT_URL = "https://justaskevolveiq.com";
   var SUGGESTED_QUESTIONS = [];
   try {
     SUGGESTED_QUESTIONS = JSON.parse((scriptTag && scriptTag.getAttribute("data-suggested-questions")) || "[]");
@@ -48,10 +56,16 @@
         if (done) return;
         done = true;
         clearTimeout(timer);
-        if (data.assistant_name || data.name) BUSINESS_NAME = data.assistant_name || data.name;
+        if (data.assistant_name || data.name) {
+          BUSINESS_NAME = data.assistant_name || data.name;
+          HAS_NAME = true;
+        }
         if (data.accent_color) ACCENT = data.accent_color;
         if (data.assistant_image_url) AVATAR_URL = data.assistant_image_url;
         if (data.greeting) GREETING = data.greeting;
+        if (data.bubble_teaser_text) TEASER_TEXT = data.bubble_teaser_text;
+        if (data.product_name) PRODUCT_NAME = data.product_name;
+        if (data.product_url) PRODUCT_URL = data.product_url;
         if (Array.isArray(data.demo_suggested_questions) && data.demo_suggested_questions.length) {
           SUGGESTED_QUESTIONS = data.demo_suggested_questions;
         }
@@ -127,18 +141,29 @@
     document.body.appendChild(host);
     var root = host.attachShadow({ mode: "open" });
 
+    function hexToRgb(hex) {
+      var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+      return m ? parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) : "79,70,229";
+    }
+    var ACCENT_RGB = hexToRgb(ACCENT);
+
     var style = document.createElement("style");
     style.textContent =
       "*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}" +
-      ".bubble{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:" +
+      ".launcher{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;z-index:2147483000;max-width:180px;}" +
+      ".bubble{width:64px;height:64px;flex-shrink:0;border-radius:50%;background:" +
       ACCENT +
-      ";box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2147483000;transition:transform .15s ease;}" +
-      ".bubble:hover{transform:scale(1.06);}" +
-      ".bubble svg{width:28px;height:28px;fill:#fff;}" +
-      ".bubble img{width:46px;height:46px;border-radius:50%;object-fit:cover;}" +
+      ";border:3px solid #fff;box-shadow:0 0 0 5px rgba(" +
+      ACCENT_RGB +
+      ",.18),0 4px 14px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;transition:transform .15s ease;}" +
+      ".launcher:hover .bubble{transform:scale(1.06);}" +
+      ".bubble svg{width:30px;height:30px;fill:#fff;}" +
+      ".bubble img{width:100%;height:100%;border-radius:50%;object-fit:cover;}" +
+      ".launcherTeaser{background:#fff;color:#1c1c1e;font-size:13px;font-weight:700;font-style:italic;text-align:center;line-height:1.35;padding:9px 14px;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.18);}" +
+      ".launcher.open .launcherTeaser{display:none;}" +
       ".header .avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;margin-right:8px;vertical-align:middle;}" +
       ".header .titleRow{display:flex;align-items:center;}" +
-      ".panel{position:fixed;bottom:92px;right:20px;width:340px;max-width:90vw;height:480px;max-height:70vh;background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;z-index:2147483000;}" +
+      ".panel{position:fixed;bottom:96px;right:20px;width:340px;max-width:90vw;height:480px;max-height:70vh;background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;z-index:2147483000;}" +
       ".panel.open{display:flex;}" +
       ".header{background:" +
       ACCENT +
@@ -174,7 +199,10 @@
       ACCENT +
       ";color:#fff;border:none;border-radius:22px;padding:0 18px;font-size:15px;cursor:pointer;}" +
       ".inputRow button:disabled{opacity:.5;cursor:default;}" +
-      ".suggestions{position:fixed;bottom:90px;right:20px;z-index:2147482999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:280px;}" +
+      ".branding{padding:6px 10px 10px;text-align:center;font-size:11px;background:#fff;border-top:1px solid #f0f0f2;flex-shrink:0;}" +
+      ".branding a{color:#9a9aa0;text-decoration:none;}" +
+      ".branding a:hover{color:#6b6b70;text-decoration:underline;}" +
+      ".suggestions{position:fixed;bottom:165px;right:20px;z-index:2147482999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:280px;}" +
       ".suggestions button{font-family:inherit;font-size:13px;text-align:left;background:#fff;border:1px solid #ddd;border-radius:14px;padding:9px 14px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);transition:transform .1s ease,border-color .1s ease;}" +
       ".suggestions button:hover{border-color:" +
       ACCENT +
@@ -183,6 +211,9 @@
 
     var CHAT_ICON_SVG =
       '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.4 1.05 4.57 2.77 6.19-.13 1.32-.6 2.83-1.62 4.09a.5.5 0 00.5.72c2.13-.35 3.7-1.24 4.63-1.9A11.4 11.4 0 0012 21c5.52 0 10-4.03 10-9s-4.48-9-10-9z"/></svg>';
+
+    var launcher = document.createElement("div");
+    launcher.className = "launcher";
 
     var bubble = document.createElement("div");
     bubble.className = "bubble";
@@ -194,7 +225,19 @@
     } else {
       bubble.innerHTML = CHAT_ICON_SVG;
     }
-    root.appendChild(bubble);
+    launcher.appendChild(bubble);
+
+    // Standard greeting if a real name is known, otherwise a plain invitation to chat —
+    // never "Hi, I'm Chat with us", the generic no-name fallback for BUSINESS_NAME.
+    var teaserFinal = TEASER_TEXT || (HAS_NAME ? "Hi, I'm " + BUSINESS_NAME + " — I'm here to help!" : "");
+    if (teaserFinal) {
+      var teaserEl = document.createElement("div");
+      teaserEl.className = "launcherTeaser";
+      teaserEl.textContent = teaserFinal;
+      launcher.appendChild(teaserEl);
+    }
+
+    root.appendChild(launcher);
 
     var suggestionsEl = null;
     if (SUGGESTED_QUESTIONS.length) {
@@ -234,7 +277,12 @@
       headerBodyHtml +
       '<span class="headerActions"><span class="reset" title="Start a new conversation">↺</span><span class="close">✕</span></span></div>' +
       '<div class="messages"></div>' +
-      '<div class="inputRow"><input type="text" placeholder="Type a message..." /><button>Send</button></div>';
+      '<div class="inputRow"><input type="text" placeholder="Type a message..." /><button>Send</button></div>' +
+      '<div class="branding"><a href="' +
+      escHtml(PRODUCT_URL) +
+      '" target="_blank" rel="noopener noreferrer">AI powered by ' +
+      escHtml(PRODUCT_NAME) +
+      "</a></div>";
     root.appendChild(panel);
 
     var messagesEl = panel.querySelector(".messages");
@@ -287,6 +335,7 @@
     var greeted = false;
     function openPanel() {
       panel.classList.add("open");
+      launcher.classList.add("open");
       if (suggestionsEl) suggestionsEl.style.display = "none";
       if (!greeted) {
         addMessage("assistant", GREETING);
@@ -294,15 +343,17 @@
       }
       inputEl.focus();
     }
-    bubble.addEventListener("click", function () {
+    launcher.addEventListener("click", function () {
       if (panel.classList.contains("open")) {
         panel.classList.remove("open");
+        launcher.classList.remove("open");
       } else {
         openPanel();
       }
     });
     closeBtn.addEventListener("click", function () {
       panel.classList.remove("open");
+      launcher.classList.remove("open");
     });
     resetBtn.addEventListener("click", function () {
       try {
