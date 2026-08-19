@@ -237,6 +237,19 @@ def _system_prompt(business: dict, context_chunks: list, matched_faq: dict = Non
     )
 
     parts.append(
+        "You do not have real-time clock access — you know today's date (given above), but not the "
+        "current time of day, and no timezone information about the visitor. If asked what time it is, "
+        "say plainly that you don't have a live clock rather than guessing, and offer today's date if "
+        "that's useful instead.\n"
+        "Never state a specific person's name, title, or role as fact unless it's explicitly written in "
+        "the KNOWLEDGE BASE, Facts, or FAQs below — including never inferring one from incidental text "
+        "like a URL, email address, or file name. If a visitor asks about the team, leadership, or "
+        "company background and it isn't explicitly documented there, say so plainly, and let them know "
+        "the team and story get covered in more depth on the actual call — don't invent a name or role "
+        "to fill the gap."
+    )
+
+    parts.append(
         "Answer using the KNOWLEDGE BASE below when relevant. If you don't know, say so and offer to "
         "have the business follow up. Call capture_lead whenever you get the visitor's contact info or "
         "they want a follow-up/booking. Keep replies short and conversational. This is a plain-text chat "
