@@ -1,3 +1,6 @@
+// LeadGuard — Copyright (c) 2026 Evolve and Advance Consulting LLC. All Rights Reserved.
+// Proprietary and confidential. See LICENSE for terms.
+
 (function () {
   "use strict";
 

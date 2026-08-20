@@ -40,3 +40,8 @@ natively, and Zapier/Make can map any field from `lead`.
   clients from one deployment) is a documented next step in SPEC.md, not built yet.
 - Retrieval is TF-IDF (keyword-based) — works well for a single business's knowledge base;
   revisit if a client's content is huge or very heterogeneous.
+
+## License
+
+Copyright (c) 2026 Evolve and Advance Consulting LLC. All Rights Reserved.
+Proprietary and confidential — see [LICENSE](LICENSE) for terms.
